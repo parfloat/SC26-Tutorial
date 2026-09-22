@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SC26 Precision-Edge Tutorial Visualizations (regenerated)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .provenance {
+            text-align: center;
+            color: #999;
+            margin-bottom: 40px;
+            font-size: 12px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: box-shadow 0.3s;
+        }
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .card-svg {
+            width: 100%;
+            background: #fafafa;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .card-content {
+            padding: 20px;
+        }
+        .card h2 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #1f77b4;
+        }
+        .card p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        .legend {
+            background: #f9f9f9;
+            border-left: 4px solid #1f77b4;
+            padding: 20px;
+            margin-bottom: 30px;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+        .legend-item {
+            display: inline-block;
+            margin-right: 25px;
+            margin-bottom: 10px;
+        }
+        .color-box {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin-right: 7px;
+            vertical-align: middle;
+            border-radius: 2px;
+            border: 1px solid #333;
+        }
+        .interpretation {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 40px;
+        }
+        .interpretation h3 {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .interpretation ul {
+            margin: 10px 0;
+            padding-left: 20px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .interpretation li {
+            margin-bottom: 8px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #ddd;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Precision-Edge Visualization Suite (regenerated)</h1>
+        <p class="subtitle">SC26 Nixnan Tutorial: Floating-Point Precision Limits in Reaction-Diffusion CUDA</p>
+        <p class="provenance">Regenerated from <code>traces-new/</code> (M=1600 build of <code>rd_nixnan.cu</code>, the last version that ever existed in git, recovered and re-run against the current nixnan.so) &mdash; see <code>rd_nixnan/README.md</code> for provenance notes.</p>
+
+        <div class="legend">
+            <strong>Format Legend:</strong><br>
+            <span class="legend-item">
+                <span class="color-box" style="background: #1f77b4;"></span>
+                <strong>FP16:</strong> 5-bit exp, 10-bit mantissa (fails earliest)
+            </span>
+            <span class="legend-item">
+                <span class="color-box" style="background: #ff7f0e;"></span>
+                <strong>BF16:</strong> 8-bit exp, 8-bit mantissa (range okay, precision compromised)
+            </span>
+            <span class="legend-item">
+                <span class="color-box" style="background: #2ca02c;"></span>
+                <strong>FP32:</strong> 8-bit exp, 24-bit mantissa (reference precision)
+            </span>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-svg">
+                    <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
+                        <style>
+                            text { font-family: sans-serif; font-size: 12px; }
+                            .title { font-size: 14px; font-weight: bold; }
+                            .label { font-size: 11px; fill: #333; }
+                        </style>
+                        <text x="350" y="25" text-anchor="middle" class="title">Overflow Timeline through Step 1600</text>
+                        <line x1="60" y1="60" x2="60" y2="240" stroke="#333" stroke-width="2"/>
+                        <line x1="60" y1="240" x2="640" y2="240" stroke="#333" stroke-width="2"/>
+                        <rect x="60" y="130" width="108.75" height="40" fill="#1f77b4" stroke="#333" stroke-width="1"/>
+                        <text x="15" y="154" class="label" text-anchor="end">FP16</text>
+                        <text x="174" y="154" class="label">Step 300 (t=0.30s) &#8594; overflow</text>
+                        <rect x="60" y="180" width="580" height="40" fill="#ff7f0e" fill-opacity="0.35" stroke="#ff7f0e" stroke-width="2" stroke-dasharray="5,3"/>
+                        <text x="15" y="204" class="label" text-anchor="end">BF16</text>
+                        <text x="350" y="204" class="label" text-anchor="middle">No overflow through step 1600 (max&#8776;8.3&#215;10&#179;&#179;)</text>
+                        <rect x="60" y="230" width="580" height="40" fill="#2ca02c" fill-opacity="0.35" stroke="#2ca02c" stroke-width="2" stroke-dasharray="5,3"/>
+                        <text x="15" y="254" class="label" text-anchor="end">FP32</text>
+                        <text x="350" y="254" class="label" text-anchor="middle">No overflow through step 1600 (max&#8776;6.9&#215;10&#179;&#179;)</text>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <h2>1. Overflow Timeline</h2>
+                    <p><strong>What:</strong> Step count at which each format first overflows to infinity (solid bar), or how far it got without overflowing (hatched bar).</p>
+                    <p><strong>Key finding:</strong> At M=1600 steps, only FP16 overflows (step 300). BF16 and FP32 keep growing but stay finite &mdash; this build was deliberately shortened from M=2500 specifically so higher precisions survive the run (see nixnan git history: "Reduce rd_nixnan.cu to M=1600 steps to avoid overflow in higher precisions").</p>
+                    <p><strong>Physics:</strong> Reaction term grows ~1.05&#215; per step; FP16's narrow exponent range (5 bits) saturates first, long before BF16/FP32's 8-bit exponent range would.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-svg">
+                    <embed src="02_exception_counts.svg" type="image/svg+xml" style="width: 100%; display: block;">
+                </div>
+                <div class="card-content">
+                    <h2>2. Exception Propagation</h2>
+                    <p><strong>What:</strong> Per-format count of NaN and Infinity exceptions (log scale), from <code>traces-new/Stage3/exceptions_summary.txt</code>.</p>
+                    <p><strong>Key finding:</strong> FP16 shows 60,556 total NaN occurrences (22 unique sites) and 661 Infinity occurrences (22 unique sites) &mdash; a cascade from the overflow at step 300 propagating for the remaining 1300 steps. BF16/FP32 show zero exceptions: they never leave the finite range within this run.</p>
+                    <p><strong>Teaching moment:</strong> Infinity triggers NaN in the next iteration (inf &minus; 2&middot;inf + inf = NaN); the 1300 remaining steps after FP16's overflow is what turns 22 unique sites into 60K+ total occurrences.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-svg">
+                    <embed src="03_exponent_ranges.svg" type="image/svg+xml" style="width: 100%; display: block;">
+                </div>
+                <div class="card-content">
+                    <h2>3. Dynamic Range</h2>
+                    <p><strong>What:</strong> Exponent range actually reached by each format through step 1600, from <code>traces-new/Stage4/histogram_full.txt</code>.</p>
+                    <p><strong>FP16:</strong> Fixed capacity [-14, 15] (29 total exponent values); exceeds it at step 300 and reports <code>inf</code>.</p>
+                    <p><strong>BF16 &amp; FP32:</strong> Both reach unbiased exponent 113 by step 1600 &mdash; identical trajectory, since they follow the same double-precision-equivalent growth curve; both still have headroom to their shared ceiling of 127.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="background: #f9f9f9; padding: 20px; min-height: 300px;">
+                    <h3 style="margin-bottom: 15px; font-size: 16px; color: #1f77b4;">4. Per-Instruction Error Hotspots</h3>
+                    <p style="font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 8px;"><strong>Hottest instructions by format (from <code>traces-new/Stage3</code>):</strong></p>
+                    <ul style="margin: 10px 0; padding-left: 20px; font-size: 13px; line-height: 1.8;">
+                        <li><strong>FP16:</strong> HFMA2 (24 flagged occurrences), HADD2 (9 flagged occurrences) &mdash; packed FP16 ops carrying NaN/Inf propagation through the stencil.</li>
+                        <li><strong>BF16:</strong> no hotspots &mdash; zero exceptions occurred within 1600 steps.</li>
+                        <li><strong>FP32:</strong> no hotspots &mdash; zero exceptions occurred within 1600 steps.</li>
+                    </ul>
+                    <p style="font-size: 13px; color: #666; line-height: 1.6;"><strong>Stencil anatomy:</strong> Laplacian (u_{i+1} - 2u_i + u_{i-1}) is where the Infinity first appears (HADD2/HFMA2); the reaction term's own FMA (HFMA2) then spreads the corruption every step after.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-svg">
+                    <embed src="05_mantissa_precision.svg" type="image/svg+xml" style="width: 100%; display: block;">
+                </div>
+                <div class="card-content">
+                    <h2>5. Mantissa Precision Impact</h2>
+                    <p><strong>Left:</strong> Mantissa width &mdash; BF16's 8 bits vs FP32's 24 bits. (Format-defined; unchanged by M.)</p>
+                    <p><strong>Right:</strong> Diffusion term fidelity in PDE. BF16 (~2&#8315;&#8312;&middot;u) is below noise floor &rarr; physics lost, independent of whether/when overflow happens.</p>
+                    <p><strong>Hook:</strong> BF16 and FP32 share the same exponent range and (per card 3) the same trajectory through step 1600, yet BF16's diffusion signal is already gone &mdash; precision loss that no exception counter catches.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="interpretation">
+            <h3>Interpretation Guide</h3>
+            <ul>
+                <li><strong>Why this differs from the archived <code>viz/</code>:</strong> The original visuals were built against an M=2500 run where BF16/FP32 also eventually overflow (~step 1900). The <code>rd_nixnan.cu</code> that produced <code>traces-new/</code> is the <em>last</em> version that ever existed in nixnan's git history, which deliberately shortened the run to M=1600 specifically so higher precisions survive &mdash; a different, and arguably cleaner, teaching point (precision-dependent failure vs. universal-eventual-failure).</li>
+                <li><strong>FP16 subnormals:</strong> Zero in this run (high growth rate &lambda;=50, matching the original design note). Lower &lambda; or raise dt to push boundary diffusion below 2&#8315;&#185;&#8308; and observe subnormal underflow instead of overflow.</li>
+                <li><strong>BF16 vs FP32 parity:</strong> Identical exponent trajectory (both reach 113 by step 1600, card 3), but BF16's 8-bit mantissa already renders the diffusion term invisible (card 5) &mdash; precision loss that isn't flagged by any exception counter, because nothing overflows.</li>
+                <li><strong>max_element() silent failure:</strong> After NaN propagates through FP16's interior, all comparisons with NaN return false &rarr; reports 0.0 (boundary), not inf/NaN. Classic silent failure mode, visible in <code>traces-new/Stage2</code>.</li>
+                <li><strong>Exception timeline:</strong> FP16 hits Infinity at step 300; NaN follows on the very next stencil iteration via inf &minus; 2&middot;inf + inf. The other 1300 steps of the run is pure cascade &mdash; 22 unique sites become 60K+ total occurrences.</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>Regenerated by <code>viz-new/analyze.py</code> (one-line fix to the archived <code>viz/analyze.py</code>, which crashed on a tuple dict key and silently dropped the exception-type dimension) + hand-authored SVGs reflecting the actual M=1600 data.</p>
+            <p>Palette: categorical hues (#1f77b4, #ff7f0e, #2ca02c) validated for colorblind access (WCAG AAA)</p>
+            <p>Data source: <code>traces-new/Stage2-5/</code> (rd_nixnan experiment, recovered <code>rd_nixnan.cu</code> + <code>spec.json</code> re-run against the current nixnan.so)</p>
+            <p style="margin-top: 10px; font-size: 11px; color: #bbb;">
+                SC26 Nixnan Demo | Reaction-Diffusion FTCS | 3 precisions, 1 PDE, 3 kernels
+            </p>
+        </div>
+    </div>
+</body>
+</html>
