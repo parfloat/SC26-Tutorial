@@ -31,6 +31,10 @@ that format's dynamic range a given run actually used, and (4) it can confirm or
 hypothesis about \emph{why} a lower-precision format fails first --- here, that domain
 enlargement does not explain FP16's earlier failure, but running longer does. All numbers
 below come from real runs captured in \texttt{Logs/}; nothing is simulated or hand-typed.
+An apparent FP64 anomaly encountered along the way --- nixnan reporting zero exceptions
+for a format the program's own diagnostic claimed had gone non-finite --- is fully
+resolved in Section~\ref{sec:fp64-resolved}: it turns out to be a narrowing-conversion bug
+in the program's own check, not a gap in nixnan.
 \end{abstract}
 
 \tableofcontents
@@ -297,7 +301,7 @@ Format & First non-finite (step) & NaN unique/repeats & Inf unique/repeats \\
 FP16 & 300  & 22 / 78134 & 22 / 639 \\
 BF16 & 1900 & 15 / 8975  & 6 / 76   \\
 FP32 & 1900 & 19 / 10966 & 8 / 90   \\
-FP64 & 1900 & \multicolumn{2}{c}{see caveat below} \\
+FP64 & step 1900 (artifact, not real) & \multicolumn{2}{c}{0 / 0 --- correctly} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -305,19 +309,13 @@ FP64 & 1900 & \multicolumn{2}{c}{see caveat below} \\
 At $M{=}2000$, BF16 and FP32 both now show real, nixnan-classified NaN/Infinity activity
 --- confirmed, not just inferred from the program's own \texttt{max=...} printout.
 
-\paragraph{An honest caveat: FP64 does not show up in nixnan's classifier.} The
-program's own non-finite check reports FP64 crossing to non-finite at step 1900 as well.
-This is stranger than it first looks (see Section~\ref{sec:extended-detail}): FP64's own
-max magnitude at step 1800 is only $1.1675\times10^{38}$ --- \emph{identical}, digit for
-digit, to FP32's value at the same checkpoint, and nowhere near FP64's actual ceiling
-($\sim\!1.8\times10^{308}$). Steady $1.05\times$/step growth from there cannot reach
-FP64's ceiling in the next 100 steps; reaching it would take on the order of 12{,}700
-more steps at that rate. Something other than plain reaction-driven exponential growth
-is making FP64 non-finite here, and it happens in the same 100-step window as BF16/FP32.
-\texttt{nixnan}'s exception classifier reports \emph{zero} NaN/Infinity for FP64 either
-way, even after re-running with more margin past the crossing point ($M{=}2500$). Both of
-these --- the classifier gap and the anomalous growth-rate jump --- are reported here as
-observed, not root-caused; resolving either is outside this experiment's scope.
+\paragraph{A puzzle, initially: FP64 does not show up in nixnan's classifier.} The
+program's own non-finite check reports FP64 crossing to non-finite at step 1900 as well,
+yet \texttt{nixnan}'s exception classifier reports \emph{zero} NaN/Infinity for FP64,
+even after re-running with more margin past the crossing point ($M{=}2500$). This looked,
+at first, like a real gap in nixnan's FP64 support. It is not: Section~\ref{sec:fp64-resolved}
+shows the program's own diagnostic is the thing that is wrong, and gives the exact line
+and mechanism.
 
 \subsection{Where Infinity Actually Comes From}
 \label{sec:extended-detail}
@@ -329,7 +327,10 @@ observed, not root-caused; resolving either is outside this experiment's scope.
 \texttt{Logs/05\_extended\_M2000.log} run as the table above. FP16 (blue) departs the
 shared curve at step 300. BF16/FP32/FP64 stay numerically indistinguishable all the way
 to step 1800 ($1.1675\times10^{38}$ for FP32 and FP64 to all four significant figures
-shown) and are all non-finite by step 1900.}
+shown) and the log marks all three non-finite by step 1900 --- true for BF16 and FP32,
+but, as Section~\ref{sec:fp64-resolved} shows, an artifact of the logging code for FP64:
+the real double value at step 1900 is $\approx\!1.5\times10^{40}$, large but perfectly
+finite.}
 \label{fig:inf-onset}
 \end{figure}
 
@@ -374,6 +375,142 @@ distinct site to fire. That NaN then flows into line 97's FFMA chain
 \texttt{STG.E} store, exactly matching the source comment's prediction and giving it a
 concrete, tool-verified instruction sequence rather than a hand-derived guess.
 
+\section{Resolving the FP64 Anomaly: A Diagnostic Bug, Not a nixnan Gap}
+\label{sec:fp64-resolved}
+
+Section~\ref{sec:extended} left one thing unexplained: \texttt{rd\_nixnan.cu}'s own
+non-finite check reports FP64 crossing to non-finite at step 1900, in the same 100-step
+window as BF16 and FP32, yet \texttt{nixnan}'s exception classifier --- which had just
+correctly caught real NaN/Infinity activity for BF16 and FP32 at that same $M{=}2000$
+--- reports \emph{zero} NaN/Infinity events for FP64, at $M{=}2000$ and even at
+$M{=}2500$ (extra margin past the crossing). This section documents the full
+investigation into why, and its resolution: \textbf{nixnan did not miss anything. The
+program's own diagnostic code is wrong}, in a specific, demonstrable way, and FP64 never
+actually goes non-finite in this program at all.
+
+\subsection{Ruling out sampling}
+
+The first candidate was the mechanism at the center of Sections~\ref{sec:sample-every}
+--\ref{sec:exp-decay}: could \texttt{SAMPLING} have skipped the launches where FP64's
+exception would have fired? No --- \texttt{shell-scripts/05\_extended\_run\_all\_fail.sh}
+never sets \texttt{SAMPLING}, so it defaults to 0/unset, meaning \emph{every} kernel
+launch is instrumented (Section~\ref{sec:reference}). This was confirmed directly by
+inspecting the script and the run's environment; sampling cannot explain a total miss of
+every single FP64 launch across 2000 steps.
+
+\subsection{Ruling out nixnan's FP64 support in general}
+
+Next: does \texttt{nixnan} actually understand FP64 arithmetic at all? A minimal,
+isolated test kernel was written that deliberately overflows via \texttt{1e308 + 1e308}
+(triggering both \texttt{DADD} and \texttt{DFMA}). Run under \texttt{nixnan.so} with
+\texttt{-lineinfo}, it was caught immediately and correctly: \texttt{Infinity: 3 unique
+sites}, with clean source-line attribution to the exact statements. This rules out any
+fundamental gap in \texttt{nixnan}'s FP64 classification path --- the mechanism works.
+
+Relatedly, \texttt{instructions.h} (the embedded JSON table mapping SASS opcodes to
+operand specs that \texttt{nixnan} rewrites around) was decoded directly: both the
+\texttt{(D(ADD|MUL)(?:\textbackslash.(RP|RM|RZ))?)} and \texttt{(DFMA(?:\textbackslash
+.(RP|RM|RZ))?)} regex patterns are present, each with the correct 3-/4-operand
+double-precision register specs, matching operand-for-operand the actual SASS
+\texttt{rd\_step\_fp64} compiles to (\texttt{DADD R6, R6, -R8}; \texttt{DFMA R6, R10,
+c[0x0][0x178], R6}). The instruction table has no gap for this kernel's opcodes either.
+
+\subsection{Ruling out kernel launch order}
+
+\texttt{rd\_nixnan.cu}'s \texttt{main()} calls \texttt{run<T>()} for FP16, BF16, FP32,
+then FP64, in that order --- could some state left behind by an earlier kernel be
+interfering with FP64's instrumentation specifically? The call order was reversed (FP64
+first, completing entirely before FP16/BF16/FP32 are ever launched) and rebuilt with
+identical flags. \texttt{nixnan} still reported zero FP64 exceptions. This rules out
+any dependency on launch order or state carried over from the other three kernels.
+
+\subsection{Ruling out memory corruption}
+
+\texttt{compute-sanitizer --tool memcheck} was run against the real $M{=}2000$ binary
+under nixnan's exact test conditions:
+\begin{lstlisting}
+========= ERROR SUMMARY: 0 errors
+\end{lstlisting}
+No out-of-bounds access, no uninitialized read, no race. This rules out a memory-safety
+bug as the source of any bad value entering FP64's arithmetic through a path
+\texttt{nixnan}'s instruction-level operand checks would not have been watching.
+
+\subsection{The pivotal test: an isolated, byte-identical-SASS extraction}
+
+With sampling, the classifier, the instruction table, launch order, and memory safety
+all ruled out, \texttt{rd\_step\_fp64} and its exact driver loop were extracted into a
+fully standalone translation unit --- no other kernel functions present anywhere in the
+compiled binary --- built with identical flags (\texttt{-arch=sm\_86 -g -lineinfo}).
+\texttt{cuobjdump -sass} confirmed the compiled \texttt{DADD}/\texttt{DFMA} encodings
+are \textbf{byte-identical} to the ones in the original four-kernel binary.
+
+Run to $M{=}2000$, this standalone binary never goes non-finite: it reaches
+\texttt{max=1.9813e+42} at step 2000, still finite, continuing the same smooth
+${\sim}1.05\times$/step growth visible in Figure~\ref{fig:inf-onset}. Re-run twice more
+for determinism: identical result both times. Since the GPU instructions themselves are
+proven byte-identical, this meant the divergence could not be in the arithmetic that
+runs on the device --- it had to be in the code doing the reporting.
+
+\subsection{The actual bug}
+
+\texttt{rd\_nixnan.cu} defines a pair of conversion helpers used for the driver's
+non-finite check:
+\begin{lstlisting}
+template <class T> static double from_T(T);
+...
+template <> double from_T<double>(double v){ return v; }
+\end{lstlisting}
+\texttt{from\_T<double>} returns a genuine, unmodified \texttt{double}. But the check
+that calls it, at line 155, is:
+\begin{lstlisting}
+float mx = -1e30f; bool bad = false;
+for (int i = 0; i < N; ++i) {
+    float v = from_T<T>(h[i]);
+    if (!std::isfinite(v)) bad = true;
+    if (std::isfinite(v) && v > mx) mx = v;
+}
+\end{lstlisting}
+\texttt{float v = from\_T<T>(h[i]);} silently narrows that double into a \texttt{float}.
+\texttt{float}'s maximum finite magnitude is ${\approx}3.4028235\times10^{38}$; once a
+\texttt{double} exceeds it, the narrowing conversion \emph{itself} produces
+\texttt{+Infinity} in \texttt{v}, entirely independent of whether the double was ever
+non-finite. At step 1900, FP64's real values are of order $1.5\times10^{40}$: enormous,
+comfortably past \texttt{float}'s ceiling, but still ${\sim}270$ orders of magnitude
+below \texttt{double}'s actual ceiling ($\sim\!1.8\times10^{308}$) and perfectly finite
+as doubles. \texttt{v > mx} then never triggers again either (a real \texttt{+Infinity}
+compares false against everything under \texttt{isfinite}), which is also why the log
+shows \texttt{max=0.0000e+00} rather than the true value at that checkpoint. This one
+narrowing conversion, not any property of the GPU arithmetic, is the entire cause of
+\emph{``FP64 crosses to non-finite at step 1900.''}
+
+This also explains, in hindsight, why the standalone extraction (\S6.5) never reproduced
+the failure: its check was written independently, using \texttt{double mx} and
+\texttt{std::isfinite(h[i])} directly on the double, with no narrowing conversion in the
+loop at all. The two binaries were never actually testing the same question --- one had
+the bug, the other accidentally did not --- which is exactly why comparing them was the
+step that isolated the cause.
+
+\subsection{Answering the question directly}
+
+\textbf{Did sampling miss it?} No --- every launch was instrumented; sampling was never
+in the loop for this run at all.
+
+\textbf{Did nixnan miss it?} No. \texttt{nixnan} instruments real GPU instructions
+operating on real double-precision registers, and those instructions never produce NaN
+or Infinity for FP64 in this program, at $M{=}2000$ or $M{=}2500$ --- because they never
+actually overflow. There is no FP64 exception here for \texttt{nixnan} to have caught.
+The zero it reported was the correct answer the entire time.
+
+The earlier framing of this as ``an unresolved gap in FP64 classification'' (this
+report's own draft, and \texttt{ExptPlan.md}) was itself mistaken, for the same reason:
+it trusted the program's \texttt{max=...} printout, which is the thing that turned out
+to be wrong. The lesson generalizes beyond this one kernel: a device-side instrumentation
+tool like \texttt{nixnan}, checking real instruction operands, can be a more trustworthy
+witness to what actually happened numerically on the GPU than a host-side
+\texttt{printf}-based check written around it --- precisely because the host-side check
+has its own, entirely separate arithmetic (here, an implicit narrowing cast) that can
+fail on its own terms.
+
 \section{Conclusion: What nixnan Made Visible Here}
 
 Across five short experiments on one simple, well-understood kernel, \texttt{nixnan}
@@ -399,13 +536,21 @@ exception sites, repeats, or exponent range):
   first} (Section~\ref{sec:extended}): domain enlargement, the obvious first guess,
   is ruled out directly by the kernel's own growth term; running longer is confirmed,
   with nixnan's own classifier newly reporting real BF16 and FP32 exceptions at
-  $M{=}2000$ where it reported none at $M{=}1600$ --- while also surfacing an honest
-  limitation (FP64 exceptions going unclassified) that a quieter tool would have hidden.
+  $M{=}2000$ where it reported none at $M{=}1600$.
 \item \textbf{Line-level attribution turns a hand-derived guess into a tool-verified
   fact} (Section~\ref{sec:extended-detail}): with \texttt{-lineinfo}, nixnan pinpoints
   the exact CUDA statement (the Laplacian, not the reaction term) and the exact SASS
   instruction where $\infty-\infty$ produces \texttt{NaN} --- confirming, to the
   instruction, a mechanism the source code's own comments could only predict by hand.
+\item \textbf{nixnan's device-side instrumentation can outrank the target program's own
+  diagnostics} (Section~\ref{sec:fp64-resolved}): when nixnan reported zero FP64
+  exceptions against the program's own claim of an FP64 failure at step 1900, the
+  eventual, fully-verified resolution was that nixnan was right and the program's
+  \texttt{printf} check was wrong --- an implicit \texttt{double}$\to$\texttt{float}
+  narrowing conversion in the host-side check, not a real GPU event. Getting there took
+  ruling out sampling, the classifier itself, the instruction table, kernel launch
+  order, and memory safety (\texttt{compute-sanitizer}, 0 errors) before an isolated,
+  byte-identical-SASS extraction of just the FP64 kernel exposed the actual bug.
 \end{enumerate}
 As a side effect, re-verifying \texttt{SAMPLING} against the current build (Section~4)
 also caught that a previously-documented no-op regression in \texttt{nixnan.so} has
