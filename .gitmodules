@@ -1,0 +1,4 @@
+[submodule "external/nixnan"]
+	path = external/nixnan
+	url = https://github.com/parfloat/nixnan.git
+	branch = auto-nixnan
