@@ -30,6 +30,15 @@
     <p>HISTOGRAM=1 exponent ranges actually reached by each format (Logs/04_histograms_per_precision.log):
     FP16 overflows to <code>inf</code>; BF16/FP32/FP64 all reach exponent 113 and stay finite.</p>
   </div>
+
+  <div class="card">
+    <h2>3. Max|u| vs. step, all four precisions (M=2000 extended run)</h2>
+    <embed src="inf_onset_vs_step.svg" type="image/svg+xml" style="width:100%">
+    <p>From Logs/05_extended_M2000.log: FP16 departs the shared curve at step 300;
+    BF16/FP32/FP64 stay numerically indistinguishable through step 1800 and are all
+    non-finite by step 1900. See latex/report.tex &sect;8 for the line-level diagnosis
+    of exactly where Infinity first appears and how it becomes NaN.</p>
+  </div>
 </div>
 </body>
 </html>

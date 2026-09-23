@@ -15,5 +15,7 @@ else
 fi
 
 echo "== Building rd_nixnan (the 4-precision FP16/BF16/FP32/FP64 FTCS demo) =="
-( cd "$RD_NIXNAN_DIR" && nvcc -arch=sm_86 rd_nixnan.cu -o rd_nixnan )
+# -lineinfo: without it nixnan's LINE_INFO=1 has no debug info to resolve, so
+# its exception reports carry SASS only, no source file:line.
+( cd "$RD_NIXNAN_DIR" && nvcc -arch=sm_86 -lineinfo rd_nixnan.cu -o rd_nixnan )
 echo "== Build complete: $RD_NIXNAN_DIR/rd_nixnan =="

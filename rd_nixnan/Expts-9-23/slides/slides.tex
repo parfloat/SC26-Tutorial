@@ -37,6 +37,25 @@ implemented once each in FP16, BF16, FP32, FP64.
 \end{frame}
 
 % ------------------------------------------------------------------
+\begin{frame}[fragile]{NixNan Feature Reference: BIN\_SPEC\_FILE}
+nixnan's own banner gives this example:
+\begin{lstlisting}
+{ "count": 128, "bf16": [], "f16":  [[0,5],[-4,-1]],
+  "f32":  [], "f64":  [] }
+\end{lstlisting}
+\begin{itemize}
+  \item Each format key: a list of \emph{unbiased signed exponent} ranges to
+    watch. Here only \texttt{f16} watches anything: $[0,5]$ and $[-4,-1]$.
+  \item \texttt{count}: report every \texttt{count}-th occurrence in a
+    watched range --- \texttt{count:128} = ``every 128th hit.''
+  \item \textbf{Zero and infinity are structurally excluded from every
+    range} --- a value that jumps straight from finite to \texttt{inf} in
+    one step is invisible to this mechanism, no matter how ranges are
+    drawn. (Matters later: this is exactly what happens here.)
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------------
 \begin{frame}[fragile]{Concept 1: Sampling --- The Mechanism}
 Every run here uses \texttt{nixnan.so} directly (``straight nixnan''), no
 wrapper:
@@ -78,10 +97,14 @@ under-count, it can miss whole bugs.
 built as a sequence of short runs (\texttt{sampling\_schedule.json}):
 step 4 times at spacing 1 $\to$ double to 2 $\to$ 4 $\to$ 8 $\to$ \textbf{reset}.
 \begin{center}
-\includegraphics[width=0.85\textwidth]{../viz/sampling_decay.pdf}
+\includegraphics[width=0.72\textwidth]{../viz/sampling_decay.pdf}
 \end{center}
-Every snap at a level is byte-identical; \textbf{cycle 2 exactly reproduces
-cycle 1} --- the reset is provably clean.
+\vspace{-0.1cm}
+{\small Every snap at a level is byte-identical; \textbf{cycle 2 exactly
+reproduces cycle 1} --- the reset is provably clean. The TSV = 32
+independent runs (4 levels $\times$ 4 snaps $\times$ 2 cycles), each just
+\texttt{SAMPLING=\$level LD\_PRELOAD=nixnan.so ./rd\_nixnan} --- no other
+setting changed from the Section~4 baseline.}
 \end{frame}
 
 % ------------------------------------------------------------------
@@ -107,7 +130,84 @@ ceilings, only one ceiling reached.
 \end{frame}
 
 % ------------------------------------------------------------------
-\begin{frame}{What nixnan Made Visible Here}
+\begin{frame}[fragile]{Concept 3: Making BF16 and FP32 Fail Too}
+Every result so far: FP16 fails, the other three don't. Can we make BF16/FP32
+fail as well?
+
+\vspace{0.3cm}
+\textbf{Tried: domain enlargement (bigger $N$).} Does \textbf{not} work ---
+the reaction term \texttt{lam * u[i]} grows every point by the same factor
+regardless of $N$/$dx$. Already confirmed earlier this session:
+\texttt{rd\_nixnan\_large.cu} (10$\times$ grid, $N{=}1001$) still only failed
+in FP16 at $M{=}1600$.
+
+\vspace{0.3cm}
+\textbf{Works: more time steps.} $M$ is a compile-time macro:
+\begin{lstlisting}[language=bash]
+nvcc -arch=sm_86 -DM=2000 rd_nixnan.cu -o rd_nixnan_extended
+LD_PRELOAD=nixnan.so ./rd_nixnan_extended
+\end{lstlisting}
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}[fragile]{Concept 3: Results at M=2000}
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Format & First non-finite & NaN u/r & Inf u/r \\
+\midrule
+FP16 & step 300  & 22 / 78134 & 22 / 639 \\
+BF16 & step 1900 & 15 / 8975  & 6 / 76   \\
+FP32 & step 1900 & 19 / 10966 & 8 / 90   \\
+FP64 & step 1900 & \multicolumn{2}{c}{see caveat} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{BF16 and FP32 now both show real nixnan-classified exceptions.}
+
+\vspace{0.3cm}
+\textbf{Honest caveat:} FP64 also goes non-finite (program's own check,
+step 1900), but nixnan's classifier reports \emph{zero} for FP64 --- even
+with more margin ($M{=}2500$). A real, unresolved gap, reported as observed.
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}{Concept 3: Where Infinity Actually Comes From}
+\begin{center}
+\includegraphics[width=0.85\textwidth]{../viz/inf_onset_vs_step.pdf}
+\end{center}
+FP16 (blue) departs the shared curve at step 300. BF16/FP32/FP64 stay
+numerically \textbf{indistinguishable} through step 1800
+($1.1675\times10^{38}$, all three, to 4 sig.\ figs.) and are all
+non-finite by step 1900.
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}[fragile]{Concept 3: The Exact CUDA Statement}
+Rebuilt with \texttt{-g -lineinfo} so nixnan's \texttt{LINE\_INFO=1} could
+resolve real source locations (not just SASS):
+\begin{lstlisting}
+error [infinity] detected ... instruction FADD R0, R0, R7
+  ; in function rd_step_fp32 at rd_nixnan.cu:96 of type f32
+\end{lstlisting}
+Line 96: \texttt{float lap = (u[i+1] + u[i-1]) - 2.f * u[i];} ---
+\textbf{Infinity first appears in the diffusion term, not the reaction
+term.} (FP16's \texttt{\_\_h*} intrinsics never resolve a line in this
+build --- a real nixnan limitation; same conclusion by structural analogy.)
+
+\vspace{0.2cm}
+\textbf{Inf $\to$ NaN, confirmed to the instruction:}
+\begin{lstlisting}[basicstyle=\ttfamily\tiny]
+FADD R0,R0,R7   ; u[i+1]+u[i-1]        -> operand already Infinity
+FADD R7,R6,R6   ; 2.f*u[i]             -> operand already Infinity
+FADD R7,R0,-R7  ; (sum) - 2.f*u[i]     -> RESULT is NaN  (inf - inf)
+\end{lstlisting}
+Matches the source file's own long-standing comment
+(\texttt{inf - 2*inf + inf -> NaN}) --- now tool-verified, not hand-derived.
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}{What nixnan Made Visible Here (1/2)}
 \begin{enumerate}
   \item \textbf{Sampling trades overhead for completeness}, not just
     verbosity --- coarse sampling can drop entire exception sites, not
@@ -120,9 +220,22 @@ ceilings, only one ceiling reached.
     three formats are proven to share one common growth trajectory up to
     a shared checkpoint exponent.
 \end{enumerate}
-\vspace{0.3cm}
-\textit{Bonus: re-verifying SAMPLING here also caught that a previously
-documented nixnan regression has since been fixed.}
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}{What nixnan Made Visible Here (2/2)}
+\begin{enumerate}
+\setcounter{enumi}{3}
+  \item \textbf{nixnan can adjudicate a hypothesis about \emph{why} a format
+    fails first}: domain enlargement is ruled out by the kernel's own growth
+    term; running longer is confirmed, with nixnan itself newly reporting
+    real BF16/FP32 exceptions --- and surfacing an FP64 classification gap.
+  \item \textbf{Line-level attribution turns a hand-derived guess into a
+    tool-verified fact}: with \texttt{-lineinfo}, nixnan pinpoints the exact
+    statement (the Laplacian) and instruction where $\infty-\infty$ produces
+    \texttt{NaN} --- confirming a mechanism the source comments could only
+    predict by hand.
+\end{enumerate}
 \end{frame}
 
 \end{document}

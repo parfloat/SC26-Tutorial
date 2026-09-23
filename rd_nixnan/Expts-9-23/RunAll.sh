@@ -13,6 +13,10 @@
 #       (1,1,1,1,2,2,2,2,4,4,4,4,8,8,8,8, then reset), per
 #       sampling_schedule.json.
 #   04  Histograms per precision bucket (HISTOGRAM=1).
+#   05  Extended run (M=2000, up from the default 1600): makes BF16 and
+#       FP32 fail too, not just FP16. Domain enlargement does NOT do this
+#       (the reaction term's growth is independent of N/dx) -- see
+#       ExptPlan.md for the full reasoning and what was tried.
 #
 # All raw output goes to Logs/. Re-running is safe/idempotent -- each stage
 # overwrites its own output.
@@ -29,6 +33,7 @@ bash shell-scripts/01_sampling_every_call.sh
 bash shell-scripts/02_sampling_every_8.sh
 bash shell-scripts/03_sampling_exp_decay.sh
 bash shell-scripts/04_histograms_per_precision.sh
+bash shell-scripts/05_extended_run_all_fail.sh
 
 echo
 echo "== All stages complete. Logs in $SCRIPT_DIR/Logs/ =="
