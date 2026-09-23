@@ -1,0 +1,27 @@
+// sampling_schedule.json -- exponentially-decaying SAMPLING schedule for
+// 03_sampling_exp_decay.sh.
+//
+// nixnan.so's SAMPLING env var is read once at process start (one fixed
+// value for that whole run), so there is no native "schedule" feature in
+// nixnan itself -- a decaying/backoff sampling rate has to be built at the
+// orchestration level, as a sequence of separate short runs ("snaps"), each
+// one holding SAMPLING constant. This file is that sequence, consumed by
+// 03_sampling_exp_decay.sh (it strips these leading "//" comment lines
+// before parsing the JSON below, since nixnan's own JSON reader -- used
+// only for BIN_SPEC_FILE, not for this file -- has no comment support).
+//
+// Schedule, as specified in ExptPlan.md: step 4 times at the current
+// spacing, then double the spacing; do that 4 times (1 -> 2 -> 4 -> 8),
+// then reset back to the start (spacing 1) for the next cycle.
+//
+//   spacing:  1  1  1  1  2  2  2  2  4  4  4  4  8  8  8  8   (cycle 1)
+//   snap #:   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16
+//
+// "cycles" below controls how many times this 16-snap pattern repeats, so
+// the reset-to-1 behavior is directly visible in the logs (cycle_02 starts
+// back at SAMPLING=1, identical in shape to cycle_01).
+{
+  "snaps_per_level": 4,
+  "levels": [1, 2, 4, 8],
+  "cycles": 2
+}
