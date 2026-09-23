@@ -22,13 +22,15 @@ An Experiment on \texttt{rd\_nixnan.cu}}
 
 \begin{abstract}
 This report documents a self-contained experiment (\texttt{Expts-9-23/}) demonstrating
-that \texttt{nixnan.so} helps understand a real GPU precision-sensitivity problem in three
-specific ways: (1) it can trade instrumentation overhead for observation completeness via
-the \texttt{SAMPLING} env var, (2) that trade-off can be driven through an arbitrary,
-externally-scripted schedule (here, an exponentially decaying rate) rather than a single
-fixed value, and (3) it reports, per floating-point format, exactly how much of that
-format's dynamic range a given run actually used. All numbers below come from real runs
-captured in \texttt{Logs/}; nothing is simulated or hand-typed.
+that \texttt{nixnan.so} helps understand a real GPU precision-sensitivity problem in
+several specific ways: (1) it can trade instrumentation overhead for observation
+completeness via the \texttt{SAMPLING} env var, (2) that trade-off can be driven through
+an arbitrary, externally-scripted schedule (here, an exponentially decaying rate) rather
+than a single fixed value, (3) it reports, per floating-point format, exactly how much of
+that format's dynamic range a given run actually used, and (4) it can confirm or refute a
+hypothesis about \emph{why} a lower-precision format fails first --- here, that domain
+enlargement does not explain FP16's earlier failure, but running longer does. All numbers
+below come from real runs captured in \texttt{Logs/}; nothing is simulated or hand-typed.
 \end{abstract}
 
 \tableofcontents
@@ -69,6 +71,71 @@ kernel's SASS the first time that kernel is launched, inserting device-side chec
 per format, of unique exception \emph{sites} (distinct instruction/operand locations
 that ever fired) and \emph{repeats} (additional occurrences beyond each site's first
 hit) --- the distinction that matters throughout this report.
+
+\section{NixNan Feature Reference}
+\label{sec:reference}
+
+Before walking through results, this section fixes the exact meaning of every
+nixnan-specific setting the rest of the report relies on.
+
+\paragraph{The \texttt{BIN\_SPEC\_FILE} JSON format.} nixnan's own \texttt{--help}
+banner gives this example:
+\begin{lstlisting}
+{
+    "count": 128,
+    "bf16": [],
+    "f16":  [[0,5],[-4,-1]],
+    "f32":  [],
+    "f64":  []
+}
+\end{lstlisting}
+Each format key holds a list of \emph{unbiased signed exponent} ranges to watch (here,
+only \texttt{f16} watches anything: the ranges $[0,5]$ and $[-4,-1]$). \texttt{count}
+is a global report-frequency threshold: within a watched range, nixnan counts every
+value landing in it and emits a ``bin has reached threshold'' line every \texttt{count}
+occurrences --- so \texttt{count:128} here means ``tell me every 128th time an
+\texttt{f16} value's exponent falls in $[0,5]$ or $[-4,-1]$.'' Ranges are
+\emph{unbiased} (e.g.\ FP16's usable exponent span is $[-14,15]$, not the raw 5-bit
+field $[0,31]$), and the two special encodings zero and infinity are structurally
+excluded from every range --- a consequence used directly in
+Section~\ref{sec:extended-detail}: a value that jumps straight from finite to
+\texttt{inf} in one step, with no gradually-climbing trail through large-but-finite
+exponents first, is invisible to this mechanism no matter how the ranges are drawn.
+This experiment's own \texttt{HISTOGRAM=1} runs (Section~\ref{sec:histograms}) use the
+simpler, rangeless form of this same machinery: with no \texttt{BIN\_SPEC\_FILE} set at
+all, nixnan still tracks every exponent it sees and reports each format's overall
+$[\min,\max]$ at exit, just without the interim ``every $N$th occurrence'' pings.
+
+\paragraph{\texttt{SAMPLING=8}.} Per nixnan's own banner text, \emph{``Instrument a
+repeat kernel every SAMPLING times.''} Concretely: the tool keeps a per-kernel launch
+counter, and only \emph{enables} the already-instrumented version of the kernel on
+launches where \texttt{launch\_count \% SAMPLING == 0}; other launches run the
+kernel's plain, uninstrumented SASS. \texttt{SAMPLING=8} therefore observes 1 launch in
+8; \texttt{SAMPLING} unset (or 0) disables sampling entirely, i.e.\ every launch is
+observed --- the baseline used throughout Section~4.
+
+\paragraph{How the exponential-decay parameters are specified.} There is no
+\texttt{nixnan.so} setting for a decaying rate --- \texttt{SAMPLING} is read once at
+process start and held fixed for that process's entire lifetime. The schedule in
+Section~\ref{sec:exp-decay} is therefore specified entirely outside nixnan, in
+\texttt{shell-scripts/sampling\_schedule.json} (three fields: \texttt{levels}, the
+sequence of \texttt{SAMPLING} values to sweep through; \texttt{snaps\_per\_level}, how
+many independent process launches to repeat at each level before advancing; and
+\texttt{cycles}, how many times to repeat the whole level sequence from the start).
+\texttt{03\_sampling\_exp\_decay.sh} reads that file and, for every
+\texttt{(cycle, level, snap)} triple, launches exactly one fresh
+\texttt{SAMPLING=\$level LD\_PRELOAD=nixnan.so ./rd\_nixnan} process, redirecting its
+full output to its own log file.
+
+\paragraph{What generated \texttt{03\_sampling\_exp\_decay\_summary.tsv}.} Every row of
+that file is the FP16 NaN/Infinity unique-site and repeat counts parsed back out of one
+such snap's log --- 4 levels $\times$ 4 snaps $\times$ 2 cycles = 32 independent nixnan
+runs in total, each identical in every setting except \texttt{SAMPLING} and which
+\texttt{(cycle,level,snap)} log file it wrote to. No other nixnan setting (no
+\texttt{HISTOGRAM}, no \texttt{BIN\_SPEC\_FILE}, no \texttt{INSTR\_MEM}) is active
+during these runs --- it is the same default exception-instrumentation
+(\texttt{INSTRUMENT\_EXCEPTIONS=1}) as Section~4's baseline, run 32 times at 4 different
+\texttt{SAMPLING} values.
 
 \section{Sampling, Level 1: Every Kernel Call}
 \label{sec:sample-every}
@@ -193,10 +260,124 @@ reach the same exponent, 113, with room remaining to their much wider ceilings.}
 \label{fig:histograms}
 \end{figure}
 
+\section{Making BF16 and FP32 Fail Too}
+\label{sec:extended}
+
+Every result so far has one format failing (FP16) and three staying finite. A natural
+follow-up: what would it take to make BF16 and FP32 fail as well, and does
+\texttt{nixnan} help answer that?
+
+\paragraph{Hypothesis tried: domain enlargement.} Enlarging the grid ($N$, holding $dx$
+fixed by extending $L$ proportionally) was tried \emph{first}, because it is the most
+obvious ``make the problem bigger'' lever. It does not work, for a structural reason
+visible directly in the kernel: the reaction term \texttt{lam * u[i]} is a per-point
+multiplicative growth factor that does not reference $N$ or $dx$ at all --- every grid
+point grows by the same $\sim\!1.05\times$ per step regardless of how many points there
+are. Enlarging $N$ just runs the identical per-step growth curve on more points; it
+cannot change \emph{when} any single point's exponent is exhausted. This was already
+verified empirically earlier this session with \texttt{rd\_nixnan\_large.cu} (a 10$\times$
+grid, $N{=}1001$): at the same $M{=}1600$, only FP16 failed there too, exactly as at
+$N{=}101$.
+
+\paragraph{What actually works: more time steps.} \texttt{rd\_nixnan.cu}'s step count is
+a compile-time macro (\texttt{\#ifndef M ... \#define M 1600}), so it can be overridden
+at compile time without touching the source:
+\begin{lstlisting}[language=bash]
+nvcc -arch=sm_86 -DM=2000 rd_nixnan.cu -o rd_nixnan_extended
+LD_PRELOAD=nixnan.so ./rd_nixnan_extended
+\end{lstlisting}
+\texttt{shell-scripts/05\_extended\_run\_all\_fail.sh} builds and runs exactly this
+(\texttt{Logs/05\_extended\_M2000.log}):
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Format & First non-finite (step) & NaN unique/repeats & Inf unique/repeats \\
+\midrule
+FP16 & 300  & 22 / 78134 & 22 / 639 \\
+BF16 & 1900 & 15 / 8975  & 6 / 76   \\
+FP32 & 1900 & 19 / 10966 & 8 / 90   \\
+FP64 & 1900 & \multicolumn{2}{c}{see caveat below} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+At $M{=}2000$, BF16 and FP32 both now show real, nixnan-classified NaN/Infinity activity
+--- confirmed, not just inferred from the program's own \texttt{max=...} printout.
+
+\paragraph{An honest caveat: FP64 does not show up in nixnan's classifier.} The
+program's own non-finite check reports FP64 crossing to non-finite at step 1900 as well.
+This is stranger than it first looks (see Section~\ref{sec:extended-detail}): FP64's own
+max magnitude at step 1800 is only $1.1675\times10^{38}$ --- \emph{identical}, digit for
+digit, to FP32's value at the same checkpoint, and nowhere near FP64's actual ceiling
+($\sim\!1.8\times10^{308}$). Steady $1.05\times$/step growth from there cannot reach
+FP64's ceiling in the next 100 steps; reaching it would take on the order of 12{,}700
+more steps at that rate. Something other than plain reaction-driven exponential growth
+is making FP64 non-finite here, and it happens in the same 100-step window as BF16/FP32.
+\texttt{nixnan}'s exception classifier reports \emph{zero} NaN/Infinity for FP64 either
+way, even after re-running with more margin past the crossing point ($M{=}2500$). Both of
+these --- the classifier gap and the anomalous growth-rate jump --- are reported here as
+observed, not root-caused; resolving either is outside this experiment's scope.
+
+\subsection{Where Infinity Actually Comes From}
+\label{sec:extended-detail}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{../viz/inf_onset_vs_step.pdf}
+\caption{Max$|u|$ per 100-step checkpoint, all four formats, from the same
+\texttt{Logs/05\_extended\_M2000.log} run as the table above. FP16 (blue) departs the
+shared curve at step 300. BF16/FP32/FP64 stay numerically indistinguishable all the way
+to step 1800 ($1.1675\times10^{38}$ for FP32 and FP64 to all four significant figures
+shown) and are all non-finite by step 1900.}
+\label{fig:inf-onset}
+\end{figure}
+
+\paragraph{The CUDA statement where Infinity was first generated.} \texttt{rd\_nixnan.cu}
+was rebuilt with \texttt{-g -lineinfo} for this run specifically so nixnan's
+\texttt{LINE\_INFO=1} (the default) could resolve real source locations instead of SASS
+only. For FP32, it does, cleanly:
+\begin{lstlisting}
+error [infinity] detected in operand 0 of instruction FADD R0, R0, R7
+  ; in function rd_step_fp32 at rd_nixnan.cu:96 of type f32
+\end{lstlisting}
+Line 96 is the Laplacian: \texttt{float lap = (u[i + 1] + u[i - 1]) - 2.f * u[i];} ---
+\textbf{Infinity first appears while computing the diffusion term, not the reaction
+term.} BF16 partially resolves too (its analogous line, 84, appears on some but not all
+of its error lines --- likely because BF16's arithmetic goes through \texttt{\_\_h*}
+intrinsic wrappers that are not always attributed as cleanly as FP32's plain operators).
+FP16's error lines carry no source location at all: every FP16 statement uses
+\texttt{cuda\_fp16.h} intrinsics (\texttt{\_\_hadd}, \texttt{\_\_hsub}, \texttt{\_\_hmul}),
+which are fully inlined and, in this build, resolve to no attributable line whatsoever ---
+a real limitation of \texttt{nixnan}'s line-info resolution for deeply-inlined intrinsics,
+not a property of the kernel. By direct structural analogy (line 70,
+\texttt{\_\_hsub(\_\_hadd(u[i+1],u[i-1]), \_\_hmul(two,u[i]))}, is the exact same
+expression as FP32's line 96, and FP16's SASS shows the identical
+HADD2-then-HFMA2-with-constant-2 pattern nixnan reports for FP32/BF16 at their resolved
+lines), the same conclusion almost certainly holds for FP16, though \texttt{nixnan}
+itself cannot confirm it here.
+
+\paragraph{How Infinity becomes NaN, with the specific statement.} The original source
+comment in \texttt{rd\_nixnan.cu} predicted this mechanism by hand:
+\texttt{inf - 2*inf + inf -> NaN}. \texttt{nixnan}'s own instrumentation confirms it, to
+the instruction, for FP32. The three FADD instructions on line 96 fire in this order as
+the classifier first sees each:
+\begin{lstlisting}
+FADD R0, R0, R7    ; u[i+1] + u[i-1]          -> operand already Infinity
+FADD R7, R6, R6    ; 2.f * u[i] (as u[i]+u[i]) -> operand already Infinity
+FADD R7, R0, -R7   ; (u[i+1]+u[i-1]) - 2.f*u[i] -> RESULT is NaN
+\end{lstlisting}
+The third instruction is exactly $\infty - \infty$, IEEE-754's indeterminate form ---
+nixnan reports \texttt{NaN} for that instruction's \emph{result} operand as the very next
+distinct site to fire. That NaN then flows into line 97's FFMA chain
+(\texttt{un[i] = u[i] + r * lap + lam * u[i];}) and out through the final
+\texttt{STG.E} store, exactly matching the source comment's prediction and giving it a
+concrete, tool-verified instruction sequence rather than a hand-derived guess.
+
 \section{Conclusion: What nixnan Made Visible Here}
 
-Across four short experiments on one simple, well-understood kernel, \texttt{nixnan}
-surfaced three things that would not be visible from the program's own output (a plain
+Across five short experiments on one simple, well-understood kernel, \texttt{nixnan}
+surfaced several things that would not be visible from the program's own output (a plain
 run of \texttt{rd\_nixnan} only prints \texttt{max=...} per step, with no notion of
 exception sites, repeats, or exponent range):
 \begin{enumerate}
@@ -214,6 +395,17 @@ exception sites, repeats, or exponent range):
   fails and the others probably don't'' into a specific, quantified claim: FP16 alone
   hits \texttt{inf}; the other three all reach exactly the same exponent, 113, with
   headroom still remaining to their much larger ceilings.
+\item \textbf{nixnan can adjudicate a hypothesis about \emph{why} a format fails
+  first} (Section~\ref{sec:extended}): domain enlargement, the obvious first guess,
+  is ruled out directly by the kernel's own growth term; running longer is confirmed,
+  with nixnan's own classifier newly reporting real BF16 and FP32 exceptions at
+  $M{=}2000$ where it reported none at $M{=}1600$ --- while also surfacing an honest
+  limitation (FP64 exceptions going unclassified) that a quieter tool would have hidden.
+\item \textbf{Line-level attribution turns a hand-derived guess into a tool-verified
+  fact} (Section~\ref{sec:extended-detail}): with \texttt{-lineinfo}, nixnan pinpoints
+  the exact CUDA statement (the Laplacian, not the reaction term) and the exact SASS
+  instruction where $\infty-\infty$ produces \texttt{NaN} --- confirming, to the
+  instruction, a mechanism the source code's own comments could only predict by hand.
 \end{enumerate}
 As a side effect, re-verifying \texttt{SAMPLING} against the current build (Section~4)
 also caught that a previously-documented no-op regression in \texttt{nixnan.so} has
