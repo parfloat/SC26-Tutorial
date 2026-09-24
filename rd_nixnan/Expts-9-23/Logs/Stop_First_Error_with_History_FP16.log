@@ -14,7 +14,7 @@ ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ct
 INSTRUMENT_EXCEPTIONS = 1 - Enable instrumentation of exceptions
            INSTR_MEM = 0 - Instrument memory instructions for NaN/Inf detection
            HISTOGRAM = 1 - Enable FP exponent histogramming
-       BIN_SPEC_FILE = /home/ganesh/repos/SC26-Tutorial/rd_nixnan/Expts-9-23/shell-scripts/bin_spec_fp16_extremes.json - Specification for which exponent ranges to report. If the file does not exist, a template specification will be created.
+       BIN_SPEC_FILE = /home/ganesh/repos/SC26-Tutorial/rd_nixnan/Expts-9-23/shell-scripts/Stop_First_Error_with_History_FP16.json - Specification for which exponent ranges to report. If the file does not exist, a template specification will be created.
 For example:
 {
     "count": 128,
@@ -11408,8 +11408,26 @@ lambda*dt = 0.0500 (reaction growth per step ~ 1.0500 x)
 #nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
 #nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
 #nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
-#nixnan: #nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
-error [infinity] detected in operand 0 of instruction HADD2 R0, R0.H0_H0, R7.H0_H0 ; in function rd_step_fp16 of type f16
-#nixnan: Terminating early: Maximum number of errors reached.
 #nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
-#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half)
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=1
+#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15#nixnan: error [infinity] detected in operand 0 of instruction HADD2 R0, R0.H0_H0, R7.H0_H0 ; in function rd_step_fp16 of type f16] count=1
+#nixnan: 
+#nixnan: Terminating early: Maximum number of errors reached.
+f16 bin has reached threshold: function=rd_step_fp16(__half const*, __half*, __half, __half) range=[14,15] count=

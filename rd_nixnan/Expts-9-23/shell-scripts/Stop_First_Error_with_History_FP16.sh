@@ -33,7 +33,7 @@
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 
-BIN_SPEC="$SCRIPT_DIR/bin_spec_fp16_extremes.json"
+BIN_SPEC="$SCRIPT_DIR/Stop_First_Error_with_History_FP16.json"
 OUT="$LOGS_DIR/Stop_First_Error_with_History_FP16.log"
 
 echo "== Running rd_nixnan under nixnan (FP16 histogram trace, MAX_ERRORS=1) -> $OUT =="
