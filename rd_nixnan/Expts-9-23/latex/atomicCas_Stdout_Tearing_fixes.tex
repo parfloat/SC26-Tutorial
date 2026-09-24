@@ -1,0 +1,322 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{parskip}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{graphicx}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\lstset{basicstyle=\ttfamily\small, backgroundcolor=\color{codebg}, breaklines=true,
+  columns=fullflexible, frame=single, framesep=3pt, xleftmargin=3pt, xrightmargin=3pt}
+
+\title{Two Concurrency Bugs on nixnan's \texttt{print\_histo\_instrn} Branch:\\
+Diagnosis, Fixes, and Verification}
+\author{ganesh@cs.utah.edu \\ \small (written with Claude Code)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+While porting \texttt{BIN\_SPEC\_FILE}'s adaptive threshold-doubling feature
+(\texttt{doublings}) from nixnan's \texttt{fp-reset} branch onto \texttt{print\_histo\_instrn},
+two independent concurrency bugs were found and fixed in nixnan's own source, not in any
+user program. The first is a genuine correctness bug in the doubling mechanism itself,
+present in \texttt{fp-reset}'s original code: concurrent GPU threads can race on
+non-atomic updates to shared per-bin state, corrupting the reported threshold sequence.
+The second is a pre-existing, format-independent bug in how nixnan prints \emph{any}
+report at all: two independent background threads (exception reports and histogram
+threshold reports) write to the same output stream with no synchronization, producing
+torn, interleaved lines whenever both are active at once. Both are fixed here, with
+before/after evidence from real runs against \texttt{rd\_nixnan.cu}.
+\end{abstract}
+
+\tableofcontents
+
+\section{Context}
+
+\texttt{print\_histo\_instrn} (off \texttt{auto-nixnan}) added \texttt{record\_inst}:
+histogram threshold reports that also name the instruction responsible, not just the
+format/kernel/range. A follow-up request asked for the same exponentially decaying
+report rate nixnan's own documentation had long described --- \texttt{BIN\_SPEC\_FILE}'s
+\texttt{doublings} key --- to be used directly, rather than orchestrated by hand the way
+\texttt{SAMPLING} has to be (no native schedule for that env var; see the main
+\texttt{report.tex}, Section~4). Checking the actual source on \texttt{print\_histo\_instrn}
+(and, for that matter, \texttt{main}) found that \texttt{doublings} had never been
+implemented there at all --- only documented. The real implementation lived on a
+separate branch, \texttt{fp-reset}. Porting it in, and combining it with
+\texttt{record\_inst} (which \texttt{fp-reset} never had), surfaced both bugs documented
+here.
+
+\section{Bug 1: The Adaptive-Doubling Race}
+\label{sec:doubling-race}
+
+\subsection{The mechanism}
+
+A \texttt{BinCounter} watching one exponent range accumulates a running occurrence
+count (\texttt{count}, via \texttt{atomicAdd}) and compares it against a
+\texttt{threshold}. With \texttt{doublings} enabled, that comparison is against a value
+that itself changes over the life of the process:
+\begin{itemize}
+\item Start at \texttt{threshold = count} (the spec's starting value).
+\item Each time an occurrence crosses a multiple of \texttt{threshold}, report, then
+  double \texttt{threshold} and increment \texttt{times\_doubled}.
+\item Once \texttt{times\_doubled} reaches \texttt{doubling\_limit}, the \emph{next}
+  crossing resets every bin in that kernel's \texttt{BinArray} back to the starting
+  \texttt{threshold} and \texttt{times\_doubled=0}.
+\end{itemize}
+With \texttt{count:1, doublings:8}, this produces the sequence
+$1,2,4,8,16,32,64,128,256$, then reset --- eight doubling steps from 1 to 256.
+
+\subsection{The original code, and why it races}
+
+\texttt{fp-reset}'s implementation of the crossing check:
+\begin{lstlisting}
+unsigned long long int prev = bin.increment();
+if (prev % threshold == 0 && prev != 0) {
+    // ... send report ...
+    if (bin.doubling_limit != 0) {
+        if (bin.times_doubled == bin.doubling_limit) {
+            reset_bin_thresholds(bins);
+        } else {
+            bin.threshold *= 2;
+            bin.times_doubled++;
+        }
+    }
+}
+\end{lstlisting}
+\texttt{bin.count} (the running occurrence counter) is shared across \emph{every GPU
+thread} that ever hits this bin --- it is a per-range, whole-kernel counter, not a
+per-thread one. So is \texttt{bin.threshold} and \texttt{bin.times\_doubled}. The crossing
+check above is a classic check-then-act race: many threads can read the same
+\texttt{threshold} concurrently, all satisfy \texttt{prev \% threshold == 0} for their own
+distinct \texttt{prev} values, and then all attempt the state transition at once.
+\texttt{bin.threshold *= 2} and \texttt{bin.times\_doubled++} are both plain,
+non-atomic read-modify-write operations --- under concurrent execution, increments can
+be silently lost, and the reset condition can be evaluated against a stale or
+inconsistent \texttt{times\_doubled}.
+
+\subsection{Evidence: a deliberately worst-case stress test}
+
+To make contention as severe as possible, FP16's \emph{entire} valid exponent range was
+watched (\texttt{"f16": [[0,15]]}, rather than a narrow couple of exponents), against
+\texttt{rd\_nixnan}'s default kernel, before any fix:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 1 1 ...
+\end{lstlisting}
+The threshold value visibly falls \emph{back} from 2 to 1 without ever reaching 4 ---
+impossible under the intended semantics (threshold only ever doubles or resets all the
+way back to the start; it cannot revisit 2 after having been at 2 unless a reset already
+happened, which would also have reset the \emph{other} format/range bins, easily checked
+and not the case here). This is exactly the lost-update/stale-read signature: multiple
+threads independently satisfying the crossing condition at the same nominal
+\texttt{threshold}, racing on the non-atomic update.
+
+\subsection{The fix: atomicCAS-gated transitions}
+\label{sec:cas-fix}
+
+Both state transitions are now gated with \texttt{atomicCAS}, so that of however many
+threads concurrently observe the same stale \texttt{threshold}, exactly one of them
+performs the actual transition:
+\begin{lstlisting}
+unsigned long long int threshold = bin.threshold; // re-read fresh per occurrence
+if (prev % threshold == 0 && prev != 0) {
+    // ... send report (threshold captured above) ...
+    if (bin.doubling_limit != 0) {
+        if (bin.times_doubled < bin.doubling_limit) {
+            if (atomicCAS(&bin.threshold, threshold, threshold * 2) == threshold) {
+                atomicAdd(&bin.times_doubled, 1u);
+            }
+        } else {
+            unsigned int limit = bin.doubling_limit;
+            if (atomicCAS(&bin.times_doubled, limit, limit + 1) == limit) {
+                reset_bin_thresholds(bins);
+            }
+        }
+    }
+}
+\end{lstlisting}
+The doubling transition is gated on \texttt{threshold} itself: a CAS from the exact value
+a thread just observed to double that value succeeds for at most one thread per actual
+transition; every other thread's CAS fails harmlessly (the comparand no longer matches)
+and that thread does nothing further --- it already reported above, correctly, for its
+own genuine occurrence. The reset transition is gated the same way on
+\texttt{times\_doubled}, using \texttt{doubling\_limit} itself as the expected value and
+\texttt{doubling\_limit+1} as a one-shot ``already reset'' marker, so
+\texttt{reset\_bin\_thresholds} --- which touches every bin, every format, in that
+kernel --- runs exactly once per cycle rather than once per thread that happens to
+observe the terminal threshold.
+
+Multiple reports \emph{at the same threshold value} are still expected and correct under
+this fix (each represents a genuinely distinct occurrence crossing that same multiple,
+e.g.\ several grid points reaching the ceiling within the same or adjacent kernel
+launches); what the fix eliminates is corruption of the \emph{transition} itself.
+
+\subsection{Verification}
+
+\paragraph{Same worst-case range, after the fix.} Re-running the identical
+\texttt{"f16": [[0,15]]} stress spec no longer produces backward jumps; every
+observed value belongs to the set $\{1,2,4,8,16,32,64,128,256\}$ and cycles reset
+cleanly, though with heavier repetition at low levels than a narrow range shows (more
+threads genuinely contend for the wide range).
+
+\paragraph{A realistic (narrow) range.} FP16's smallest-two/largest-two normal exponents,
+\texttt{count:1, doublings:8}:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+1 1 1 1 1 1 1 2 2 4 8 8 8 8 8 16 16 16 32 32 64 64 128 256
+\end{lstlisting}
+Cleanly monotonic within the cycle --- repeats at one level (e.g.\ five reports at
+threshold 1, five at threshold 8) are real, correct reports of distinct grid points
+crossing the same threshold in close succession, not corruption.
+
+\paragraph{A second, independent run: FP32 overflowing, FP64 not.} With
+\texttt{count:1, doublings:10} watching only FP32's highest two exponents
+(\texttt{[126,127]}) at $M{=}2000$ (where FP32 fails and FP64 correctly stays finite ---
+see the main report, Section~9):
+\begin{center}
+\begin{tabular}{rrrrrrrrrrr}
+\toprule
+1 & 2 & 4 & 8 & 16 & 32 & 64 & 128 & 256 & 512 & 1024 \\
+\midrule
+349 & 76 & 29 & 24 & 18 & 16 & 11 & 12 & 11 & 11 & 10 \\
+\bottomrule
+\end{tabular}
+\end{center}
+All eleven levels present, occurrence counts falling off with level as expected, cycling
+repeatedly for the rest of the run --- see
+\texttt{Logs/Exp-Output-Rate-FP32-Top2Exp-M2000-start-1-double-10-times.log} for the full
+trace.
+
+\section{Bug 2: Torn Output Between the Exception and Histogram Report Threads}
+\label{sec:stdout-tearing}
+
+\subsection{The mechanism}
+
+nixnan has two independent background threads that each print reports as they arrive
+over a device-to-host channel:
+\begin{itemize}
+\item \texttt{nixnan.cu}'s exception receiver (\texttt{recv\_thread\_fun}), printing
+  \texttt{"error [...] detected ..."} lines.
+\item \texttt{fp-histogram.cu}'s threshold-report receiver, its own separate
+  \texttt{std::thread} spawned in \texttt{tool\_init()}, printing
+  \texttt{"... bin has reached threshold: ..."} lines.
+\end{itemize}
+Both call \texttt{nnout()}, which returns a reference to the same process-global
+\texttt{std::ostream} (\texttt{g\_nnout\_stream}, default \texttt{std::cerr}; \texttt{nntools.cc}).
+Each report is assembled as a \emph{chain} of several \texttt{operator<<} calls:
+\begin{lstlisting}
+nnout() << "error [" << errors << "] detected in operand " << ei->operand()
+        << " of instruction " << instr << " in function " << func
+        << source_location << " of type " << type << std::endl;
+\end{lstlisting}
+Nothing serializes this chain against another thread doing the same thing at the same
+time. The OS and C++ runtime are free to interleave individual \texttt{<<} calls from
+two different threads' messages arbitrarily.
+
+\subsection{Evidence: a real captured example}
+
+From an actual run combining both mechanisms at once (the script
+\texttt{Stop\_First\_Error\_\allowbreak with\_History\_\allowbreak
+FP16\_\allowbreak SAMPLING8\_\allowbreak MAXERRORS4.sh}, chosen specifically
+because it drives both report paths hard simultaneously):
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+#nixnan: error [infinity#nixnan: f16 bin has reached threshold: function=rd_step_fp16(__half c\
+onst*, __half*, __half, __half) range=[14,15] count=64
+] detected in operand 0 of instruction HFMA2 R0, R9.H0_H0, c[0x0] [0x170].H1_H1, R0.H0_H0 ; in\
+ function rd_step_fp16 of type f16
+\end{lstlisting}
+Reading this as two separate, individually-correct messages makes it clear what
+happened: the exception thread had written \texttt{"\#nixnan: error [" + "infinity"} and
+was about to write \texttt{"] detected in operand "} when the histogram thread's entire
+(shorter) message interleaved in the middle, completing before the exception thread
+resumed and finished its own line.
+
+\subsection{The fix: a single, mutex-protected write per message}
+
+A new helper, \texttt{nnout\_line()} (\texttt{nntools.hh}/\texttt{nntools.cc}), takes a
+fully-assembled message string and writes it as one locked unit:
+\begin{lstlisting}
+static std::mutex g_nnout_mutex;
+
+void nnout_line(const std::string& msg) {
+    std::lock_guard<std::mutex> lock(g_nnout_mutex);
+    *g_nnout_stream << "#nixnan: " << msg;
+    if (msg.empty() || msg.back() != '\n') {
+        *g_nnout_stream << "\n";
+    }
+    g_nnout_stream->flush();
+}
+\end{lstlisting}
+Both report sites, and \texttt{nnterminate()} (used by \texttt{MAX\_ERRORS} and
+\texttt{max\_reports} to end the program early), now build their message into a local
+\texttt{std::ostringstream} first, then call \texttt{nnout\_line(oss.str())} once ---
+there is no longer a multi-part \texttt{<<} chain against the shared stream from either
+thread.
+
+\subsection{Verification}
+
+The same high-contention script was rerun three times after the fix. Each full log
+(1{,}300+ lines) was scanned for the torn-line signature --- any single line containing
+both \texttt{"error ["} and \texttt{"bin has reached threshold"}:
+\begin{lstlisting}[language=bash]
+grep -c "error \[.*bin has reached\|bin has reached.*error \[" "$LOG"
+\end{lstlisting}
+Zero occurrences, all three runs, all four exception messages fully intact each time.
+The other three scripts in this experiment (\texttt{Stop\_First\_Error\_with\_History\_FP16.sh},
+its \texttt{\_Sampled} variant, and \texttt{Exp-Output-Rate-start-1-double-8-times.sh}) were
+also rerun and produce identical output to before the fix --- the change is purely to
+\emph{how} messages are written, not what they say.
+
+\section{Why Neither Bug Existed Before}
+
+Both bugs are specific to mechanisms this work introduced or extended; nixnan's
+pre-existing code was never exposed to either failure mode, and not because anyone
+engineered around it --- the existing designs simply never created the opportunity.
+
+\paragraph{The doubling race (\S\ref{sec:doubling-race}).} Every other counting path in
+nixnan checks a running \texttt{atomicAdd} counter against a value that never changes for
+the life of the kernel: a fixed \texttt{count} threshold (plain histogram counting), or a
+single first-occurrence latch (exception deduplication, gated on
+\texttt{num\_exceptions == 0} from one \texttt{atomicAdd}). Neither pattern has any
+shared, mutable \emph{control} state for concurrent threads to race on --- the only
+shared state is the monotonic counter itself, and a single \texttt{atomicAdd} already
+makes that safe. \texttt{doublings} is the first mechanism whose per-occurrence decision
+depends on state the same mechanism also writes, in a read-decide-write cycle spanning
+two separate fields (\texttt{threshold} and \texttt{times\_doubled}) that must change
+together, consistently, exactly once per logical event. That is a structurally harder
+concurrency problem, and confirmed (Section~\ref{sec:cas-fix}) to need \texttt{atomicCAS},
+not a plain \texttt{atomicAdd}, to close correctly.
+
+\paragraph{The output tearing (\S\ref{sec:stdout-tearing}).} This one predates
+\texttt{doublings} and \texttt{record\_inst} entirely --- it has existed as long as
+\texttt{HISTOGRAM=1} and exception reporting could both be active in the same process
+(the default). It was not fixed here because it was newly introduced; it was fixed
+because this work was the first to drive both report threads hard enough,
+simultaneously, to make the interleaving reliably visible rather than a rare, easily
+dismissed anomaly.
+
+\section{Summary}
+
+\begin{center}
+\begin{tabular}{p{3.7cm}p{4.3cm}p{4.3cm}}
+\toprule
+& Bug 1: Doubling race & Bug 2: Output tearing \\
+\midrule
+Where & \texttt{fp-fun.cu}, \texttt{record()} & \texttt{nixnan.cu}, \texttt{fp-histogram.cu} \\
+Introduced by & Original \texttt{fp-reset} port & Pre-existing (any concurrent HISTOGRAM + exceptions) \\
+Root cause & Non-atomic read-modify-write on shared \texttt{threshold}/\texttt{times\_doubled} & Unsynchronized multi-part \texttt{<<} chains to one shared stream \\
+Fix & \texttt{atomicCAS}-gated transitions & Mutex-protected single-write \texttt{nnout\_line()} \\
+Verified by & Narrow- and wide-range doubling traces; FP32/FP64 run & 3$\times$ rerun of the highest-contention script, zero torn lines \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Both fixes are narrowly scoped to the specific code paths that needed them and do not
+change the behavior or output format of any existing, previously-correct nixnan
+functionality --- confirmed by rerunning every prior script in this experiment and
+observing identical output to before either fix.
+
+\end{document}

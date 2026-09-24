@@ -340,7 +340,30 @@ stop-at-first-error trace is five flags, no wrapper script or change to
 \end{frame}
 
 % ------------------------------------------------------------------
-\begin{frame}{What nixnan Made Visible Here (1/2)}
+\begin{frame}[fragile]{Native Decaying Report Rate: FP32 Fails, FP64 Doesn't}
+{\small Unlike \texttt{SAMPLING} (Concept 1: no native schedule, built one
+outside nixnan), \texttt{BIN\_SPEC\_FILE} has its own: \texttt{doublings}
+--- report every \texttt{count} occurrences, double the threshold each
+report, reset after \texttt{doublings} doublings. Ported in (from branch
+\texttt{fp-reset}) and fixed --- see
+\texttt{atomicCas\_Stdout\_Tearing\_fixes.tex}.}
+
+$M{=}2000$ already makes FP32 fail while FP64 stays finite. Watching only
+FP32's highest two exponents (\texttt{[126,127]}) with
+\texttt{count:1, doublings:10}:
+\begin{lstlisting}
+{ "count": 1, "doublings": 10, "f32": [[126, 127]] }
+\end{lstlisting}
+\texttt{Exp-Output-Rate-FP32-Top2Exp-M2000-start-1-double-10-times.sh}
+confirms both halves: FP32 hits ``first non-finite at step 1900''; FP64's
+block ends with no such line at all. The reported sequence climbs
+cleanly through all 11 levels, 1 to 1024 (ten doublings --- double the
+FP16 predecessor's reach of 256), resetting repeatedly for the rest of
+the run.
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}{What nixnan Made Visible Here (1/4)}
 \begin{enumerate}
   \item \textbf{Sampling trades overhead for completeness}, not just
     verbosity --- coarse sampling can drop entire exception sites, not
@@ -356,7 +379,7 @@ stop-at-first-error trace is five flags, no wrapper script or change to
 \end{frame}
 
 % ------------------------------------------------------------------
-\begin{frame}{What nixnan Made Visible Here (2/3)}
+\begin{frame}{What nixnan Made Visible Here (2/4)}
 \begin{enumerate}
 \setcounter{enumi}{3}
   \item \textbf{nixnan can adjudicate a hypothesis about \emph{why} a format
@@ -373,13 +396,41 @@ stop-at-first-error trace is five flags, no wrapper script or change to
 \end{frame}
 
 % ------------------------------------------------------------------
-\begin{frame}{What nixnan Made Visible Here (3/3)}
+\begin{frame}{What nixnan Made Visible Here (3/4)}
 \begin{enumerate}
 \setcounter{enumi}{5}
   \item \textbf{Running FP64 long enough shows it fails too, and nixnan
     shows exactly where}: run for real to step 14600, FP64 overflows at
     the step its own growth rate predicts, attributed to the identical
     Laplacian statement and mechanism already confirmed for FP32.
+  \item \textbf{Per-instruction histogram attribution turns ``a value
+    landed in this range'' into ``this specific instruction put it
+    there''}: \texttt{"<fmt> (record\_inst)"} extends histogram
+    threshold reports with the same instruction-level detail exception
+    reports already carry --- and, combined with \texttt{SAMPLING},
+    shows the same completeness gap yet again: a real, correctly-
+    attributed \texttt{NaN}, one launch downstream of the original
+    Infinity.
+\end{enumerate}
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}{What nixnan Made Visible Here (4/4)}
+\begin{enumerate}
+\setcounter{enumi}{7}
+  \item \textbf{Recovering both requires the right knob, not more of the
+    wrong one}: raising \texttt{MAX\_ERRORS} alone cannot recover a
+    missed Infinity, at any value --- it counts distinct sites, not
+    occurrences. Tightening \texttt{SAMPLING}'s stride does, though even
+    then as one combined \texttt{NaN,infinity} report (a warp's lanes
+    are classified and OR'd together).
+  \item \textbf{A decaying report rate can be native to nixnan, not just
+    orchestrated around it}: \texttt{BIN\_SPEC\_FILE}'s \texttt{doublings}
+    key --- ported in and fixed as part of this work --- watches FP32's
+    highest two exponents through one $M{=}2000$ run where FP32
+    overflows and FP64 correctly does not, climbing cleanly through 11
+    threshold levels (1 to 1024) and resetting, no orchestration script
+    required.
 \end{enumerate}
 \end{frame}
 

@@ -578,6 +578,59 @@ Every one of these is an existing nixnan env var except \texttt{BIN\_SPEC\_FILE}
 ``sampled, per-instruction, stop-at-first-error'' trace is five flags, no wrapper script
 or source change to \texttt{rd\_nixnan.cu} required.
 
+\subsection{A Native Exponential Report Rate: FP32 Overflows, FP64 Doesn't}
+\label{sec:fp32-doubling}
+
+Section~\ref{sec:exp-decay} built a decaying sampling rate entirely outside nixnan,
+because \texttt{SAMPLING} itself has no such setting. \texttt{BIN\_SPEC\_FILE} turns out
+to have its own, unrelated notion of a decaying rate: \texttt{doublings}. A bin starts
+reporting every \texttt{count} occurrences; each report doubles that bin's own
+threshold; after \texttt{doublings} doublings, the \emph{next} report resets every bin
+in that kernel back to \texttt{count} and the cycle repeats. Unlike
+\texttt{SAMPLING}, this needs no orchestration script --- it is a single flag, native to
+one process.
+
+\texttt{doublings} was documented (in this repository's own \texttt{README.md} and
+\texttt{Tutorial.md}) well before it was ever implemented on this line of development;
+it existed only on a separate branch, \texttt{fp-reset}, and even there with a real
+concurrency bug. Both the port and the fix are detailed separately in
+\texttt{atomicCas\_Stdout\_Tearing\_fixes.tex}, alongside a second, unrelated bug the
+same work surfaced (torn output between two independent report threads).
+
+\paragraph{The run: FP32 overflows, FP64 doesn't.} Section~\ref{sec:extended}
+established that $M{=}2000$ makes BF16 and FP32 fail (step 1900) while FP64 stays
+correctly finite --- no new build needed, just reuse of \texttt{rd\_nixnan\_extended}.
+Watching only FP32's highest two normal exponents (8 exponent bits, bias 127, so
+$[126,127]$) with \texttt{count:1, doublings:10}:
+\begin{lstlisting}
+{ "count": 1, "doublings": 10, "f32": [[126, 127]] }
+\end{lstlisting}
+\texttt{shell-scripts/Exp-Output-Rate-FP32-Top2Exp-M2000-start-1-double-10-times.sh}
+runs this (\texttt{Logs/Exp-Output-Rate-FP32-Top2Exp-M2000-start-1-double-10-times.log}).
+Confirmed exactly as intended:
+\begin{lstlisting}
+===== FP32 : ... =====
+  first non-finite at step 1900 (t=1.900)
+===== FP64 : ... =====
+\end{lstlisting}
+(FP64's block ends with no ``first non-finite'' line at all.) The reported threshold
+sequence climbs cleanly through all 11 levels from 1 to 1024 --- ten doubling steps,
+double the reach of this feature's first demonstration,
+\texttt{Exp-Output-Rate-start-1-double-8-times.sh} (FP16, eight doublings, stopping at
+256) --- and resets, repeatedly, for the rest of the run:
+\begin{center}
+\begin{tabular}{rrrrrrrrrrr}
+\toprule
+1 & 2 & 4 & 8 & 16 & 32 & 64 & 128 & 256 & 512 & 1024 \\
+\midrule
+349 & 76 & 29 & 24 & 18 & 16 & 11 & 12 & 11 & 11 & 10 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Occurrence counts fall off sharply (not perfectly monotonically) with level, as
+expected: reaching a higher threshold takes more occurrences, and only one grid's
+worth of values is climbing through FP32's ceiling at a time.
+
 \section{Conclusion: What nixnan Made Visible Here}
 
 Across six short experiments on one simple, well-understood kernel, \texttt{nixnan}
@@ -630,6 +683,13 @@ exception sites, repeats, or exponent range):
   then as a single combined \texttt{NaN,infinity} report, since a warp's lanes are
   classified and OR'd together, and different lanes can be at different points of the
   same buildup within one launch.
+\item \textbf{A decaying report rate can be native to nixnan, not just orchestrated
+  around it} (Section~\ref{sec:fp32-doubling}): \texttt{BIN\_SPEC\_FILE}'s
+  \texttt{doublings} key, ported and fixed as part of this work (see
+  \texttt{atomicCas\_Stdout\_Tearing\_fixes.tex}), watches FP32's highest two exponents
+  through a single $M{=}2000$ run where FP32 overflows and FP64 correctly does not,
+  climbing cleanly through 11 threshold levels (1 to 1024, ten doublings) and resetting
+  --- no multi-process orchestration script required, unlike Section~\ref{sec:exp-decay}.
 \end{enumerate}
 As a side effect, re-verifying \texttt{SAMPLING} against the current build (Section~4)
 also caught that a previously-documented no-op regression in \texttt{nixnan.so} has
