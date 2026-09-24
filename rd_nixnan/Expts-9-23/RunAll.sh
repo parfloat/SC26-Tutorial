@@ -17,6 +17,11 @@
 #       FP32 fail too, not just FP16. Domain enlargement does NOT do this
 #       (the reaction term's growth is independent of N/dx) -- see
 #       ExptPlan.md for the full reasoning and what was tried.
+#   06  FP64, run for real until it too goes non-finite (step ~14600), after
+#       fixing a double->float narrowing bug in rd_nixnan.cu's own
+#       non-finite check that had been making step 05 misreport FP64 as
+#       failing at step 1900. See ExptPlan.md and the report for the fix
+#       and the diagnosis that led to it.
 #
 # All raw output goes to Logs/. Re-running is safe/idempotent -- each stage
 # overwrites its own output.
@@ -34,6 +39,7 @@ bash shell-scripts/02_sampling_every_8.sh
 bash shell-scripts/03_sampling_exp_decay.sh
 bash shell-scripts/04_histograms_per_precision.sh
 bash shell-scripts/05_extended_run_all_fail.sh
+bash shell-scripts/06_fp64_longrun.sh
 
 echo
 echo "== All stages complete. Logs in $SCRIPT_DIR/Logs/ =="

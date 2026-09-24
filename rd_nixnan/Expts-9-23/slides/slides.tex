@@ -159,16 +159,14 @@ Format & First non-finite & NaN u/r & Inf u/r \\
 FP16 & step 300  & 22 / 78134 & 22 / 639 \\
 BF16 & step 1900 & 15 / 8975  & 6 / 76   \\
 FP32 & step 1900 & 19 / 10966 & 8 / 90   \\
-FP64 & step 1900 & \multicolumn{2}{c}{see caveat} \\
+FP64 & --- (finite) & \multicolumn{2}{c}{0 / 0} \\
 \bottomrule
 \end{tabular}
 \end{center}
 \textbf{BF16 and FP32 now both show real nixnan-classified exceptions.}
-
-\vspace{0.3cm}
-\textbf{Honest caveat:} FP64 also goes non-finite (program's own check,
-step 1900), but nixnan's classifier reports \emph{zero} for FP64 --- even
-with more margin ($M{=}2500$). A real, unresolved gap, reported as observed.
+FP64 correctly stays finite at $M{=}2000$ --- an earlier draft of this
+experiment reported it going non-finite at step 1900 too, which turned out
+to be a bug in the driver's own check, not nixnan (next slide).
 \end{frame}
 
 % ------------------------------------------------------------------
@@ -178,8 +176,9 @@ with more margin ($M{=}2500$). A real, unresolved gap, reported as observed.
 \end{center}
 FP16 (blue) departs the shared curve at step 300. BF16/FP32/FP64 stay
 numerically \textbf{indistinguishable} through step 1800
-($1.1675\times10^{38}$, all three, to 4 sig.\ figs.) and are all
-non-finite by step 1900.
+($1.1675\times10^{38}$, all three, to 4 sig.\ figs.); BF16/FP32 are
+non-finite by step 1900, FP64 continues (real value there
+${\approx}1.5\times10^{40}$, still finite).
 \end{frame}
 
 % ------------------------------------------------------------------
@@ -207,6 +206,57 @@ Matches the source file's own long-standing comment
 \end{frame}
 
 % ------------------------------------------------------------------
+\begin{frame}[fragile]{FP64: The Diagnostic Bug}
+The driver converts every format to \texttt{double} for its non-finite
+check, then narrows the result into a \texttt{float}:
+\begin{lstlisting}
+float v = from_T<T>(h[i]);   // <-- narrows a double into a float
+if (!std::isfinite(v)) bad = true;
+\end{lstlisting}
+\texttt{float}'s max is ${\approx}3.4\times10^{38}$. Once a
+\texttt{double} exceeds that, the narrowing conversion \emph{alone}
+produces \texttt{+Infinity} --- regardless of whether the double itself
+was ever non-finite. At step 1900, FP64's real value is
+${\approx}1.5\times10^{40}$: past \texttt{float}'s ceiling, but
+${\sim}270$ orders of magnitude below \texttt{double}'s
+($\sim\!1.8\times10^{308}$), and perfectly finite.
+
+\vspace{0.2cm}
+\textbf{Fix:} keep the check in \texttt{double} throughout
+(\texttt{rd\_nixnan.cu}, commit \texttt{03c9ef3}). Audited the rest of the
+file for the same class of cast --- no other instance found; every other
+\texttt{float}/\texttt{half}/\texttt{bf16} cast is an intentional
+target-type conversion, not a truncation of a value under test.
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}[fragile]{FP64: The Real Overflow}
+FP64's ceiling is $\sim\!1.8\times10^{308}$; from step 1800's value and
+the ${\sim}1.05\times$/step growth, overflow is expected around step
+14{,}550. A new build mode, \texttt{FP64\_LONGRUN}, runs all four formats
+together to step 3800 (2$\times$ FP32's trigger step), then steps FP64
+alone until it overflows:
+\begin{lstlisting}[language=bash]
+nvcc -DFP64_LONGRUN=1 -g -lineinfo rd_nixnan.cu -o rd_nixnan_fp64_longrun
+LD_PRELOAD=nixnan.so ./rd_nixnan_fp64_longrun
+\end{lstlisting}
+FP64 overflows at \textbf{step 14600} --- matching the estimate. nixnan
+now classifies it for real:
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+ & NaN u/r & Inf u/r & $-$Inf u/r \\
+\midrule
+FP64 & 36 / 1699 & 10 / 74 & 32 / 712 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Same statement as FP32, \texttt{rd\_nixnan.cu:106} (the Laplacian), same
+\texttt{DADD, DADD, DADD}$\to$\texttt{NaN} mechanism --- just $12{,}700$
+steps later, because FP64 has far more exponent range to climb through.
+\end{frame}
+
+% ------------------------------------------------------------------
 \begin{frame}{What nixnan Made Visible Here (1/2)}
 \begin{enumerate}
   \item \textbf{Sampling trades overhead for completeness}, not just
@@ -223,18 +273,36 @@ Matches the source file's own long-standing comment
 \end{frame}
 
 % ------------------------------------------------------------------
-\begin{frame}{What nixnan Made Visible Here (2/2)}
+\begin{frame}{What nixnan Made Visible Here (2/3)}
 \begin{enumerate}
 \setcounter{enumi}{3}
   \item \textbf{nixnan can adjudicate a hypothesis about \emph{why} a format
     fails first}: domain enlargement is ruled out by the kernel's own growth
     term; running longer is confirmed, with nixnan itself newly reporting
-    real BF16/FP32 exceptions --- and surfacing an FP64 classification gap.
+    real BF16/FP32 exceptions at $M{=}2000$ where it reported none at
+    $M{=}1600$.
   \item \textbf{Line-level attribution turns a hand-derived guess into a
     tool-verified fact}: with \texttt{-lineinfo}, nixnan pinpoints the exact
     statement (the Laplacian) and instruction where $\infty-\infty$ produces
     \texttt{NaN} --- confirming a mechanism the source comments could only
     predict by hand.
+\end{enumerate}
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}{What nixnan Made Visible Here (3/3)}
+\begin{enumerate}
+\setcounter{enumi}{5}
+  \item \textbf{A device-side check can outrank a host-side one written
+    around it}: when nixnan reported zero FP64 exceptions against the
+    program's own claim of a step-1900 failure, nixnan was right --- the
+    program's check had an implicit \texttt{double}$\to$\texttt{float}
+    narrowing before \texttt{isfinite()}. Fixed.
+  \item \textbf{With the bug fixed, nixnan confirms FP64 does eventually
+    fail, and shows exactly where}: run for real to step 14600, FP64
+    overflows at the step its own growth rate predicts, attributed to the
+    identical Laplacian statement and mechanism already confirmed for
+    FP32.
 \end{enumerate}
 \end{frame}
 

@@ -35,9 +35,10 @@
     <h2>3. Max|u| vs. step, all four precisions (M=2000 extended run)</h2>
     <embed src="inf_onset_vs_step.svg" type="image/svg+xml" style="width:100%">
     <p>From Logs/05_extended_M2000.log: FP16 departs the shared curve at step 300;
-    BF16/FP32/FP64 stay numerically indistinguishable through step 1800 and are all
-    non-finite by step 1900. See latex/report.tex &sect;8 for the line-level diagnosis
-    of exactly where Infinity first appears and how it becomes NaN.</p>
+    BF16/FP32/FP64 stay numerically indistinguishable through step 1800. BF16/FP32 are
+    non-finite by step 1900; FP64 continues (it does eventually overflow for real, at
+    step 14600 -- see Logs/06_fp64_longrun.log). See latex/report.tex for the line-level
+    diagnosis of exactly where Infinity first appears and how it becomes NaN, for both.</p>
   </div>
 </div>
 </body>

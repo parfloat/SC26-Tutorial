@@ -29,7 +29,9 @@ echo
 echo "== FP16/BF16/FP32/FP64 exception summary (M=$EXTENDED_M) =="
 grep -A6 "FP16 Operations\|BF16 Operations\|FP32 Operations\|FP64 Operations" "$OUT" || true
 echo
-echo "NOTE: FP64's own printf check (grep below) also reports going non-finite,"
-echo "but nixnan's exception classifier reports zero NaN/Infinity for FP64 above"
-echo "-- a real, observed gap, not fixed by more margin (also checked at M=2500)."
+echo "NOTE: FP64 correctly stays finite through M=$EXTENDED_M (see grep below)."
+echo "An earlier version of rd_nixnan.cu's own non-finite check had a bug (an"
+echo "implicit double->float narrowing before isfinite()) that falsely reported"
+echo "FP64 going non-finite at step 1900 -- fixed. FP64 does eventually overflow"
+echo "for real, at step ~14600; see shell-scripts/06_fp64_longrun.sh."
 grep "=====\|first non-finite" "$OUT" || true

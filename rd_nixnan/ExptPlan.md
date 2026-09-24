@@ -30,7 +30,9 @@
       specified, built from the real 100-step checkpoints in
       Logs/05_extended_M2000.log -- FP16 breaks off the shared curve at step
       300; BF16/FP32/FP64 stay numerically indistinguishable through step
-      1800 and are all non-finite by step 1900.
+      1800 and BF16/FP32 are non-finite by step 1900 (FP64's apparent
+      step-1900 non-finite in the same log turned out to be a diagnostic
+      bug, not real -- see below).
     + The CUDA statement: rd_nixnan.cu was rebuilt with -g -lineinfo (00_build.sh,
       05_extended_run_all_fail.sh) specifically so nixnan's LINE_INFO=1 could
       resolve real source locations. Result: Infinity first appears at
@@ -47,6 +49,16 @@
       to FP32's (1.1675e38) and nowhere near FP64's real ceiling (~1.8e308);
       steady 1.05x/step growth cannot explain FP64 also going non-finite by
       step 1900. Reported as an open anomaly, not resolved here.
+  - [Done] Not actually an anomaly: rd_nixnan.cu's own check narrowed a
+    double into a float before calling isfinite() -- for FP64, once a real
+    value passed float's max (~3.4e38) while still a finite double, that
+    cast alone fabricated a false +Infinity. Fixed (double throughout;
+    audited for similar casts, none found; commit 03c9ef3). With that
+    fixed, added an off-by-default FP64_LONGRUN build mode that suppresses
+    FP16/BF16/FP32 after step 3800 and steps FP64 alone until it, too,
+    goes non-finite for real: step 14600, with nixnan now correctly
+    classifying it (shell-scripts/06_fp64_longrun.sh, same Laplacian line
+    and inf-inf->NaN mechanism as FP32). Details in the report.
 * Make this entire set of steps repeatable thru a RunAll.sh
   - Do the experiments, writing all outputs to a suitable log file named wrt the expts
     + Save the logs in a Logs/ folder
@@ -72,11 +84,12 @@
 	      FP16 still fails earliest (step 300); BF16 and FP32 now also fail,
 	      together, at step 1900, with real nixnan-classified NaN/Infinity
 	      counts for all three. See Logs/05_extended_M2000.log.
-	    + caveat: the program's own check also reports FP64 going non-finite
-	      at step 1900, but nixnan's exception classifier reports zero for
-	      FP64 even at M=2500 (more margin past the crossing) -- a real,
-	      unresolved gap in FP64 classification for this program, documented
-	      as observed rather than root-caused.
+	    + [Done] the FP64-at-step-1900 report above was a bug in the
+	      program's own check (a double->float narrowing before
+	      isfinite()), not a nixnan gap -- fixed in rd_nixnan.cu. FP64 does
+	      overflow for real, just much later: step 14600, confirmed under
+	      nixnan with real classified NaN/Infinity counts. See
+	      shell-scripts/06_fp64_longrun.sh.
   - Write a Latex report of what was done (one concept/idea per section)
   - Make slides in latex/beamer
     + Explain example in one slide (very high level)
