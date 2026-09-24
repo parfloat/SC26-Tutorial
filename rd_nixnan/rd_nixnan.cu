@@ -150,9 +150,13 @@ static void run(const char* tag, Kernel kern)
 
         if ((n + 1) % 100 == 0 || n == M - 1) {
             CUDA_CHECK(cudaMemcpy(h.data(), u, N * sizeof(T), cudaMemcpyDeviceToHost));
-            float mx = -1e30f; bool bad = false;
+            // Stay in double here: from_T already returns double, and for T=double
+            // that value can legitimately exceed float's ~3.4e38 max while still
+            // being a perfectly finite double. Narrowing to float first would call
+            // isfinite() on a value the cast itself turned into +Infinity.
+            double mx = -1e30; bool bad = false;
             for (int i = 0; i < N; ++i) {
-                float v = from_T<T>(h[i]);
+                double v = from_T<T>(h[i]);
                 if (!std::isfinite(v)) bad = true;
                 if (std::isfinite(v) && v > mx) mx = v;
             }
@@ -166,6 +170,12 @@ static void run(const char* tag, Kernel kern)
 
     cudaFree(u); cudaFree(un);
 }
+
+#ifndef FP64_LONGRUN
+#define FP64_LONGRUN 0
+#endif
+
+#if !FP64_LONGRUN
 
 int main()
 {
@@ -181,3 +191,144 @@ int main()
            "and BIN_SPEC_FILE=spec.json.\n");
     return 0;
 }
+
+#else  // FP64_LONGRUN: interleave all four to SUPPRESS_AFTER, then step FP64
+       // alone until it, too, goes non-finite (or M_FP64_MAX as a safety cap).
+
+#ifndef SUPPRESS_AFTER
+#define SUPPRESS_AFTER 3800   // 2x the FP32/BF16 trigger step (1900) at M=2000
+#endif
+#ifndef M_FP64_MAX
+#define M_FP64_MAX 20000      // safety cap; real FP64 overflow is expected ~14500-14600
+#endif
+
+int main()
+{
+    printf("r = %.4f (diffusion number, stable if <= 0.5)\n", R);
+    printf("lambda*dt = %.4f (reaction growth per step ~ %.4f x)\n", LDT, 1.0 + LDT);
+    printf("FP64_LONGRUN: FP16/BF16/FP32 suppressed after step %d "
+           "(2x the FP32 trigger step); FP64 alone continues to step %d "
+           "or first non-finite.\n\n", SUPPRESS_AFTER, M_FP64_MAX);
+
+    std::vector<__half>        h16(N);
+    std::vector<__nv_bfloat16> hb16(N);
+    std::vector<float>         h32(N);
+    std::vector<double>        h64(N);
+    for (int i = 0; i < N; ++i) {
+        double v0 = std::sin(M_PI * (i * DX) / L);
+        h16[i]  = to_T<__half>(v0);
+        hb16[i] = to_T<__nv_bfloat16>(v0);
+        h32[i]  = to_T<float>(v0);
+        h64[i]  = to_T<double>(v0);
+    }
+
+    __half        *u16, *un16;
+    __nv_bfloat16 *ub16, *unb16;
+    float         *u32, *un32;
+    double        *u64, *un64;
+    CUDA_CHECK(cudaMalloc(&u16,  N * sizeof(__half)));
+    CUDA_CHECK(cudaMalloc(&un16, N * sizeof(__half)));
+    CUDA_CHECK(cudaMalloc(&ub16,  N * sizeof(__nv_bfloat16)));
+    CUDA_CHECK(cudaMalloc(&unb16, N * sizeof(__nv_bfloat16)));
+    CUDA_CHECK(cudaMalloc(&u32,  N * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&un32, N * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&u64,  N * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&un64, N * sizeof(double)));
+    CUDA_CHECK(cudaMemcpy(u16,  h16.data(),  N * sizeof(__half),        cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(ub16, hb16.data(), N * sizeof(__nv_bfloat16), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(u32,  h32.data(),  N * sizeof(float),         cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(u64,  h64.data(),  N * sizeof(double),        cudaMemcpyHostToDevice));
+
+    __half        r16  = to_T<__half>(R),        lam16  = to_T<__half>(LDT);
+    __nv_bfloat16 rb16 = to_T<__nv_bfloat16>(R),  lamb16 = to_T<__nv_bfloat16>(LDT);
+    float         r32  = to_T<float>(R),          lam32  = to_T<float>(LDT);
+    double        r64  = to_T<double>(R),         lam64  = to_T<double>(LDT);
+
+    dim3 block(128), grid((N + 127) / 128);
+
+    int first_bad16 = -1, first_badb16 = -1, first_bad32 = -1, first_bad64 = -1;
+    int n = 0;
+    for (; n < SUPPRESS_AFTER; ++n) {
+        rd_step_fp16<<<grid, block>>>(u16, un16, r16, lam16);
+        CUDA_CHECK(cudaGetLastError());
+        std::swap(u16, un16);
+        rd_step_bf16<<<grid, block>>>(ub16, unb16, rb16, lamb16);
+        CUDA_CHECK(cudaGetLastError());
+        std::swap(ub16, unb16);
+        rd_step_fp32<<<grid, block>>>(u32, un32, r32, lam32);
+        CUDA_CHECK(cudaGetLastError());
+        std::swap(u32, un32);
+        rd_step_fp64<<<grid, block>>>(u64, un64, r64, lam64);
+        CUDA_CHECK(cudaGetLastError());
+        std::swap(u64, un64);
+
+        if ((n + 1) % 100 == 0 || n == SUPPRESS_AFTER - 1) {
+            CUDA_CHECK(cudaMemcpy(h16.data(),  u16,  N * sizeof(__half),        cudaMemcpyDeviceToHost));
+            CUDA_CHECK(cudaMemcpy(hb16.data(), ub16, N * sizeof(__nv_bfloat16), cudaMemcpyDeviceToHost));
+            CUDA_CHECK(cudaMemcpy(h32.data(),  u32,  N * sizeof(float),         cudaMemcpyDeviceToHost));
+            CUDA_CHECK(cudaMemcpy(h64.data(),  u64,  N * sizeof(double),        cudaMemcpyDeviceToHost));
+
+            double mx16 = -1e30, mxb16 = -1e30, mx32 = -1e30, mx64 = -1e30;
+            bool bad16 = false, badb16 = false, bad32 = false, bad64 = false;
+            for (int i = 0; i < N; ++i) {
+                double v16  = from_T<__half>(h16[i]);
+                double vb16 = from_T<__nv_bfloat16>(hb16[i]);
+                double v32  = from_T<float>(h32[i]);
+                double v64  = from_T<double>(h64[i]);
+                if (!std::isfinite(v16))  bad16  = true; else if (v16  > mx16)  mx16  = v16;
+                if (!std::isfinite(vb16)) badb16 = true; else if (vb16 > mxb16) mxb16 = vb16;
+                if (!std::isfinite(v32))  bad32  = true; else if (v32  > mx32)  mx32  = v32;
+                if (!std::isfinite(v64))  bad64  = true; else if (v64  > mx64)  mx64  = v64;
+            }
+            if (bad16  && first_bad16  < 0) first_bad16  = n + 1;
+            if (badb16 && first_badb16 < 0) first_badb16 = n + 1;
+            if (bad32  && first_bad32  < 0) first_bad32  = n + 1;
+            if (bad64  && first_bad64  < 0) first_bad64  = n + 1;
+            printf("  step %6d (t=%.3f)  FP16=%.3e%s BF16=%.3e%s FP32=%.3e%s FP64=%.3e%s\n",
+                   n + 1, (n + 1) * DT,
+                   mx16,  bad16  ? "*" : " ", mxb16, badb16 ? "*" : " ",
+                   mx32,  bad32  ? "*" : " ", mx64,  bad64  ? "*" : " ");
+        }
+    }
+
+    printf("\nInterleaved phase done (steps 1..%d):\n", SUPPRESS_AFTER);
+    printf("  FP16 first non-finite at step %d\n", first_bad16);
+    printf("  BF16 first non-finite at step %d\n", first_badb16);
+    printf("  FP32 first non-finite at step %d\n", first_bad32);
+    printf("Suppressing FP16/BF16/FP32 from here on (already non-finite well "
+           "before this point); FP64 continues alone.\n\n");
+    cudaFree(u16); cudaFree(un16);
+    cudaFree(ub16); cudaFree(unb16);
+    cudaFree(u32); cudaFree(un32);
+
+    for (; n < M_FP64_MAX; ++n) {
+        rd_step_fp64<<<grid, block>>>(u64, un64, r64, lam64);
+        CUDA_CHECK(cudaGetLastError());
+        std::swap(u64, un64);
+
+        if ((n + 1) % 100 == 0) {
+            CUDA_CHECK(cudaMemcpy(h64.data(), u64, N * sizeof(double), cudaMemcpyDeviceToHost));
+            double mx64 = -1e30; bool bad64 = false;
+            for (int i = 0; i < N; ++i) {
+                double v64 = from_T<double>(h64[i]);
+                if (!std::isfinite(v64)) bad64 = true;
+                else if (v64 > mx64) mx64 = v64;
+            }
+            printf("  step %6d (t=%.3f)  FP64 max=%.4e%s\n",
+                   n + 1, (n + 1) * DT, mx64, bad64 ? "   <-- non-finite present" : "");
+            if (bad64) { first_bad64 = n + 1; break; }
+        }
+    }
+    if (first_bad64 < 0)
+        printf("\nFP64 never went non-finite through step %d (hit M_FP64_MAX cap).\n", n);
+    else
+        printf("\nFP64 first non-finite at step %d (t=%.3f).\n",
+               first_bad64, first_bad64 * DT);
+
+    cudaFree(u64); cudaFree(un64);
+    printf("\nDone. Re-run under LD_PRELOAD=nixnan.so to see FP64 exceptions "
+           "classified for real this time.\n");
+    return 0;
+}
+
+#endif // FP64_LONGRUN
