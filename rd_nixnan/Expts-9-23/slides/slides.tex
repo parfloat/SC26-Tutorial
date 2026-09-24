@@ -232,6 +232,84 @@ steps later, because FP64 has far more exponent range to climb through.
 \end{frame}
 
 % ------------------------------------------------------------------
+\begin{frame}[fragile]{New Feature: Per-Instruction Histogram Attribution}
+A histogram threshold report used to name only a \textbf{format, kernel,
+and range} --- unlike an exception report, which also names the exact
+instruction. Branch \texttt{print\_histo\_instrn} (nixnan commit
+\texttt{15ad4f8}) closes that gap.
+
+\vspace{0.3cm}
+\textbf{How invoked:} a new \texttt{BIN\_SPEC\_FILE} key,
+\texttt{"<fmt> (record\_inst)"}, alongside the plain \texttt{"<fmt>"} key:
+\begin{lstlisting}
+{ "count": 1, "f16 (record_inst)": [[-14,-13],[14,15]] }
+\end{lstlisting}
+Same \texttt{[lower,upper]} range syntax; every bin it defines now also
+prints the SASS instruction that triggered each hit. Plain \texttt{"<fmt>"}
+keys are unchanged --- verified byte-identical before/after.
+
+\vspace{0.2cm}
+\textbf{What it does, internally:} every instrumented instruction is
+registered in the same instruction table the exception path already
+builds; its id rides along through the histogram channel and is resolved
+only when the triggering bin's \texttt{record\_inst} flag is set.
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}[fragile]{Dribble of Instructions Before the Exception}
+Unsampled: 11,000+ lines (one per occurrence). Add \texttt{SAMPLING=128}
+(1 in 128 launches instrumented) and the same watched ranges collapse to
+seven lines, still a legible story:
+\begin{lstlisting}[basicstyle=\ttfamily\tiny]
+range=[-14,-13] instr=HFMA2 R0, R9.H0_H0, -2, -2, R0.H0_H0
+range=[-14,-13] instr=HFMA2 R0, R9.H0_H0, -2, -2, R0.H0_H0
+range=[-14,-13] instr=HFMA2 R0, R9.H0_H0, -2, -2, R0.H0_H0
+range=[-14,-13] instr=HFMA2 R0, R0.H0_H0, c[0x0][0x170].H0_H0, R9.H0_H0
+range=[-14,-13] instr=HFMA2 R0, R0.H0_H0, c[0x0][0x170].H0_H0, R9.H0_H0
+range=[-14,-13] instr=HFMA2 R0, R0.H0_H0, c[0x0][0x170].H0_H0, R9.H0_H0
+range=[-14,-13] instr=HFMA2 R0, R0.H0_H0, c[0x0][0x170].H0_H0, R9.H0_H0
+error [NaN] detected ... instruction HADD2 R0, R0.H0_H0, R7.H0_H0
+\end{lstlisting}
+Two \texttt{HFMA2} variants feed tiny near-boundary values early on, then
+silence (no \texttt{[14,15]} hits at all), then \texttt{NaN} at the same
+\texttt{HADD2} already identified as the Laplacian's overflow point.
+
+\vspace{0.15cm}
+\textbf{Honest tradeoff:} the real overflow onset ($\sim$step 227) isn't a
+multiple of 128, so it's never itself sampled --- step 256 (the next
+sampled launch) already sees \texttt{NaN}, not the original
+\texttt{Infinity}. Same \texttt{SAMPLING} completeness gap as Concept~1,
+in a new form: a real, correctly-attributed, but \emph{downstream}
+exception.
+\end{frame}
+
+% ------------------------------------------------------------------
+\begin{frame}[fragile]{All the Invocation Flags for a Sampled Run}
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Flag & Purpose \\
+\midrule
+\texttt{LD\_PRELOAD=nixnan.so} & Load the tool \\
+\texttt{SAMPLING=128} & Instrument 1 in 128 launches \\
+\texttt{HISTOGRAM=1} & Enable exponent histogramming \\
+\texttt{BIN\_SPEC\_FILE=...\_Sampled.json} & \texttt{"f16 (record\_inst)"} ranges, count:1 \\
+\texttt{MAX\_ERRORS=1} & Stop at the first exception \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{lstlisting}[language=bash]
+SAMPLING=128 HISTOGRAM=1 \
+  BIN_SPEC_FILE=Stop_First_Error_with_History_FP16_Sampled.json \
+  MAX_ERRORS=1 LD_PRELOAD=nixnan.so ./rd_nixnan
+\end{lstlisting}
+Every flag here already existed in nixnan except \texttt{BIN\_SPEC\_FILE}'s
+new \texttt{(record\_inst)} key --- the whole sampled, per-instruction,
+stop-at-first-error trace is five flags, no wrapper script or change to
+\texttt{rd\_nixnan.cu} needed.
+\end{frame}
+
+% ------------------------------------------------------------------
 \begin{frame}{What nixnan Made Visible Here (1/2)}
 \begin{enumerate}
   \item \textbf{Sampling trades overhead for completeness}, not just

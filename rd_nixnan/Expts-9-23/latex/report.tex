@@ -415,9 +415,124 @@ That \texttt{NaN} then flows into line 107's \texttt{DFMA} chain and out through
 at a much larger step count because FP64 simply has far more exponent range to climb
 through first.
 
+\section{A New nixnan Feature: Per-Instruction Histogram Attribution}
+\label{sec:record-inst}
+
+Every histogram threshold report so far (Sections~\ref{sec:histograms}) names only a
+\emph{format}, a \emph{kernel function}, and an \emph{exponent range} --- unlike an
+exception report, which also names the exact SASS instruction (and, when line info
+resolves, the source file:line) responsible. nixnan's histogram path and exception path
+are separate instrumentation mechanisms internally, and only the exception path carried
+per-instruction identity. This section adds that identity to the histogram path too, on a
+new branch, \texttt{print\_histo\_instrn} (off \texttt{auto-nixnan}, nixnan commit
+\texttt{15ad4f8}), and uses it to watch, occurrence by occurrence, which instruction fed
+FP16's extreme exponent bins in the steps leading up to its exception.
+
+\subsection{How It's Invoked, and What It Does}
+
+\texttt{BIN\_SPEC\_FILE} now accepts a key of the form \texttt{"<fmt> (record\_inst)"}
+(e.g.\ \texttt{"f16 (record\_inst)"}) alongside the existing plain \texttt{"<fmt>"} key:
+same \texttt{[lower,upper]} exponent-range syntax, but every bin it defines also prints
+the instruction that triggered each threshold hit:
+\begin{lstlisting}
+{
+  "count": 1,
+  "bf16": [],
+  "f16 (record_inst)": [[-14, -13], [14, 15]],
+  "f32": [],
+  "f64": []
+}
+\end{lstlisting}
+FP16 has a 5-bit exponent, bias 15: \texttt{[-14,-13]} is its smallest two normal
+exponents, \texttt{[14,15]} its largest two (one below the inf/nan field). \texttt{count:1}
+is the histogram bucket size --- a print on every single occurrence, the finest
+granularity available. Plain \texttt{"<fmt>"} keys are unaffected: verified byte-for-byte
+identical output against \texttt{Stop\_First\_Error\_with\_History\_FP16.sh}
+before and after this change.
+
+Internally: every instrumented static instruction is now registered in the same
+instruction-info table the exception path already builds (\texttt{recorder->mk\_entry}),
+and its id is threaded through \texttt{nixnan\_fp\_histogram\_counter}
+$\rightarrow$ \texttt{record()} $\rightarrow$ \texttt{exp\_info} over the device/host
+channel; the threshold-report callback resolves and prints it only when the triggering
+bin's \texttt{record\_inst} flag is set, so plain-key bins keep their original,
+lighter-weight report.
+
+\subsection{The Dribble of Instructions Before the Exception}
+\label{sec:dribble}
+
+Combined with \texttt{MAX\_ERRORS=1} (Section~\ref{sec:histograms}'s companion script,
+\texttt{Stop\_First\_Error\_with\_History\_FP16.sh}), the dense, unsampled version of this
+trace is over 11{,}000 lines --- one line per occurrence landing in either watched range,
+across every one of FP16's $\sim\!300$ kernel launches before it fails. Most of that is
+genuinely dense, per-instruction signal, but too much of it to read.
+\texttt{SAMPLING=128} (instrument only 1 in 128 launches) cuts it down to something
+actually readable. The companion script,
+\texttt{Stop\_First\_Error\_\allowbreak with\_History\_\allowbreak FP16\_Sampled.sh},
+runs exactly this (log: \texttt{...FP16\_Sampled.log}), in full:
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+f16 bin has reached threshold: range=[-14,-13] instruction=HFMA2 R0, R9.H0_H0, -2, -2, R0.H0_H0
+f16 bin has reached threshold: range=[-14,-13] instruction=HFMA2 R0, R9.H0_H0, -2, -2, R0.H0_H0
+f16 bin has reached threshold: range=[-14,-13] instruction=HFMA2 R0, R9.H0_H0, -2, -2, R0.H0_H0
+f16 bin has reached threshold: range=[-14,-13] instruction=HFMA2 R0, R0.H0_H0, c[0x0][0x170].H0_H0, R9.H0_H0
+f16 bin has reached threshold: range=[-14,-13] instruction=HFMA2 R0, R0.H0_H0, c[0x0][0x170].H0_H0, R9.H0_H0
+f16 bin has reached threshold: range=[-14,-13] instruction=HFMA2 R0, R0.H0_H0, c[0x0][0x170].H0_H0, R9.H0_H0
+f16 bin has reached threshold: range=[-14,-13] instruction=HFMA2 R0, R0.H0_H0, c[0x0][0x170].H0_H0, R9.H0_H0
+  step   100 (t=0.100)  max=1.3088e+02
+  step   200 (t=0.200)  max=1.7184e+04
+error [NaN] detected in operand 1 of instruction HADD2 R0, R0.H0_H0, R7.H0_H0 in function rd_step_fp16
+Terminating early: Maximum number of errors reached.
+\end{lstlisting}
+Seven lines instead of thousands, and still legible as a story: two different
+\texttt{HFMA2} variants (the reaction-term update, \texttt{un[i] = u[i] + diff + reac})
+feed tiny near-boundary values into the smallest-exponent bin early on, then --- silence,
+no \texttt{[14,15]} hits at all --- then a \texttt{NaN}, at the same \texttt{HADD2} that
+Section~\ref{sec:extended-detail} already identified as the Laplacian's overflow point.
+
+\paragraph{An honest tradeoff, not a clean win.} That silence is the interesting part.
+\texttt{SAMPLING=128} instruments launches $0, 128, 256, 384, \ldots$; the checkpoint
+prints bracket the exception between step 200 and step 300, so the triggering launch is
+step 256 --- inferred from the printf checkpoints and the known sampling stride, since
+nixnan's own reports don't carry a step number. FP16's real overflow onset is
+${\sim}$step 227 (the source file's own comment, Section~1), \emph{not} a multiple of 128
+--- so the launch that actually first produces Infinity is never itself instrumented.
+Step 256 is the closest sampled launch after it, and by then the value is already
+\texttt{NaN} (Infinity having already combined with itself one step earlier, unobserved).
+The exception report is real and correctly attributed to the right instruction --- but
+it's downstream propagation, not the origination event, and the \texttt{[14,15]} bin that
+would have shown the climb never fires at all in this run. This is the same
+completeness gap Section~\ref{sec:sample-every}--\ref{sec:exp-decay} already
+documented for \texttt{SAMPLING} (5 distinct Infinity sites vanishing at
+\texttt{SAMPLING=8}), now showing up again in a different form: not fewer repeats of the
+same bug, but a different, later exception than the one that actually started it.
+
+\subsection{All the Invocation Flags for a Sampled Run}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Flag & Purpose in this run \\
+\midrule
+\texttt{LD\_PRELOAD=nixnan.so} & Load the tool into the process \\
+\texttt{SAMPLING=128} & Instrument only 1 in 128 kernel launches \\
+\texttt{HISTOGRAM=1} & Enable FP exponent histogramming \\
+\texttt{BIN\_SPEC\_FILE=...\_Sampled.json} & \texttt{"f16 (record\_inst)": [[-14,-13],[14,15]]}, \texttt{count:1} \\
+\texttt{MAX\_ERRORS=1} & Stop the whole program at the first exception \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{lstlisting}[language=bash]
+SAMPLING=128 HISTOGRAM=1 BIN_SPEC_FILE=Stop_First_Error_with_History_FP16_Sampled.json \
+  MAX_ERRORS=1 LD_PRELOAD=nixnan.so ./rd_nixnan
+\end{lstlisting}
+Every one of these is an existing nixnan env var except \texttt{BIN\_SPEC\_FILE}'s new
+\texttt{(record\_inst)} key syntax (Section~\ref{sec:record-inst}) --- the whole
+``sampled, per-instruction, stop-at-first-error'' trace is five flags, no wrapper script
+or source change to \texttt{rd\_nixnan.cu} required.
+
 \section{Conclusion: What nixnan Made Visible Here}
 
-Across five short experiments on one simple, well-understood kernel, \texttt{nixnan}
+Across six short experiments on one simple, well-understood kernel, \texttt{nixnan}
 surfaced several things that would not be visible from the program's own output (a plain
 run of \texttt{rd\_nixnan} only prints \texttt{max=...} per step, with no notion of
 exception sites, repeats, or exponent range):
@@ -451,6 +566,14 @@ exception sites, repeats, or exponent range):
   \texttt{FP64\_LONGRUN} build mode), FP64 overflows at the step its own growth rate
   predicts, and nixnan attributes it to the identical Laplacian statement and
   $\infty-\infty\to\texttt{NaN}$ mechanism already confirmed for FP32.
+\item \textbf{Per-instruction histogram attribution turns ``a value landed in this
+  range'' into ``this specific instruction put it there''} (Section~\ref{sec:record-inst}):
+  a new \texttt{BIN\_SPEC\_FILE} key, \texttt{"<fmt> (record\_inst)"}, extends histogram
+  threshold reports with the same instruction-level detail exception reports already
+  carry. Combined with \texttt{SAMPLING} to cut an 11{,}000-line trace down to seven
+  readable lines, it also demonstrates \texttt{SAMPLING}'s completeness gap yet again,
+  in a new form: the sampled run catches a real, correctly-attributed \texttt{NaN}, but
+  one step downstream of the launch that actually produced the original Infinity.
 \end{enumerate}
 As a side effect, re-verifying \texttt{SAMPLING} against the current build (Section~4)
 also caught that a previously-documented no-op regression in \texttt{nixnan.so} has
