@@ -284,6 +284,36 @@ exception.
 \end{frame}
 
 % ------------------------------------------------------------------
+\begin{frame}[fragile]{Getting Both Exceptions: Stride, Not Budget}
+\textbf{Question:} would \texttt{MAX\_ERRORS=2} recover the Infinity too?
+Tested directly, both ways:
+\begin{itemize}
+  \item Unsampled, \texttt{MAX\_ERRORS=2}: sites 1 \emph{and} 2 are both
+    \texttt{Infinity} (two different instructions). No NaN until
+    ${\sim}$site 10.
+  \item \texttt{SAMPLING=128}, \texttt{MAX\_ERRORS=2}: sites 1 \emph{and}
+    2 are both \texttt{NaN}. \texttt{Infinity} never appears, at
+    \emph{any} \texttt{MAX\_ERRORS} --- no instrumented launch ever
+    witnesses it. \textbf{Stride problem, not a budget problem.}
+\end{itemize}
+
+\textbf{Fix: tighten SAMPLING, not MAX\_ERRORS.}
+\texttt{..\_SAMPLING8\_MAXERRORS4.sh} (\texttt{SAMPLING=8},
+\texttt{MAX\_ERRORS=4}) catches both:
+\begin{lstlisting}[basicstyle=\ttfamily\tiny]
+error [NaN,infinity] operand 1 of HADD2 R0, R0.H0_H0, R7.H0_H0
+error [NaN,infinity] operand 2 of HADD2 R0, R0.H0_H0, R7.H0_H0
+error [NaN,infinity] operand 0 of HADD2 R0, R0.H0_H0, R7.H0_H0
+error [NaN,infinity] operand 1 of HFMA2 R0, R9.H0_H0, -2, -2, R0.H0_H0
+\end{lstlisting}
+{\small Still not a clean ``Inf line, then a NaN line'': every site is
+tagged \texttt{NaN,infinity} \emph{together} --- a warp's 32 lanes are
+OR'd before reporting, and different grid points are at different points
+of the same buildup within one launch. Cost: 1{,}314 histogram lines
+(vs.\ 7 at \texttt{SAMPLING=128}).}
+\end{frame}
+
+% ------------------------------------------------------------------
 \begin{frame}[fragile]{All the Invocation Flags for a Sampled Run}
 \begin{center}
 \begin{tabular}{ll}

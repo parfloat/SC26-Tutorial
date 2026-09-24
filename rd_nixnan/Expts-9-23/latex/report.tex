@@ -506,6 +506,54 @@ documented for \texttt{SAMPLING} (5 distinct Infinity sites vanishing at
 \texttt{SAMPLING=8}), now showing up again in a different form: not fewer repeats of the
 same bug, but a different, later exception than the one that actually started it.
 
+\subsection{Getting Both Exceptions: Stride, Not Budget}
+\label{sec:sampling-vs-max-errors}
+
+A natural next question: could raising \texttt{MAX\_ERRORS} recover the original
+Infinity alongside the downstream NaN? Tested directly, in both directions, rather than
+guessed.
+
+\paragraph{Raising MAX\_ERRORS alone does not.} \texttt{nixnan} only ever prints an
+exception the \emph{first} time a given (instruction, exception-type, operand) triple
+occurs, for the life of the process --- repeats at the same site are tallied silently but
+never re-printed or re-counted, so \texttt{MAX\_ERRORS} counts distinct \emph{sites}, not
+occurrences. Raising it from 1 to 2 does reach a second, different site, but not the one
+one might expect:
+\begin{itemize}
+\item \textbf{Unsampled, \texttt{MAX\_ERRORS=2}:} sites 1 and 2 are \emph{both}
+  Infinity --- first the Laplacian's \texttt{HADD2}, then a different instruction (the
+  reaction term's \texttt{HFMA2}) that picks up the now-infinite Laplacian value. A NaN
+  doesn't appear until roughly site 10 (and even then mixed with Infinity, see below);
+  a NaN-only site not until roughly site 24.
+\item \textbf{\texttt{SAMPLING=128}, \texttt{MAX\_ERRORS=2}:} sites 1 and 2 are
+  \emph{both} NaN (different operands of the same \texttt{HADD2}) --- confirming the
+  worry directly. Raising \texttt{MAX\_ERRORS} further doesn't help: Infinity never
+  appears here, at any \texttt{MAX\_ERRORS} value, because no instrumented launch ever
+  witnesses it --- the true overflow ($\sim$step 227) simply isn't a multiple of 128.
+  This is a stride problem, not a counting-budget problem.
+\end{itemize}
+
+\paragraph{The fix: tighten SAMPLING's stride instead.} The companion script,
+\texttt{Stop\_First\_Error\_\allowbreak with\_History\_\allowbreak FP16\_\allowbreak
+SAMPLING8\_\allowbreak MAXERRORS4.sh}, tests \texttt{SAMPLING=8} (instrument 1 in 8
+launches --- close enough to land an instrumented launch on or next to step 227) with
+\texttt{MAX\_ERRORS=4} (log: \texttt{...FP16\_SAMPLING8\_MAXERRORS4.log}):
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+error [NaN,infinity] detected in operand 1 of instruction HADD2 R0, R0.H0_H0, R7.H0_H0
+error [NaN,infinity] detected in operand 2 of instruction HADD2 R0, R0.H0_H0, R7.H0_H0
+error [NaN,infinity] detected in operand 0 of instruction HADD2 R0, R0.H0_H0, R7.H0_H0
+error [NaN,infinity] detected in operand 1 of instruction HFMA2 R0, R9.H0_H0, -2, -2, R0.H0_H0
+\end{lstlisting}
+This does surface both exception kinds within \texttt{MAX\_ERRORS=4} --- but, honestly,
+not as a clean ``Infinity line, then later a separate NaN line.'' Every one of the four
+sites is tagged \texttt{NaN,infinity} together. \texttt{nixnan} classifies a whole warp's
+worth of lanes at once and ORs their exception bits before reporting; at
+\texttt{SAMPLING=8}, the sampled launch that catches this instruction happens to have
+some lanes (some grid points) still transitioning to Infinity while others, slightly
+further along the same buildup, have already reached NaN --- both true simultaneously
+across the 32 lanes sharing that one report. The 1{,}314 histogram threshold lines in
+this run (versus 7 at \texttt{SAMPLING=128}) are the visible cost of that finer stride.
+
 \subsection{All the Invocation Flags for a Sampled Run}
 
 \begin{center}
@@ -574,6 +622,14 @@ exception sites, repeats, or exponent range):
   readable lines, it also demonstrates \texttt{SAMPLING}'s completeness gap yet again,
   in a new form: the sampled run catches a real, correctly-attributed \texttt{NaN}, but
   one step downstream of the launch that actually produced the original Infinity.
+\item \textbf{Recovering both requires the right knob, not more of the wrong one}
+  (Section~\ref{sec:sampling-vs-max-errors}): raising \texttt{MAX\_ERRORS} alone cannot
+  recover the missed Infinity above, at any value, because it counts distinct sites, not
+  occurrences, and \texttt{SAMPLING=128} simply never instruments the launch where it
+  happens. Tightening \texttt{SAMPLING}'s stride to 8 does surface both --- though even
+  then as a single combined \texttt{NaN,infinity} report, since a warp's lanes are
+  classified and OR'd together, and different lanes can be at different points of the
+  same buildup within one launch.
 \end{enumerate}
 As a side effect, re-verifying \texttt{SAMPLING} against the current build (Section~4)
 also caught that a previously-documented no-op regression in \texttt{nixnan.so} has

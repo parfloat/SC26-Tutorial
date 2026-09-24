@@ -59,6 +59,33 @@
     goes non-finite for real: step 14600, with nixnan now correctly
     classifying it (shell-scripts/06_fp64_longrun.sh, same Laplacian line
     and inf-inf->NaN mechanism as FP32). Details in the report.
+  - [Done] New nixnan feature: per-instruction histogram attribution.
+    Histogram threshold reports used to name only a format/kernel/range,
+    unlike exception reports, which also name the instruction. Added
+    BIN_SPEC_FILE key "<fmt> (record_inst)" (e.g. "f16 (record_inst)"),
+    same range syntax as the plain "<fmt>" key, on a new nixnan branch
+    print_histo_instrn (off auto-nixnan, commit 15ad4f8, pushed; this
+    repo's submodule pointer now tracks it). Combined with MAX_ERRORS=1
+    (stop at the first exception): Stop_First_Error_with_History_FP16.sh
+    traces FP16's smallest-two/largest-two exponent bins at count:1,
+    11,000+ lines. Stop_First_Error_with_History_FP16_Sampled.sh adds
+    SAMPLING=128 to cut that to 7 lines -- and honestly surfaces a new
+    form of SAMPLING's completeness gap: the sampled run's single
+    exception is a NaN one launch downstream of the un-sampled step
+    (~227) where the real Infinity first appeared. See report.tex
+    Section 9 for the full trace, the tradeoff, and the flag reference.
+  - [Done] Tested whether raising MAX_ERRORS (instead of tightening
+    SAMPLING) could recover both the original Infinity and the
+    downstream NaN: it can't. MAX_ERRORS counts distinct sites, not
+    occurrences, so raising it just reaches more distinct sites of
+    whichever kind was already being hit (two Infinities unsampled;
+    two NaNs at SAMPLING=128) -- a stride problem, not a budget one.
+    Stop_First_Error_with_History_FP16_SAMPLING8_MAXERRORS4.sh
+    (SAMPLING=8, MAX_ERRORS=4) fixes it by tightening the stride
+    instead, and does catch both -- though every one of the 4 sites is
+    tagged "NaN,infinity" together, not as separate Inf-then-NaN lines,
+    since nixnan ORs a whole warp's lanes' exception bits before
+    reporting. Details in report.tex Section 9.
 * Make this entire set of steps repeatable thru a RunAll.sh
   - Do the experiments, writing all outputs to a suitable log file named wrt the expts
     + Save the logs in a Logs/ folder
