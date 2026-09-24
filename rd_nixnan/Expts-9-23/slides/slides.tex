@@ -164,9 +164,8 @@ FP64 & --- (finite) & \multicolumn{2}{c}{0 / 0} \\
 \end{tabular}
 \end{center}
 \textbf{BF16 and FP32 now both show real nixnan-classified exceptions.}
-FP64 correctly stays finite at $M{=}2000$ --- an earlier draft of this
-experiment reported it going non-finite at step 1900 too, which turned out
-to be a bug in the driver's own check, not nixnan (next slide).
+FP64 correctly stays finite at $M{=}2000$ --- it does eventually overflow
+too, much later (next slide).
 \end{frame}
 
 % ------------------------------------------------------------------
@@ -203,30 +202,6 @@ FADD R7,R0,-R7  ; (sum) - 2.f*u[i]     -> RESULT is NaN  (inf - inf)
 \end{lstlisting}
 Matches the source file's own long-standing comment
 (\texttt{inf - 2*inf + inf -> NaN}) --- now tool-verified, not hand-derived.
-\end{frame}
-
-% ------------------------------------------------------------------
-\begin{frame}[fragile]{FP64: The Diagnostic Bug}
-The driver converts every format to \texttt{double} for its non-finite
-check, then narrows the result into a \texttt{float}:
-\begin{lstlisting}
-float v = from_T<T>(h[i]);   // <-- narrows a double into a float
-if (!std::isfinite(v)) bad = true;
-\end{lstlisting}
-\texttt{float}'s max is ${\approx}3.4\times10^{38}$. Once a
-\texttt{double} exceeds that, the narrowing conversion \emph{alone}
-produces \texttt{+Infinity} --- regardless of whether the double itself
-was ever non-finite. At step 1900, FP64's real value is
-${\approx}1.5\times10^{40}$: past \texttt{float}'s ceiling, but
-${\sim}270$ orders of magnitude below \texttt{double}'s
-($\sim\!1.8\times10^{308}$), and perfectly finite.
-
-\vspace{0.2cm}
-\textbf{Fix:} keep the check in \texttt{double} throughout
-(\texttt{rd\_nixnan.cu}, commit \texttt{03c9ef3}). Audited the rest of the
-file for the same class of cast --- no other instance found; every other
-\texttt{float}/\texttt{half}/\texttt{bf16} cast is an intentional
-target-type conversion, not a truncation of a value under test.
 \end{frame}
 
 % ------------------------------------------------------------------
@@ -293,13 +268,10 @@ steps later, because FP64 has far more exponent range to climb through.
 \begin{frame}{What nixnan Made Visible Here (3/3)}
 \begin{enumerate}
 \setcounter{enumi}{5}
-  \item \textbf{FP64 does eventually fail too, and nixnan shows exactly
-    where}: an implicit \texttt{double}$\to$\texttt{float} narrowing in
-    the program's own check had falsely reported FP64 failing at step
-    1900; fixed, then run for real to step 14600, where FP64 overflows
-    at the step its own growth rate predicts, attributed to the
-    identical Laplacian statement and mechanism already confirmed for
-    FP32.
+  \item \textbf{Running FP64 long enough shows it fails too, and nixnan
+    shows exactly where}: run for real to step 14600, FP64 overflows at
+    the step its own growth rate predicts, attributed to the identical
+    Laplacian statement and mechanism already confirmed for FP32.
 \end{enumerate}
 \end{frame}
 

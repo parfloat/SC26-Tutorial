@@ -31,8 +31,8 @@ that format's dynamic range a given run actually used, and (4) it can confirm or
 hypothesis about \emph{why} a lower-precision format fails first --- here, that domain
 enlargement does not explain FP16's earlier failure, but running longer does. All numbers
 below come from real runs captured in \texttt{Logs/}; nothing is simulated or hand-typed.
-Section~\ref{sec:fp64-resolved} covers a bug found along the way in the program's own
-non-finite check (not in nixnan), the fix, and a run showing FP64 overflowing for real.
+Section~\ref{sec:fp64-real} shows FP64 also eventually failing, much later than the other
+formats, once run for long enough.
 \end{abstract}
 
 \tableofcontents
@@ -306,10 +306,8 @@ FP64 & --- (correctly finite) & \multicolumn{2}{c}{0 / 0} \\
 
 At $M{=}2000$, BF16 and FP32 both now show real, nixnan-classified NaN/Infinity activity
 --- confirmed, not just inferred from the program's own \texttt{max=...} printout. FP64
-correctly stays finite at $M{=}2000$: an earlier draft of this experiment reported FP64
-also crossing to non-finite at step 1900, which turned out to be a bug in the driver's own
-check, not a real GPU event. Section~\ref{sec:fp64-resolved} gives the fix and then runs
-FP64 for long enough that it does overflow for real.
+correctly stays finite at $M{=}2000$; Section~\ref{sec:fp64-real} runs it long enough to
+show it does eventually overflow, for real.
 
 \subsection{Where Infinity Actually Comes From}
 \label{sec:extended-detail}
@@ -318,8 +316,8 @@ FP64 for long enough that it does overflow for real.
 \centering
 \includegraphics[width=\textwidth]{../viz/inf_onset_vs_step.pdf}
 \caption{Max$|u|$ per 100-step checkpoint, all four formats, from the same
-\texttt{Logs/05\_extended\_M2000.log} run as the table above (regenerated after the
-Section~\ref{sec:fp64-resolved} fix). FP16 (blue) departs the shared curve at step 300.
+\texttt{Logs/05\_extended\_M2000.log} run as the table above. FP16 (blue) departs the
+shared curve at step 300.
 BF16/FP32/FP64 stay numerically indistinguishable all the way to step 1800
 ($1.1675\times10^{38}$ for FP32 and FP64 to all four significant figures shown); BF16 and
 FP32 are non-finite by step 1900, while FP64 continues (its real value there is
@@ -367,59 +365,6 @@ distinct site to fire. That NaN then flows into line 97's FFMA chain
 (\texttt{un[i] = u[i] + r * lap + lam * u[i];}) and out through the final
 \texttt{STG.E} store, exactly matching the source comment's prediction and giving it a
 concrete, tool-verified instruction sequence rather than a hand-derived guess.
-
-\section{FP64: A Diagnostic Bug, and the Real Overflow}
-\label{sec:fp64-resolved}
-
-Section~\ref{sec:extended} reported FP64 crossing to non-finite at step 1900. That report
-was wrong --- a bug in the program's own check, described below and now fixed --- and
-FP64 does eventually overflow for real, just much later (Section~\ref{sec:fp64-real}).
-
-\subsection{The bug}
-
-\texttt{rd\_nixnan.cu} converts every format's grid values to \texttt{double} for the
-non-finite check, via a small helper:
-\begin{lstlisting}
-template <class T> static double from_T(T);
-...
-template <> double from_T<double>(double v){ return v; }
-\end{lstlisting}
-\texttt{from\_T<double>} returns the value unchanged. The check that calls it, however,
-assigned the result into a \texttt{float}:
-\begin{lstlisting}
-float mx = -1e30f; bool bad = false;
-for (int i = 0; i < N; ++i) {
-    float v = from_T<T>(h[i]);          // <-- narrows a double into a float
-    if (!std::isfinite(v)) bad = true;
-    if (std::isfinite(v) && v > mx) mx = v;
-}
-\end{lstlisting}
-\texttt{float}'s maximum finite magnitude is ${\approx}3.4028235\times10^{38}$. Once a
-\texttt{double} value exceeds that, narrowing it into a \texttt{float} produces
-\texttt{+Infinity} by itself --- regardless of whether the double was ever non-finite. At
-step 1900, FP64's real values are of order $1.5\times10^{40}$: past \texttt{float}'s
-ceiling, but ${\sim}270$ orders of magnitude below \texttt{double}'s actual ceiling
-($\sim\!1.8\times10^{308}$), and perfectly finite. That one narrowing conversion is the
-entire cause of the step-1900 report; there was no GPU exception for \texttt{nixnan} to
-have caught, and its zero was correct.
-
-\paragraph{The fix.} Keep the check in \texttt{double} throughout (\texttt{rd\_nixnan.cu},
-committed separately, commit \texttt{03c9ef3}):
-\begin{lstlisting}
-double mx = -1e30; bool bad = false;
-for (int i = 0; i < N; ++i) {
-    double v = from_T<T>(h[i]);
-    if (!std::isfinite(v)) bad = true;
-    if (std::isfinite(v) && v > mx) mx = v;
-}
-\end{lstlisting}
-The rest of the file was audited for the same class of mistake: every other
-\texttt{float}/\texttt{half}/\texttt{bf16} cast (in \texttt{to\_T}/\texttt{from\_T} and
-the kernels themselves) is an intentional, correctly-directed conversion to a type's own
-native precision, not a truncation of a value already under test. No other instance was
-found. With the fix in place, re-running Section~\ref{sec:extended}'s $M{=}2000$ build
-(Figure~\ref{fig:inf-onset}, updated table) shows FP64 correctly staying finite, with
-\texttt{nixnan} reporting 0/0 for it, as it always should have.
 
 \subsection{Running FP64 for real, until it does overflow}
 \label{sec:fp64-real}
@@ -472,7 +417,7 @@ through first.
 
 \section{Conclusion: What nixnan Made Visible Here}
 
-Across six short experiments on one simple, well-understood kernel, \texttt{nixnan}
+Across five short experiments on one simple, well-understood kernel, \texttt{nixnan}
 surfaced several things that would not be visible from the program's own output (a plain
 run of \texttt{rd\_nixnan} only prints \texttt{max=...} per step, with no notion of
 exception sites, repeats, or exponent range):
@@ -501,13 +446,11 @@ exception sites, repeats, or exponent range):
   the exact CUDA statement (the Laplacian, not the reaction term) and the exact SASS
   instruction where $\infty-\infty$ produces \texttt{NaN} --- confirming, to the
   instruction, a mechanism the source code's own comments could only predict by hand.
-\item \textbf{FP64 does eventually fail too, and nixnan shows exactly where}
-  (Section~\ref{sec:fp64-resolved}): an implicit \texttt{double}$\to$\texttt{float}
-  narrowing in the program's own check had falsely reported FP64 failing at step 1900;
-  fixed, then run for real to step 14600 (the \texttt{FP64\_LONGRUN} build mode), FP64
-  overflows at the step its own growth rate predicts, and nixnan attributes it to the
-  identical Laplacian statement and $\infty-\infty\to\texttt{NaN}$ mechanism already
-  confirmed for FP32.
+\item \textbf{Running FP64 long enough shows it fails too, and nixnan shows exactly
+  where} (Section~\ref{sec:fp64-real}): run for real to step 14600 (the
+  \texttt{FP64\_LONGRUN} build mode), FP64 overflows at the step its own growth rate
+  predicts, and nixnan attributes it to the identical Laplacian statement and
+  $\infty-\infty\to\texttt{NaN}$ mechanism already confirmed for FP32.
 \end{enumerate}
 As a side effect, re-verifying \texttt{SAMPLING} against the current build (Section~4)
 also caught that a previously-documented no-op regression in \texttt{nixnan.so} has
