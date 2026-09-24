@@ -293,14 +293,11 @@ steps later, because FP64 has far more exponent range to climb through.
 \begin{frame}{What nixnan Made Visible Here (3/3)}
 \begin{enumerate}
 \setcounter{enumi}{5}
-  \item \textbf{A device-side check can outrank a host-side one written
-    around it}: when nixnan reported zero FP64 exceptions against the
-    program's own claim of a step-1900 failure, nixnan was right --- the
-    program's check had an implicit \texttt{double}$\to$\texttt{float}
-    narrowing before \texttt{isfinite()}. Fixed.
-  \item \textbf{With the bug fixed, nixnan confirms FP64 does eventually
-    fail, and shows exactly where}: run for real to step 14600, FP64
-    overflows at the step its own growth rate predicts, attributed to the
+  \item \textbf{FP64 does eventually fail too, and nixnan shows exactly
+    where}: an implicit \texttt{double}$\to$\texttt{float} narrowing in
+    the program's own check had falsely reported FP64 failing at step
+    1900; fixed, then run for real to step 14600, where FP64 overflows
+    at the step its own growth rate predicts, attributed to the
     identical Laplacian statement and mechanism already confirmed for
     FP32.
 \end{enumerate}

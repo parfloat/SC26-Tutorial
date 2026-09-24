@@ -371,9 +371,9 @@ concrete, tool-verified instruction sequence rather than a hand-derived guess.
 \section{FP64: A Diagnostic Bug, and the Real Overflow}
 \label{sec:fp64-resolved}
 
-Section~\ref{sec:extended} reported FP64 crossing to non-finite at step 1900, per the
-program's own check, while \texttt{nixnan}'s classifier reported zero NaN/Infinity events
-for FP64 at that same $M{=}2000$. The cause is a bug in the check, not in \texttt{nixnan}.
+Section~\ref{sec:extended} reported FP64 crossing to non-finite at step 1900. That report
+was wrong --- a bug in the program's own check, described below and now fixed --- and
+FP64 does eventually overflow for real, just much later (Section~\ref{sec:fp64-real}).
 
 \subsection{The bug}
 
@@ -501,16 +501,13 @@ exception sites, repeats, or exponent range):
   the exact CUDA statement (the Laplacian, not the reaction term) and the exact SASS
   instruction where $\infty-\infty$ produces \texttt{NaN} --- confirming, to the
   instruction, a mechanism the source code's own comments could only predict by hand.
-\item \textbf{A device-side check can be more trustworthy than the host-side one written
-  around it} (Section~\ref{sec:fp64-resolved}): when nixnan reported zero FP64 exceptions
-  against the program's own claim of an FP64 failure at step 1900, nixnan was right ---
-  the program's check had an implicit \texttt{double}$\to$\texttt{float} narrowing before
-  \texttt{isfinite()}, not a real GPU event. Fixed in \texttt{rd\_nixnan.cu}.
-\item \textbf{With the bug fixed, nixnan confirms FP64 does eventually fail, and shows
-  exactly where} (Section~\ref{sec:fp64-real}): run for real to step 14600 (the
-  \texttt{FP64\_LONGRUN} build mode), FP64 overflows at the step its own growth rate
-  predicts, and nixnan attributes it to the identical Laplacian statement and
-  $\infty-\infty\to\texttt{NaN}$ mechanism already confirmed for FP32.
+\item \textbf{FP64 does eventually fail too, and nixnan shows exactly where}
+  (Section~\ref{sec:fp64-resolved}): an implicit \texttt{double}$\to$\texttt{float}
+  narrowing in the program's own check had falsely reported FP64 failing at step 1900;
+  fixed, then run for real to step 14600 (the \texttt{FP64\_LONGRUN} build mode), FP64
+  overflows at the step its own growth rate predicts, and nixnan attributes it to the
+  identical Laplacian statement and $\infty-\infty\to\texttt{NaN}$ mechanism already
+  confirmed for FP32.
 \end{enumerate}
 As a side effect, re-verifying \texttt{SAMPLING} against the current build (Section~4)
 also caught that a previously-documented no-op regression in \texttt{nixnan.so} has
