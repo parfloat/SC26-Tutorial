@@ -1,0 +1,202 @@
+Tools to Detect and Diagnose Floating-Point Errors in Heterogeneous Computing Hardware and Software
+A Half-Day Tutorial at Supercomputing 2025
+Tut 122: Sunday, 16 November 2025, 8:30am - 12:00pm CST : Location 121
+
+FP Exceptions (Exceptional Values) are Undesirable (often are bugs)
+FP32: ( 1.9 x 1019  )2  → INF    …  ( in E4M3,  162 = INF ) ⇐ a popular ML low-prec format
+Easily generated during dot-product
+
+Of the FP Exceptions, we focus on INF and NaN 
+NaNs can skew control-flow
+
+This macro is buggy
+#define MAX(x,y)  ( (x >= y)  ?  x  :   y )   
+hint : Consider x bound to NaN and y bound to 42; answer is 42.    Output "clean"
+         Then switch these assignments.                  ; answer is NaN. Max must be commutative
+
+Exceptions often vanish harmlessly (e.g. in ML codes)
+But it is difficult to know which control-flows they have affected meanwhile
+FP Exceptions have not received sufficient attention. We also describe how to characterize error (rounding error) in the first part of the tutorial.
+
+ In GPUs that are increasingly being used for HPC in addition to ML, the generated exceptions are recorded in the floating-point results. The onus is on the programmer to observe the results of calculations by decoding the FP results. But unfortunately, the results are often not easy to observe except at the program outputs. But what if the exceptions are killed before they reach the output? In those cases, they might skew control flows before the exceptions vanish.
+
+History: GPU-FPX                                      Evolved to become NixNan
+
+First demonstrated during HPDC 2023
+Has a detector and an analyzer component that does flow analysis
+Exits early when a thread detects exceptions
+No support for FP16 or Tensor Cores
+Continuing to refine it in response to tests (discovering missing cases each time…)
+Has a single component that detects as well as flow-analyzes
+Finds all exceptions (without quitting early)
+Support for FP16 and 
+Tensor Cores
+CUDA C Code 
+CUDA C Code 
+nvcc
+PTX Code
+nvcc
+PTX Code
+Small matrix multiplications D = A.B+C
+
+
+Performed by Tensore Core  hardware.
+ptxas
+ptxas
+SASS Code
+SASS Code
+Warp
+Warp
+We
+Instrument SASS.
+Tells which exceptions occur after optimizations.
+Closed libraries are "X-rayed" !!
+ 
+
+NixNan : Detecting Exceptions in NVIDIA GPUs
+Detects exceptions in 
+SIMT Cores as well as Tensor Cores
+
+In GPUs that are increasingly being used for HPC in addition to ML, the generated exceptions are recorded in the floating-point results. The onus is on the programmer to observe the results of calculations by decoding the FP results. But unfortunately, the results are often not easy to observe except at the program outputs. But what if the exceptions are killed before they reach the output? In those cases, they might skew control flows before the exceptions vanish.
+
+ INF (if 0) or NaN (if not)
+NixNan : Detecting Exceptions in NVIDIA GPUs
+Detects exceptions in 
+SIMT Cores as well as Tensor Cores
+
+NVIDIA GPUs do not generate any traps when an FP exception occurs
+
+Thus, we have to detect exceptions in software
+
+By decoding the exponent and mantissa of the computed answer
+   M
+S
+E
+FF
+non-zero => subnormal
+0
+Basically, NixNan is an "NVBit tool". One can pretty much provide a call-back function that gets triggered whenever a kernel is launched
+
+Detects exceptions in 
+SIMT Cores as well as Tensor Cores
+
+> LD_PRELOAD = nixnan.so         Pre-Compiled Application Binary
+Intercept all "Kernel Launch" 
+CUDA Driver API Calls
+For Each FP instruction :
+
+   Inject_instrumentation();   
+CUDA Driver APIs
+NixNan Detects Exceptions in NVIDIA GPUs per Kernel Launch
+Basically, NixNan is an "NVBit tool". One can pretty much provide a call-back function that gets triggered whenever a kernel is launched. One can provide logic to walk the instructions and collect the exceptional answers.
+
+History: GPU-FPX                                      Evolved to become NixNan
+
+First demonstrated during HPDC 2023
+Has a detector and an analyzer component that does flow analysis
+Exits early when a thread detects exceptions
+No support for FP16 or Tensor Cores
+Continuing to refine it in response to tests (discovering missing cases each time…)
+Has a single component that detects as well as flow-analyzes
+Finds all exceptions (without quitting early)
+Support for FP16 and 
+Tensor Cores
+CUDA C Code 
+CUDA C Code 
+nvcc
+PTX Code
+nvcc
+PTX Code
+Small matrix multiplications D = A.B+C
+
+
+Performed by Tensore Core  hardware.
+ptxas
+ptxas
+SASS Code
+SASS Code
+Warp
+Warp
+We
+Instrument SASS.
+Tells which exceptions occur after optimizations.
+Closed libraries are "X-rayed" !!
+ 
+
+Real-world Issue: NixNan usage
+Link: https://github.com/asappresearch/sru/issues/193 
+This case-study was done by Dr. Xinyi Li who developed GPU-FPX, the precursor to NixNan 
+    (the latter is a refined version with bug-fixes, and Tensor-Core Support)
+
+We have adapted Dr. Li's test and fix to NixNan.
+In this demo, we are trying to solve an open issue in the SRU, which is a cuda implementation of a recurrent unit. As we can see in the description, a user complained that they have NaN values in the output when using the example code provided by SRU library
+
+Issue
+Link: https://github.com/asappresearch/sru/issues/193 
+The example is written in python using pytorch and the sru library. 
+
+Tool Usage
+
+Seeing NaNs early, we examined the source-code…
+
+Found uninitialized the tensor; setting that fixes NaNs
+torch.randn(20,32,128).cuda()
+
+Before Fixing SRU
+Exceptions
+Written
+Into
+Memory
+After Fixing SRU
+Our
+fix 
+was 
+applied
+
+FP Exceptions in HPC : Ill-conditioned Matrix 
+LD_PRELOAD=~/nixnan.so 
+CUDA_MATRIX=matrix_5.csv ./LU_solver
+LD_PRELOAD=~/nixnan.so 
+CUDA_MATRIX=matrix_0.csv ./LU_solver
+
+> LD_PRELOAD = nixnan.so         Pre-Compiled Application Binary
+Intercept all "Kernel Launch" 
+CUDA Driver API Calls
+For Each FP instruction :
+
+   Inject_instrumentation();   
+CUDA Driver APIs
+Deep-Dive : Tensor-Core Support of NixNan
+FP8 is to be added.  
+
+NOTES
+
+Hands-on your own?
+…accounts…
+Hear abt TCs?
+…
+
+Tensor core register layout
+Each thread holds part of the matrices in its registers
+
+Tensor core register layout
+Each thread holds part of the matrices in its registers
+Thread T1 holds:
+The first four elements of A
+
+Tensor core register layout
+Each thread holds part of the matrices in its registers
+Thread T1 holds:
+The first four elements of A
+The first two elements of B
+
+Tensor core register layout
+Each thread holds part of the matrices in its registers
+Thread T1 holds:
+The first four elements of A
+The first two elements of B
+The first two elements of C
+Mark : 
+here's where we grab exceptions and compile reports
+NaN
+
