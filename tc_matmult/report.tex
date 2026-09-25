@@ -359,16 +359,77 @@ As a further exercise, the FP16 tensor-core kernel (\texttt{leimao-mm.cu}) was r
 (see \texttt{rd\_nixnan/} elsewhere in this repository), to (a) confirm it can observe
 tensor-core instructions at all, and (b) measure what that observation actually costs.
 
-\paragraph{Downsizing to $128^3$.} The first attempt instrumented the original $1024^3$
-kernel with \texttt{BIN\_SPEC\_FILE}'s finest granularity, \texttt{"count":\,1} (report
-every single occurrence of a value in a watched exponent range). That kernel executes on
-the order of 262{,}000 HMMA instructions per launch; at \texttt{count:1} this produced an
-overwhelming volume of report messages through \texttt{nixnan}'s channel, and the runs
-were killed after running for over 10 minutes with no output. All measurements below use
-a $128\times128\times128$ variant of every file in this directory
-(\texttt{*-128x128.cu}, matrix sizes changed from 1024 to 128, otherwise identical) ---
-$1/512$ the work, which made \texttt{count:1} observation tractable (the longest run
-below completes in well under a minute).
+\subsection{The Reduced-Size ($128^3$) Run}
+\label{sec:reduced-size}
+
+\paragraph{Why a reduced size was needed.} The first attempt instrumented the original
+$1024^3$ kernel with \texttt{BIN\_SPEC\_FILE}'s finest granularity, \texttt{"count":\,1}
+(report every single occurrence of a value in a watched exponent range). That kernel
+executes on the order of 262{,}000 HMMA instructions per launch; at \texttt{count:1} this
+produced an overwhelming volume of report messages through \texttt{nixnan}'s channel, and
+the runs were killed after running for over 10 minutes with no output.
+
+\paragraph{The four $128^3$ files.} Every kernel used elsewhere in this report was copied
+to a $128\times128\times128$ variant, with only \texttt{matrix\_size\_m/n/k} changed from
+\texttt{1024} to \texttt{128} (everything else --- kernel code, tiling, the
+warmup/timed-repeat harness --- identical to its $1024^3$ original):
+
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+$1024^3$ original & $128^3$ variant \\
+\midrule
+\texttt{leimao-mm.cu} (FP16, tensor core) & \texttt{leimao-mm-128x128.cu} \\
+\texttt{leimao-simt-variant-fp32.cu} & \texttt{leimao-simt-variant-fp32-128x128.cu} \\
+\texttt{leimao-simt-variant-fp16.cu} & \texttt{leimao-simt-variant-fp16-128x128.cu} \\
+\texttt{leimao-tc-variant-bf16.cu} & \texttt{leimao-tc-variant-bf16-128x128.cu} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+This is $1/512$ the work of the $1024^3$ kernels ($(128/1024)^3$), which made
+\texttt{count:1} histogram observation tractable: the longest \texttt{nixnan} run in
+Section~\ref{sec:nixnan-overhead} below completes in well under a minute, versus the
+$1024^3$ attempt's 10+-minute hang.
+
+\paragraph{Correctness.} All four $128^3$ binaries were rebuilt and rerun standalone (no
+\texttt{nixnan}), using each file's existing \texttt{assert}-based check against its CPU
+reference (\texttt{leimao-mm-128x128.cu}'s \texttt{array\_equal} comparison for the HMMA
+path, the SIMT/BF16 files' own \texttt{cpu\_reference} comparison). All four ran to
+completion without tripping their assertion, i.e.\ the size reduction did not change
+correctness for any of the four kernel variants.
+
+\paragraph{Baseline (no \texttt{nixnan}) performance at $128^3$.} For reference, all four
+kernels' own reported latency at this size, row-major $\times$ row-major, no
+instrumentation:
+
+\begin{center}
+\small
+\begin{tabular}{lrr}
+\toprule
+Kernel & $128^3$ Latency & $1024^3$ Latency (for comparison) \\
+\midrule
+FP16, tensor core (\texttt{leimao-mm-128x128}) & $0.008$~ms & $\approx 0.178$~ms \\
+BF16, tensor core (\texttt{leimao-tc-variant-bf16-128x128}) & $0.008$~ms & $\approx 0.177$~ms \\
+FP32, SIMT (\texttt{leimao-simt-variant-fp32-128x128}) & $0.011$~ms & $\approx 0.845$~ms \\
+FP16, SIMT (\texttt{leimao-simt-variant-fp16-128x128}) & $0.011$~ms & $\approx 0.865$~ms \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+At $1024^3$ (Sections~\ref{sec:benchmark} and \ref{sec:benchmark-bf16}) tensor cores beat
+SIMT by $\approx\!4.8$--$4.9\times$. At $128^3$ that gap collapses to
+$\approx\!1.4\times$ ($0.011/0.008$): at this size the problem is small enough that fixed
+per-launch overhead (kernel launch, grid setup) dominates for every kernel, tensor-core
+and SIMT alike, and there isn't enough arithmetic work left for the tensor cores' raw
+throughput advantage to show through. The $128^3$ size is used here purely to make
+\texttt{nixnan}'s \texttt{count:1} observation tractable, not as a size at which the
+tensor-core-vs-SIMT comparison itself is meaningful --- that comparison is what
+Sections~\ref{sec:benchmark} and \ref{sec:benchmark-bf16} are for.
+
+\subsection{Instrumentation Overhead}
+\label{sec:nixnan-overhead}
 
 \paragraph{Confirmation: \texttt{nixnan} does instrument tensor-core instructions.} With
 \texttt{TOOL\_VERBOSE=1 HISTOGRAM=1}, \texttt{nixnan}'s instruction-matching table was
