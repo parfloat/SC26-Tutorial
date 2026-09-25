@@ -336,6 +336,10 @@ void fill_random_float_values(float* arr, size_t n,
     }
 }
 
+// INT8/IMMA support code, commented out -- not needed for the FP16/BF16/FP32
+// study in this directory (see tc_matmult/report.tex). Left in place, not
+// deleted, in case IMMA is wanted again later.
+/*
 void fill_random_int8_values(int8_t* arr, size_t n,
                              std::default_random_engine& e)
 {
@@ -355,6 +359,7 @@ void fill_random_int32_values(int32_t* arr, size_t n,
         arr[i] = uniform_dist(e);
     }
 }
+*/
 
 void float2half(__half* half_arr, float const* float_arr, size_t n)
 {
@@ -378,6 +383,8 @@ float get_avg_abs_diff_ratio(T const* arr_1, T const* arr_2, size_t n)
     return sum_abs_diff_ratio / n;
 }
 
+// Only used by the (commented-out) IMMA correctness check below.
+/*
 template <typename T>
 bool array_equal(T const* arr_1, T const* arr_2, size_t n)
 {
@@ -390,6 +397,7 @@ bool array_equal(T const* arr_1, T const* arr_2, size_t n)
     }
     return true;
 }
+*/
 
 void print_test_header(bool is_A_transpose, bool is_B_transpose)
 {
@@ -522,6 +530,10 @@ int main()
     CHECK_CUDA_ERROR(cudaFree(d_matrix_b_half));
     CHECK_CUDA_ERROR(cudaFree(d_matrix_c_float));
 
+    // INT8 IMMA, commented out -- not needed for the FP16/BF16/FP32 study
+    // in this directory (see tc_matmult/report.tex). Left in place, not
+    // deleted, in case IMMA is wanted again later.
+    /*
     // IMMA
     std::cout << "INT8 IMMA" << std::endl;
     std::vector<int8_t> matrix_a_int8(matrix_size_m * matrix_size_k);
@@ -600,6 +612,7 @@ int main()
     CHECK_CUDA_ERROR(cudaFree(d_matrix_a_int8));
     CHECK_CUDA_ERROR(cudaFree(d_matrix_b_int8));
     CHECK_CUDA_ERROR(cudaFree(d_matrix_c_int32));
+    */
 
     CHECK_CUDA_ERROR(cudaStreamDestroy(stream));
 }

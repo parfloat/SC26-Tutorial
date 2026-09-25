@@ -1,0 +1,279 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{parskip}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{graphicx}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\lstset{basicstyle=\ttfamily\small, backgroundcolor=\color{codebg}, breaklines=true,
+  columns=fullflexible, frame=single, framesep=3pt, xleftmargin=3pt, xrightmargin=3pt}
+
+\title{Precision Support for Row-Major $\times$ Row-Major GPU Matrix\\
+Multiplication: FP16, BF16, and FP32 on Tensor Cores}
+\author{ganesh@cs.utah.edu \\ \small (written with Claude Code)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report studies matrix multiplication $C = A \times B$ where both $A$ and $B$ arrive
+in \textbf{row-major} layout, restricted to three precisions: FP16, BF16, and FP32.
+Integer (INT8/IMMA) matrix multiplication is out of scope and has been commented out of
+\texttt{tc\_matmult/leimao-mm.cu} accordingly. Every claim about what the hardware and
+CUDA actually support here is verified directly against the CUDA 12.4
+\texttt{mma.hpp} header shipped on this machine (path in
+Section~\ref{sec:fp16}), not general recollection --- exact fragment types, tile shapes,
+and accumulator types are quoted from it. FP16 is fully exercised, working code
+(\texttt{leimao-mm.cu}); BF16 and the FP32/TF32 path are supported by the same header but
+not exercised by that file. Section~\ref{sec:simt} answers directly: no SIMT-core
+(ordinary per-thread CUDA) matrix multiplication happens anywhere in this file --- every
+GPU-side multiply-accumulate goes through tensor cores.
+\end{abstract}
+
+\tableofcontents
+
+\section{Scope and What ``Row-Major, Row-Major'' Means Here}
+\label{sec:scope}
+
+\texttt{leimao-mm.cu} (Lei Mao's WMMA GEMM example, copied verbatim into this
+repository) exposes its GEMM through a column-major-plus-transpose-flag interface:
+\begin{lstlisting}
+launch_wmma_mm(A, B, C, m, n, k, is_A_transpose, is_B_transpose, stream);
+\end{lstlisting}
+Its own header comment states the convention precisely: \emph{``All the data in the
+matrices are stored in a column-major order... \texttt{WMMA\_FRAG\_LAYOUT\_A}:
+\texttt{row\_major} if A is transposed, otherwise \texttt{col\_major}.''} This is a
+standard trick, not a real transpose: an $M \times K$ matrix stored \textbf{row-major}
+occupies \emph{exactly} the same bytes in memory as its $K \times M$ transpose stored
+\textbf{column-major}. So ``\texttt{is\_A\_transpose=true}'' in this code does not mean
+``compute $A^T$'' in any mathematical sense that changes the answer --- it means ``the
+data \texttt{A} points to is laid out row-major; load it that way.'' The code confirms
+this directly: setting the flag selects \texttt{nvcuda::wmma::row\_major} as the fragment
+load layout, and adjusts the leading dimension accordingly
+(\texttt{lda = is\_A\_transpose ? k : m}, correct for a row-major $M\times K$ array).
+
+\textbf{Consequence for this study:} row-major $A$ and row-major $B$ is obtained with
+\begin{lstlisting}
+launch_wmma_mm(A, B, C, m, n, k, /*is_A_transpose=*/true, /*is_B_transpose=*/true, stream);
+\end{lstlisting}
+--- the branch the demo's own \texttt{print\_test\_header} labels ``\texttt{C = A\^{}T *
+B\^{}T}''. That label is accurate to the code's internal naming convention but
+\emph{not} a mathematical transpose of the matrices this report cares about: it is
+exactly $C = A \times B$ with both operands read as ordinary row-major arrays.
+
+\section{FP16 (HMMA): Working, and Already in the File}
+\label{sec:fp16}
+
+\subsection{What the header actually defines}
+From \texttt{crt/mma.hpp}, CUDA 12.4 (full path on this machine:
+\texttt{/usr/local/cuda-12.4/targets/\allowbreak x86\_64-linux/\allowbreak
+include/crt/mma.hpp}): \texttt{wmma::fragment<matrix\_a/matrix\_b, 16, 16,
+16, \_\_half, row\_major$|$col\_major>} is defined, with \texttt{load\_matrix\_sync} for
+both layouts. Two families of \texttt{mma\_sync} overloads exist for the accumulator:
+one into \texttt{fragment<accumulator, 16, 16, 16, \_\_half>} (FP16 accumulation) and one
+into \texttt{fragment<accumulator, 16, 16, 16, float>} (FP32 accumulation) --- \emph{both}
+are real, hardware-backed instruction sequences, not a software emulation of one from the
+other. The same three families of tile shapes appear for FP16 as for every other
+supported type here: $16\!\times\!16\!\times\!16$, $32\!\times\!8\!\times\!16$, and
+$8\!\times\!32\!\times\!16$.
+
+\texttt{leimao-mm.cu} always instantiates \texttt{launch\_wmma\_mm<\_\_half, float>} ---
+i.e.\ it always chooses the \textbf{FP32-accumulator} HMMA path, at the
+$16\times16\times16$ tile shape, and never exercises the FP16-accumulator variant even
+though the hardware/header support it.
+
+\subsection{How the multiplication is realized}
+One CUDA \emph{warp} (32 threads acting as one unit) computes one $16\times16$ output
+tile per iteration of the outer loop, striding over $K$ in steps of 16:
+\begin{lstlisting}
+warpM, warpN <- this warp's 2D tile coordinates (from blockIdx/threadIdx)
+acc_frag: fragment<accumulator, 16,16,16, float> <- fill_fragment(0)
+for ki = 0, 16, 32, ..., k-16:
+    a_frag: fragment<matrix_a, 16,16,16, half, row_major>
+    b_frag: fragment<matrix_b, 16,16,16, half, row_major>
+    load_matrix_sync(a_frag, A + offset(warpM, ki), lda)   # row-major load
+    load_matrix_sync(b_frag, B + offset(ki, warpN), ldb)   # row-major load
+    mma_sync(acc_frag, a_frag, b_frag, acc_frag)           # one HMMA tensor-core op
+c_frag: fragment<accumulator, 16,16,16, float> <- load existing C tile
+for each element e in c_frag: c_frag[e] = alpha*acc_frag[e] + beta*c_frag[e]
+store_matrix_sync(C + offset(warpM, warpN), c_frag, ldc, mem_col_major)
+\end{lstlisting}
+Every multiply-accumulate over the $16\times16\times16$ tile happens in a single
+\texttt{mma\_sync} call --- one tensor-core HMMA instruction, not 4096 separate
+multiply-adds issued by ordinary CUDA cores. \texttt{load\_matrix\_sync} and
+\texttt{store\_matrix\_sync} handle the row-major$\leftrightarrow$fragment layout
+translation entirely inside the intrinsic; the kernel code never manually transposes
+anything.
+
+\section{BF16: Supported by the Header, Not Exercised by This File}
+\label{sec:bf16}
+
+\textbf{Yes, BF16 is supported} --- on Ampere (compute capability 8.0+, which includes
+\texttt{sm\_86}, the target this file already builds for) and confirmed directly in the
+same header:
+\begin{lstlisting}
+wmma::fragment<matrix_a/matrix_b, 16, 16, 16, __nv_bfloat16, row_major|col_major>
+\end{lstlisting}
+is defined, at all three tile shapes (\texttt{16$\times$16$\times$16},
+\texttt{32$\times$8$\times$16}, \texttt{8$\times$32$\times$16}), with full
+\texttt{load\_matrix\_sync} support for both layouts.
+
+\textbf{One structural difference from FP16, confirmed by the header:} only
+\texttt{mma\_sync} overloads accumulating into \texttt{fragment<accumulator, 16,16,16,
+float>} exist for BF16 --- there is \emph{no} BF16-accumulator overload. BF16 tensor-core
+matrix multiplication on this hardware \textbf{always} accumulates in FP32; there is no
+choice to make, unlike FP16.
+
+\texttt{leimao-mm.cu} never instantiates a BF16 path --- \texttt{\_\_nv\_bfloat16} does
+not appear anywhere in the file. Adding it would be a direct, mechanical change: swap
+\texttt{\_\_half} for \texttt{\_\_nv\_bfloat16} as \texttt{T1} (keeping \texttt{T2 =
+float}, since that is the only accumulator type available), and replace
+\texttt{float2half}'s \texttt{\_\_float2half} conversion with \texttt{\_\_float2bfloat16}.
+The kernel body is otherwise identical to Section~\ref{sec:fp16}:
+\begin{lstlisting}
+acc_frag: fragment<accumulator, 16,16,16, float> <- fill_fragment(0)   # float is mandatory
+for ki = 0, 16, 32, ..., k-16:
+    a_frag: fragment<matrix_a, 16,16,16, __nv_bfloat16, row_major>
+    b_frag: fragment<matrix_b, 16,16,16, __nv_bfloat16, row_major>
+    load_matrix_sync(a_frag, A + offset(warpM, ki), lda)
+    load_matrix_sync(b_frag, B + offset(ki, warpN), ldb)
+    mma_sync(acc_frag, a_frag, b_frag, acc_frag)           # one BF16 tensor-core op
+# store identical to FP16 case, c_frag is float throughout
+\end{lstlisting}
+
+\section{FP32: Not on Tensor Cores at Full Precision --- Only via TF32}
+\label{sec:fp32}
+
+This is the precision where the answer is not ``yes, same pattern, different type.''
+
+\subsection{What the header does \emph{not} define}
+Searching \texttt{crt/mma.hpp} for a tensor-core fragment holding true, full-mantissa
+\texttt{float} operands (23-bit mantissa, IEEE-754 single precision) for
+\texttt{matrix\_a}/\texttt{matrix\_b} finds nothing. \textbf{Tensor cores on this GPU
+cannot multiply two full-precision FP32 matrices directly.} There is no WMMA
+instruction for it, at any tile shape.
+
+\subsection{What the header does define: TF32}
+\texttt{wmma::fragment<matrix\_a/matrix\_b, 16, 16, \textbf{8}, precision::tf32,
+row\_major$|$col\_major>} --- note the $K$ dimension is \textbf{8}, not 16, unlike every
+other type in this report. \texttt{load\_matrix\_sync} for this fragment still takes a
+plain \texttt{const float*} pointer: the caller's data in host/device memory stays
+ordinary FP32 the whole time. The precision reduction --- TF32 keeps FP32's 8-bit
+exponent but truncates the mantissa to 10 bits, matching FP16's mantissa width while
+keeping FP32's exponent range --- happens \emph{inside} the load intrinsic itself, not as
+a separate conversion step the caller writes. The accumulator,
+\texttt{fragment<accumulator, 16,16,8, float>}, is full-precision \texttt{float}, and
+\texttt{mma\_sync} overloads for all four row/col-major combinations of
+\texttt{matrix\_a}/\texttt{matrix\_b} are present, confirming TF32 GEMM is fully
+supported for row-major operands, exactly like Sections~\ref{sec:fp16}
+and~\ref{sec:bf16}.
+
+\texttt{leimao-mm.cu} does not exercise this path either --- no \texttt{precision::tf32}
+anywhere in the file. A TF32 version of the kernel:
+\begin{lstlisting}
+acc_frag: fragment<accumulator, 16,16,8, float> <- fill_fragment(0)
+for ki = 0, 8, 16, ..., k-8:                              # K-tile is 8, not 16
+    a_frag: fragment<matrix_a, 16,16,8, precision::tf32, row_major>
+    b_frag: fragment<matrix_b, 16,16,8, precision::tf32, row_major>
+    load_matrix_sync(a_frag, A_float_ptr + offset(warpM, ki), lda)  # FP32 in, TF32 internally
+    load_matrix_sync(b_frag, B_float_ptr + offset(ki, warpN), ldb)
+    mma_sync(acc_frag, a_frag, b_frag, acc_frag)           # one TF32 tensor-core op
+# store: c_frag is float, full precision, no further loss on the output/accumulate side
+\end{lstlisting}
+
+\subsection{If true full-precision FP32 GEMM is actually required}
+Then it cannot run on tensor cores on this hardware at all --- it has to be an ordinary
+SIMT kernel using plain \texttt{FFMA} instructions on the regular CUDA cores, ordinary
+per-thread arithmetic, no \texttt{wmma} namespace involved:
+\begin{lstlisting}
+# one thread per output element (a real kernel would tile through shared memory;
+# this is the conceptual/unoptimized form)
+row, col <- this thread's output coordinates
+acc: float = 0
+for ki = 0, 1, 2, ..., k-1:
+    acc += A[row, ki] * B[ki, col]        # ordinary FFMA, full 23-bit mantissa throughout
+C[row, col] = acc
+\end{lstlisting}
+\texttt{leimao-mm.cu} does not contain this kernel either (see Section~\ref{sec:simt}) ---
+its only full-precision FP32 code is the CPU-side reference function, not a GPU kernel at
+all.
+
+\section{Is Any of This SIMT-Core Matrix Multiplication?}
+\label{sec:simt}
+
+No. \texttt{leimao-mm.cu} contains exactly one \texttt{\_\_global\_\_} kernel,
+\texttt{wmma\_gemm\_a\_col\_major\_b\_col\_major}, and every multiply-accumulate inside
+it happens via \texttt{nvcuda::wmma::mma\_sync} --- a tensor-core instruction. There is no
+kernel anywhere in this file that computes a matrix product using ordinary per-thread CUDA
+arithmetic (\texttt{FFMA}, \texttt{HFMA2}, or otherwise) on the GPU.
+
+The one non-tensor-core matrix multiplication in the file,
+\texttt{mm\_a\_col\_major\_b\_col\_major}, is \textbf{not a GPU kernel at all}: it has no
+\texttt{\_\_global\_\_} or \texttt{\_\_device\_\_} qualifier, takes no thread indices, and
+is called directly from \texttt{main()} on the host. It is a plain, serial,
+triple-nested-loop C++ function that runs on the \textbf{CPU}, used purely to compute a
+correctness reference (\texttt{get\_avg\_abs\_diff\_ratio} compares it against the
+tensor-core result) --- its runtime is never measured or reported, unlike the tensor-core
+kernel's (\texttt{measure\_performance}, cudaEvent-timed).
+
+\textbf{Summary: 100\% of GPU-side matrix multiplication in this file is tensor-core
+work. 0\% is SIMT-core.} A true SIMT FP32 GEMM kernel, as sketched in
+Section~\ref{sec:fp32}, would have to be written from scratch --- it does not exist in
+\texttt{leimao-mm.cu} in any form.
+
+\section{Summary Table}
+
+\begin{center}
+\begin{tabular}{lllll}
+\toprule
+Precision & Tensor core? & Fragment type & Accumulator & Tile ($M{\times}N{\times}K$) \\
+\midrule
+FP16 & Yes (HMMA) & \texttt{\_\_half} & \texttt{\_\_half} \emph{or} \texttt{float} & $16{\times}16{\times}16$ (+2 more) \\
+BF16 & Yes & \texttt{\_\_nv\_bfloat16} & \texttt{float} only & $16{\times}16{\times}16$ (+2 more) \\
+FP32 (TF32) & Yes & \texttt{precision::tf32} & \texttt{float} & $16{\times}16{\times}\mathbf{8}$ \\
+FP32 (full) & No & --- (SIMT only) & \texttt{float} & N/A \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Precision & Exercised in \texttt{tc\_matmult/leimao-mm.cu}? \\
+\midrule
+FP16 & Yes --- the file's only working GEMM path (FP32 accumulator variant) \\
+BF16 & No --- supported by the header/hardware, absent from this file \\
+FP32 (TF32) & No --- supported by the header/hardware, absent from this file \\
+FP32 (full, SIMT) & No --- would require a from-scratch, non-tensor-core kernel \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{A note beyond the three precisions in scope.} The same header also defines
+\texttt{fragment<matrix\_a/\allowbreak matrix\_b, 8, 8, 4, double,
+row\_major$|$col\_major>} --- double-precision (DMMA) tensor-core matrix multiplication
+exists too, at a much smaller $8{\times}8{\times}4$ tile. Out of scope for this report,
+but worth knowing it isn't only FP16/BF16/TF32/INT8 that get tensor-core paths on this
+architecture family.
+
+\section{Conclusion}
+
+For row-major $A$ times row-major $B$ (Section~\ref{sec:scope}): FP16 works today,
+unmodified, via \texttt{leimao-mm.cu}'s existing \texttt{is\_A\_transpose=true,
+is\_B\_transpose=true} call. BF16 is fully supported by the same CUDA/hardware stack,
+confirmed directly in \texttt{mma.hpp}, but needs new code --- a direct, same-shape port
+of the FP16 path with the element type swapped and the accumulator forced to
+\texttt{float}. FP32 has no true full-precision tensor-core path at all; the tensor-core
+option is TF32 (an explicit, hardware-managed precision reduction on load, full-precision
+accumulate, smaller $K$-tile), and genuine full-precision FP32 GEMM would require an
+entirely separate, non-tensor-core SIMT kernel that does not currently exist anywhere in
+this codebase. Every GPU-side multiply-accumulate that \emph{does} exist in
+\texttt{leimao-mm.cu} today runs on tensor cores; the file's only non-tensor-core matrix
+multiply is a CPU-side correctness check, not a GPU kernel.
+
+\end{document}
