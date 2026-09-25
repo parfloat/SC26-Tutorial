@@ -221,10 +221,57 @@ correctness reference (\texttt{get\_avg\_abs\_diff\_ratio} compares it against t
 tensor-core result) --- its runtime is never measured or reported, unlike the tensor-core
 kernel's (\texttt{measure\_performance}, cudaEvent-timed).
 
-\textbf{Summary: 100\% of GPU-side matrix multiplication in this file is tensor-core
-work. 0\% is SIMT-core.} A true SIMT FP32 GEMM kernel, as sketched in
-Section~\ref{sec:fp32}, would have to be written from scratch --- it does not exist in
-\texttt{leimao-mm.cu} in any form.
+\textbf{Summary: 100\% of GPU-side matrix multiplication in \texttt{leimao-mm.cu} is
+tensor-core work. 0\% is SIMT-core.} A true SIMT GEMM kernel, as sketched in
+Section~\ref{sec:fp32}, does not exist in \texttt{leimao-mm.cu} in any form --- it has
+now been written from scratch as a separate pair of files,
+\texttt{leimao-simt-variant-fp32.cu} and \texttt{leimao-simt-variant-fp16.cu}, benchmarked
+directly against the tensor-core path in Section~\ref{sec:benchmark}.
+
+\section{SIMT vs.\ Tensor Core: A Real Benchmark (FP16)}
+\label{sec:benchmark}
+
+\texttt{leimao-simt-variant-fp32.cu} and \texttt{leimao-simt-variant-fp16.cu} are the SIMT
+kernels Section~\ref{sec:simt} found missing from \texttt{leimao-mm.cu} --- a standard
+shared-memory tiled GEMM ($32\times32$ tiles, one thread per output element, ordinary
+\texttt{FFMA} throughout, ordinary CUDA (SIMT) cores, no \texttt{wmma} namespace
+anywhere), restricted to exactly the row-major $\times$ row-major case this report
+studies (Section~\ref{sec:scope}). The FP16 variant matches
+\texttt{leimao-mm.cu}'s own accumulation choice for a fair comparison: \texttt{\_\_half}
+inputs, \texttt{float} accumulation (via \texttt{\_\_half2float} inside the inner loop),
+\texttt{float} output --- the same precision contract as
+\texttt{launch\_wmma\_mm<\_\_half, float>}, so the only thing actually being compared is
+\emph{which hardware path performs the multiply-accumulate}, not a difference in
+numerical precision along the way. Both SIMT files reuse the exact same
+\texttt{measure\_performance} (cudaEvent-timed, 10 warmups, 10 measured repeats) and
+$1024\times1024\times1024$ problem size as \texttt{leimao-mm.cu}, and both were checked
+for correctness against a CPU reference before timing (no ``high average absolute diff
+ratio'' warning printed by either --- i.e.\ within the same $0.01$ average relative-error
+tolerance \texttt{leimao-mm.cu} itself uses).
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+& Latency (ms) & \\
+\midrule
+Tensor core (HMMA, \texttt{leimao-mm.cu}, ``C = A\^{}T * B\^{}T'') & 0.177--0.178 & (3 runs) \\
+SIMT (\texttt{leimao-simt-variant-fp16.cu}) & 0.864--0.866 & (3 runs) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Averaging each: tensor core $\approx 0.178$~ms, SIMT $\approx 0.865$~ms ---
+\textbf{the tensor-core path is $\approx\!4.9\times$ faster} than this tiled SIMT kernel,
+same GPU, same problem size, same input/accumulation precision, same $1024^3$-element
+problem. This is a real, measured number from this machine, not a textbook or vendor
+figure; it should not be read as ``the'' tensor-core speedup in general --- a more
+aggressively tuned SIMT kernel (larger tiles, register blocking, double-buffered shared
+memory, vectorized loads) would close some of this gap, and the gap itself grows or
+shrinks with problem size and GPU generation. What it does establish concretely: even a
+reasonably standard, textbook-tiled SIMT GEMM is not close to tensor-core throughput on
+this hardware for this problem size --- the $16\times16\times16$-element HMMA instruction
+Section~\ref{sec:fp16} walks through is doing, per issue, what this SIMT kernel needs
+$16^3 = 4096$ separate scalar \texttt{FFMA}-equivalent operations to accomplish.
 
 \section{Summary Table}
 
@@ -244,12 +291,13 @@ FP32 (full) & No & --- (SIMT only) & \texttt{float} & N/A \\
 \begin{center}
 \begin{tabular}{ll}
 \toprule
-Precision & Exercised in \texttt{tc\_matmult/leimao-mm.cu}? \\
+Precision & Exercised in \texttt{tc\_matmult/}? \\
 \midrule
-FP16 & Yes --- the file's only working GEMM path (FP32 accumulator variant) \\
-BF16 & No --- supported by the header/hardware, absent from this file \\
-FP32 (TF32) & No --- supported by the header/hardware, absent from this file \\
-FP32 (full, SIMT) & No --- would require a from-scratch, non-tensor-core kernel \\
+FP16, tensor core & Yes --- \texttt{leimao-mm.cu}'s only working GEMM path (FP32 accumulator) \\
+FP16, SIMT & Yes --- \texttt{leimao-simt-variant-fp16.cu} (Section~\ref{sec:benchmark}) \\
+FP32, SIMT & Yes --- \texttt{leimao-simt-variant-fp32.cu} \\
+BF16 & No --- supported by the header/hardware, absent from this directory \\
+FP32 (TF32) & No --- supported by the header/hardware, absent from this directory \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -271,9 +319,21 @@ of the FP16 path with the element type swapped and the accumulator forced to
 \texttt{float}. FP32 has no true full-precision tensor-core path at all; the tensor-core
 option is TF32 (an explicit, hardware-managed precision reduction on load, full-precision
 accumulate, smaller $K$-tile), and genuine full-precision FP32 GEMM would require an
-entirely separate, non-tensor-core SIMT kernel that does not currently exist anywhere in
-this codebase. Every GPU-side multiply-accumulate that \emph{does} exist in
-\texttt{leimao-mm.cu} today runs on tensor cores; the file's only non-tensor-core matrix
-multiply is a CPU-side correctness check, not a GPU kernel.
+entirely separate, non-tensor-core SIMT kernel. Every GPU-side multiply-accumulate that
+exists in \texttt{leimao-mm.cu} itself runs on tensor cores; its only non-tensor-core
+matrix multiply is a CPU-side correctness check, not a GPU kernel.
+
+That missing SIMT kernel now exists, in both precisions (Section~\ref{sec:benchmark}),
+and the FP16
+comparison in
+Section~\ref{sec:benchmark} puts a real number on the gap this report otherwise only
+described structurally: on this GPU, at $1024\times1024\times1024$, with matched
+input/accumulation precision, tensor cores finish in $\approx 0.178$~ms against a
+reasonably standard tiled SIMT kernel's $\approx 0.865$~ms --- roughly $4.9\times$.
+Section~\ref{sec:fp16}'s structural point (one HMMA instruction does the work of 4096
+scalar multiply-adds) and this measured $4.9\times$ are two different kinds of evidence
+for the same conclusion, not the same number restated: the instruction count says why a
+gap should exist; the benchmark says how large it actually is for this kernel, this
+problem size, this GPU.
 
 \end{document}
