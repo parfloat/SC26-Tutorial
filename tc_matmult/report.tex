@@ -130,11 +130,12 @@ matrix multiplication on this hardware \textbf{always} accumulates in FP32; ther
 choice to make, unlike FP16.
 
 \texttt{leimao-mm.cu} never instantiates a BF16 path --- \texttt{\_\_nv\_bfloat16} does
-not appear anywhere in the file. Adding it would be a direct, mechanical change: swap
-\texttt{\_\_half} for \texttt{\_\_nv\_bfloat16} as \texttt{T1} (keeping \texttt{T2 =
-float}, since that is the only accumulator type available), and replace
-\texttt{float2half}'s \texttt{\_\_float2half} conversion with \texttt{\_\_float2bfloat16}.
-The kernel body is otherwise identical to Section~\ref{sec:fp16}:
+not appear anywhere in the file. It now exists as a separate file,
+\texttt{leimao-tc-variant-bf16.cu}: a direct, mechanical port of
+Section~\ref{sec:fp16}'s kernel with \texttt{\_\_half} swapped for
+\texttt{\_\_nv\_bfloat16} (accumulator forced to \texttt{float}, the only type
+available), restricted like the SIMT files to row-major $\times$ row-major
+(Section~\ref{sec:scope}):
 \begin{lstlisting}
 acc_frag: fragment<accumulator, 16,16,16, float> <- fill_fragment(0)   # float is mandatory
 for ki = 0, 16, 32, ..., k-16:
@@ -145,6 +146,9 @@ for ki = 0, 16, 32, ..., k-16:
     mma_sync(acc_frag, a_frag, b_frag, acc_frag)           # one BF16 tensor-core op
 # store identical to FP16 case, c_frag is float throughout
 \end{lstlisting}
+Verified working: correctness-checked against a CPU reference (no diff-ratio warning,
+same $0.01$ tolerance as every other file here) and benchmarked in
+Section~\ref{sec:benchmark-bf16}.
 
 \section{FP32: Not on Tensor Cores at Full Precision --- Only via TF32}
 \label{sec:fp32}
@@ -273,6 +277,44 @@ this hardware for this problem size --- the $16\times16\times16$-element HMMA in
 Section~\ref{sec:fp16} walks through is doing, per issue, what this SIMT kernel needs
 $16^3 = 4096$ separate scalar \texttt{FFMA}-equivalent operations to accomplish.
 
+\section{FP32 (SIMT) vs.\ BF16 (Tensor Core): A Second Real Benchmark}
+\label{sec:benchmark-bf16}
+
+A second, deliberately \emph{cross-precision} comparison: \texttt{leimao-simt-\allowbreak
+variant-fp32.cu} (Section~\ref{sec:benchmark}'s FP32 SIMT kernel, full-precision, ordinary
+CUDA cores) against \texttt{leimao-tc-variant-bf16.cu} (Section~\ref{sec:bf16}'s BF16
+kernel, tensor cores). Unlike Section~\ref{sec:benchmark}, this pairing is not
+precision-matched on purpose --- it is the practical question a would-be user of this
+GPU actually faces: \emph{if my data is FP32, is it worth converting to BF16 to use the
+tensor cores, or should I just run FP32 on the SIMT cores as-is?} Same $1024^3$ problem,
+same \texttt{measure\_performance} methodology (10 warmups, 10 measured repeats), 3 runs
+each, both checked for correctness against a CPU reference before timing (no diff-ratio
+warning from either):
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+& Latency (ms) & \\
+\midrule
+FP32 SIMT (\texttt{leimao-simt-variant-fp32.cu}) & 0.844--0.846 & (3 runs) \\
+BF16 tensor core (\texttt{leimao-tc-variant-bf16.cu}) & 0.177 & (3 runs, identical each time) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Averaging: FP32 SIMT $\approx 0.845$~ms, BF16 tensor core $\approx 0.177$~ms ---
+\textbf{$\approx\!4.8\times$ faster}, essentially the same margin as
+Section~\ref{sec:benchmark}'s precision-matched FP16 comparison ($\approx 4.9\times$),
+and the BF16 number itself is within measurement noise of the FP16 tensor-core number
+there (both $\approx 0.177$--$0.178$~ms) --- consistent with Section~\ref{sec:bf16}'s
+header-level finding that FP16 and BF16 share the same tile shape and accumulator type
+on this hardware, so there is no reason to expect their raw tensor-core throughput to
+differ, and it doesn't. The practical answer to the question this section opened with:
+on this GPU, at this problem size, converting FP32 data to BF16 and using the tensor
+cores is close to $5\times$ faster than computing directly in FP32 on the SIMT cores ---
+at the cost of BF16's reduced mantissa (8 bits, versus FP32's 23), the same accuracy
+trade Section~\ref{sec:fp32} describes for TF32.
+
 \section{Summary Table}
 
 \begin{center}
@@ -296,7 +338,7 @@ Precision & Exercised in \texttt{tc\_matmult/}? \\
 FP16, tensor core & Yes --- \texttt{leimao-mm.cu}'s only working GEMM path (FP32 accumulator) \\
 FP16, SIMT & Yes --- \texttt{leimao-simt-variant-fp16.cu} (Section~\ref{sec:benchmark}) \\
 FP32, SIMT & Yes --- \texttt{leimao-simt-variant-fp32.cu} \\
-BF16 & No --- supported by the header/hardware, absent from this directory \\
+BF16, tensor core & Yes --- \texttt{leimao-tc-variant-bf16.cu} (Section~\ref{sec:benchmark-bf16}) \\
 FP32 (TF32) & No --- supported by the header/hardware, absent from this directory \\
 \bottomrule
 \end{tabular}
@@ -314,26 +356,29 @@ architecture family.
 For row-major $A$ times row-major $B$ (Section~\ref{sec:scope}): FP16 works today,
 unmodified, via \texttt{leimao-mm.cu}'s existing \texttt{is\_A\_transpose=true,
 is\_B\_transpose=true} call. BF16 is fully supported by the same CUDA/hardware stack,
-confirmed directly in \texttt{mma.hpp}, but needs new code --- a direct, same-shape port
-of the FP16 path with the element type swapped and the accumulator forced to
-\texttt{float}. FP32 has no true full-precision tensor-core path at all; the tensor-core
-option is TF32 (an explicit, hardware-managed precision reduction on load, full-precision
-accumulate, smaller $K$-tile), and genuine full-precision FP32 GEMM would require an
-entirely separate, non-tensor-core SIMT kernel. Every GPU-side multiply-accumulate that
-exists in \texttt{leimao-mm.cu} itself runs on tensor cores; its only non-tensor-core
-matrix multiply is a CPU-side correctness check, not a GPU kernel.
+confirmed directly in \texttt{mma.hpp}, and now has its own working file too,
+\texttt{leimao-tc-variant-bf16.cu} --- a direct, same-shape port of the FP16 path with the
+element type swapped and the accumulator forced to \texttt{float}. FP32 has no true
+full-precision tensor-core path at all; the tensor-core option is TF32 (an explicit,
+hardware-managed precision reduction on load, full-precision accumulate, smaller
+$K$-tile), and genuine full-precision FP32 GEMM needs an entirely separate,
+non-tensor-core SIMT kernel --- which also now exists
+(\texttt{leimao-simt-variant-fp32.cu}, alongside its FP16 counterpart). Every GPU-side
+multiply-accumulate that exists in \texttt{leimao-mm.cu} itself runs on tensor cores; its
+only non-tensor-core matrix multiply is a CPU-side correctness check, not a GPU kernel.
 
-That missing SIMT kernel now exists, in both precisions (Section~\ref{sec:benchmark}),
-and the FP16
-comparison in
-Section~\ref{sec:benchmark} puts a real number on the gap this report otherwise only
-described structurally: on this GPU, at $1024\times1024\times1024$, with matched
-input/accumulation precision, tensor cores finish in $\approx 0.178$~ms against a
-reasonably standard tiled SIMT kernel's $\approx 0.865$~ms --- roughly $4.9\times$.
-Section~\ref{sec:fp16}'s structural point (one HMMA instruction does the work of 4096
-scalar multiply-adds) and this measured $4.9\times$ are two different kinds of evidence
-for the same conclusion, not the same number restated: the instruction count says why a
-gap should exist; the benchmark says how large it actually is for this kernel, this
-problem size, this GPU.
+Two real benchmarks put numbers on what this report otherwise only described
+structurally. Precision-matched (Section~\ref{sec:benchmark}, FP16 both ways): tensor
+core $\approx 0.178$~ms vs.\ SIMT $\approx 0.865$~ms, $\approx\!4.9\times$. Cross-precision
+(Section~\ref{sec:benchmark-bf16}, the practical question of whether it's worth
+converting FP32 data to BF16 to use the tensor cores): FP32 SIMT $\approx 0.845$~ms vs.\
+BF16 tensor core $\approx 0.177$~ms, $\approx\!4.8\times$ --- the same margin, and BF16's
+raw latency is indistinguishable from FP16's, exactly as Section~\ref{sec:bf16}'s
+header-level finding (same tile shape, same accumulator type) predicts. Section
+\ref{sec:fp16}'s structural point (one HMMA/BMMA instruction does the work of 4096 scalar
+multiply-adds) and these measured $\approx\!4.8$--$4.9\times$ figures are two different
+kinds of evidence for the same conclusion, not the same number restated: the instruction
+count says why a gap should exist; the benchmarks say how large it actually is, for this
+kernel, this problem size, this GPU.
 
 \end{document}
