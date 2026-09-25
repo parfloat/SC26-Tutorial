@@ -1,0 +1,640 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{seahorse}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+
+\definecolor{codebg}{gray}{0.95}
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  backgroundcolor=\color{codebg},
+  breaklines=true,
+  columns=fullflexible,
+  showstringspaces=false,
+  frame=single
+}
+
+\title{NixNan: Detecting Floating-Point Exceptions on GPUs}
+\subtitle{Architecture, Features, and Four Case Studies}
+\author{SC26 Tutorial}
+\date{}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+% ---------------------------------------------------------------
+\section{Motivation}
+
+\begin{frame}[fragile]{Why Floating-Point Exceptions Matter}
+\begin{itemize}
+  \item FP exceptions (NaN, Inf) are \textbf{almost always bugs}, not intended results.
+  \item They are easy to generate, especially in dot products / reductions, and
+    especially in \textbf{low-precision ML formats}:
+  \[
+  (1.9\times10^{19})^2 \to \mathtt{INF} \text{ in FP32}, \qquad
+  16^2 = \mathtt{INF} \text{ in E4M3 (a popular ML format)}
+  \]
+  \item A classic, deceptively simple bug:
+\begin{lstlisting}[language=C]
+#define MAX(x,y)  ( (x >= y) ? x : y )
+\end{lstlisting}
+  With $x=\mathtt{NaN}, y=42$: result is $42$ (looks clean). Swap the
+  arguments: result is $\mathtt{NaN}$. \textbf{MAX must be commutative --- it isn't.}
+  \item NaNs can silently skew \textbf{control flow}, not just numeric output.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{The Silent-Killer Problem, and Why GPUs Make It Worse}
+\begin{itemize}
+  \item Exceptions often \textbf{vanish harmlessly} on the way to program output
+    (masked by a later operation, a reduction, a clamp) --- but it is very
+    hard to know, after the fact, \textbf{which control-flow decisions they
+    influenced} while they were alive.
+  \item Results are only easy to observe at the very \emph{end} of a kernel
+    or program. If an exception dies before reaching there, the programmer
+    never sees it.
+  \item NVIDIA GPUs generate \textbf{no hardware traps} on FP exceptions ---
+    unlike a CPU's SIGFPE.
+  \item So exception detection must happen \textbf{in software}, by decoding
+    the bit pattern of every computed value:
+  \[
+  \underbrace{S}_{\text{sign}}\;\underbrace{E\cdots E}_{\text{exponent}}\;\underbrace{F\cdots F}_{\text{mantissa}}
+  \]
+  \item All-ones exponent + nonzero mantissa $=$ NaN; all-ones exponent + zero
+    mantissa $=$ $\pm\infty$; all-zeros exponent + nonzero mantissa $=$ subnormal.
+  \item This has to happen for \textbf{every FP instruction, every thread,
+    every launch} --- at native GPU execution speed, or close to it.
+\end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------
+\section{NixNan: Architecture}
+
+\begin{frame}{From GPU-FPX to NixNan}
+\begin{columns}
+\column{0.5\textwidth}
+\textbf{GPU-FPX} (HPDC 2023)
+\begin{itemize}
+  \item Separate detector + analyzer (flow analysis)
+  \item Exits early on first exception per thread
+  \item No FP16 or Tensor Core support
+\end{itemize}
+\column{0.5\textwidth}
+\textbf{NixNan} (evolved from GPU-FPX)
+\begin{itemize}
+  \item Single component: detects \emph{and} flow-analyzes
+  \item Finds \emph{all} exceptions --- never quits early
+  \item Full FP16 and Tensor Core support
+\end{itemize}
+\end{columns}
+\vspace{0.5em}
+\begin{itemize}
+  \item Continuously refined against real workloads --- this tutorial's own
+    four case studies found and fixed two more bugs in NixNan itself
+    (Slide~\ref{sl:dogfood}).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Where NixNan Hooks Into the Compilation Pipeline}
+\begin{center}
+\begin{tabular}{ccccc}
+CUDA C code & $\xrightarrow{\texttt{nvcc}}$ & PTX code & $\xrightarrow{\texttt{ptxas}}$ & SASS code \\
+\end{tabular}
+\end{center}
+\begin{itemize}
+  \item Small matrix multiplications $D = A{\cdot}B + C$ are performed
+    \textbf{directly by Tensor Core hardware} --- not expressed as ordinary
+    scalar FP instructions at all.
+  \item NixNan instruments \textbf{SASS} (the actual machine code), not the
+    source or PTX: it sees exactly what runs on the GPU, \emph{after} every
+    compiler optimization.
+  \item Consequence: \textbf{closed/precompiled libraries can be
+    ``X-rayed''} too --- cuBLAS, cuSOLVER kernels included, no source needed.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{How NixNan Instruments: NVBit + \texttt{LD\_PRELOAD}}
+\begin{itemize}
+  \item NixNan is an \textbf{NVBit} (NVIDIA Binary Instrumentation Tool) tool.
+\begin{lstlisting}[language=bash]
+LD_PRELOAD=nixnan.so  ./your_precompiled_cuda_app
+\end{lstlisting}
+  \item NVBit intercepts every CUDA driver \texttt{Kernel Launch} call and
+    gives NixNan a callback \emph{before} that kernel's SASS runs.
+  \item The SASS rewrite (inserting the checking calls) happens only the
+    \textbf{first time} a given kernel function is seen --- later launches of
+    the same kernel reuse the already-instrumented code, so the rewrite cost
+    is paid once, not per launch.
+  \item Detects exceptions in \textbf{both SIMT cores and Tensor Cores}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Detecting Exceptions: Bit-Pattern Classification}
+\begin{itemize}
+  \item For every FP-classified instruction, NixNan inserts a call to a
+    device-side checker \emph{before} and \emph{after} it executes.
+  \item Classification is pure bit-masking on the operand's exponent/mantissa
+    --- \textbf{no floating-point arithmetic}, so the check itself cannot
+    introduce rounding artifacts:
+\begin{lstlisting}[language=C]
+uint32_t float_is_nan(uint32_t f) {
+  return (float_exp(f)==0xFF && float_mant(f)!=0) ? E_NAN : 0;
+}
+\end{lstlisting}
+  \item Per-lane exception bits are reduced across the warp
+    (\texttt{\_\_shfl\_sync}); only one lane per warp records, avoiding
+    32-way redundant writes.
+  \item First occurrence of a given (instruction, exception-type) pair is
+    pushed live through a device$\to$host channel to a receiver thread.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{What NixNan Detects}
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Category & Meaning \\
+\midrule
+NaN & Not-a-number \\
+Infinity / $-$Infinity & Overflow (reported with sign) \\
+Subnormal & Denormalized (near-zero) value \\
+Division by zero & Divisor operand exactly zero \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{itemize}
+  \item Across \textbf{FP16, BF16, FP32, FP64} (FP8 is future work).
+  \item Across \textbf{both SIMT-core scalar instructions} (FADD, FFMA, DFMA, \ldots)
+    \textbf{and Tensor Core MMA instructions} (HMMA, confirmed empirically ---
+    see Case Study~3).
+  \item Optional \texttt{INSTR\_MEM=1}: also instrument global-memory
+    \textbf{stores}, to confirm an exception was actually \emph{written},
+    not just transiently computed.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Key Environment Variables}
+\scriptsize
+\begin{center}
+\begin{tabular}{lp{8cm}}
+\toprule
+Variable & Effect \\
+\midrule
+\texttt{LD\_PRELOAD} & Points to \texttt{nixnan.so}; how the tool attaches at all \\
+\texttt{INSTRUMENT\_EXCEPTIONS} & Master switch for NaN/Inf/Subnormal/Div0 checking (default \textbf{on}) \\
+\texttt{INSTR\_MEM} & Also check global-memory stores \\
+\texttt{HISTOGRAM} / \texttt{BIN\_SPEC\_FILE} & Exponent-range (binade) histogramming, Slide~\ref{sl:histogram} \\
+\texttt{SAMPLING} & Instrument only every $N$th launch of a repeated kernel \\
+\texttt{MAX\_ERRORS} & Self-terminate after this many exception reports \\
+\texttt{LOG\_KERNELS} & \textbf{Disables} all instrumentation; just logs kernel launches + timing \\
+\texttt{TOOL\_VERBOSE}, \texttt{ENABLE\_FUN\_DETAIL} & Extra diagnostic printing at setup / per-launch \\
+\texttt{FUNCTION\_WHITELIST} / \texttt{\_BLACKLIST} & Restrict instrumentation to (or exclude) named kernels \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}{The Exponent-Histogram Mechanism}
+\label{sl:histogram}
+\begin{itemize}
+  \item \texttt{BIN\_SPEC\_FILE}: a JSON spec naming, per format, exponent
+    ranges to watch, a report \texttt{count}, and (optionally) \texttt{doublings}.
+  \item Every FP value updates a \texttt{[format][exponent]} histogram
+    (powers the \texttt{"Exponent range for f16: [-9, 8]"} summary line).
+  \item If the exponent falls in a watched bin, a per-bin counter increments;
+    every \texttt{count}-th hit sends a \textbf{threshold report}.
+  \item \textbf{A real blind spot}: valid bins explicitly exclude the zero and
+    infinity exponent codes. \textbf{A value that jumps straight from finite
+    to Inf in one instruction never lands in any bin} --- invisible to this
+    mechanism (see Slide~\ref{sl:blindspot}).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Adaptive Doubling: an Exponentially Decaying Report Rate}
+\begin{itemize}
+  \item Reporting on \emph{every} occurrence at \texttt{count:1} floods the
+    log for a hot kernel. \texttt{doublings} fixes this:
+  \begin{itemize}
+    \item Start reporting every \texttt{count} occurrences.
+    \item Each report \textbf{doubles} that bin's own threshold.
+    \item After \texttt{doublings} doublings, the \emph{next} crossing
+      \textbf{resets} every bin in that kernel back to \texttt{count}, and
+      the cycle repeats.
+  \end{itemize}
+  \item Example, \texttt{count:1, doublings:6}: report on the 1st, 2nd, 4th,
+    8th, 16th, 32nd, 64th occurrence, then reset.
+  \item Used throughout Case Studies~1 and~3 to keep hot-kernel logs legible
+    while still sampling every order of magnitude of occurrence.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Dogfooding NixNan: Two Concurrency Bugs Found \& Fixed}
+\label{sl:dogfood}
+While porting \texttt{doublings} for this tutorial, two real bugs were found
+\textbf{in NixNan itself}:
+\begin{enumerate}
+  \item \textbf{Doubling-transition race}: \texttt{threshold} and
+    \texttt{times\_doubled} are shared, mutable state read-then-written by
+    every GPU thread that crosses them --- a classic check-then-act race.
+    Evidence: threshold values observed jumping \emph{backward} ($2\to1$
+    without ever reaching 4). \textbf{Fix}: gate both transitions with
+    \texttt{atomicCAS} so exactly one thread performs each transition.
+  \item \textbf{Torn stdout}: the exception-report thread and the
+    histogram-report thread both write multi-part \texttt{<<} chains to the
+    same stream with no synchronization --- lines from two different reports
+    interleave mid-message. \textbf{Fix}: assemble each report as one string,
+    write it under a single mutex-protected \texttt{nnout\_line()} call.
+\end{enumerate}
+\textit{Lesson: exercising a tool's own adaptive/concurrent features hard
+enough surfaces real bugs in the tool, not just the target program.}
+\end{frame}
+
+\begin{frame}{\texttt{autonixnan}: A 3-Phase Automated Wrapper}
+\begin{itemize}
+  \item A Python wrapper around \texttt{nixnan.so} --- launches the target
+    program multiple times with different env-var combinations, stitches logs.
+  \item \textbf{Phase 1 --- baseline}: \texttt{LOG\_KERNELS} mode; catalog
+    every kernel and its wall-clock time, \emph{zero} instrumentation overhead.
+  \item \textbf{Phase 2 --- extreme-value scan}: \texttt{HISTOGRAM=1},
+    exceptions off; find which kernels touch extreme exponents.
+  \item \textbf{Phase 3 --- deep dive}: full exception instrumentation,
+    optionally whitelisted to the kernels Phase 2 flagged.
+  \item Convenient for large, unfamiliar binaries (cuBLAS/cuSOLVER-heavy) ---
+    but see the next slide for its main failure mode.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{A Real Blind Spot: Hard Overflow Jumps}
+\label{sl:blindspot}
+\begin{itemize}
+  \item Case study: a mixed-precision Cholesky solver forced into overflow
+    (\texttt{--noscale --bscale 1e5}) --- confirmed by the \emph{program's
+    own} internal check (\texttt{nonfinite=256}) on the very first iteration.
+  \item \texttt{autonixnan}'s Phase 2 scan \textbf{never flagged the
+    responsible kernel} --- it flagged an unrelated FP64 QR kernel used only
+    for test-matrix generation. Phase 3's whitelisted deep-dive then reported
+    \textbf{zero FP16 exceptions}.
+  \item Why: the histogram mechanism's bins exclude zero/infinity by design
+    (Slide~\ref{sl:histogram}) --- a one-step jump to \texttt{Inf} leaves no
+    gradually-climbing exponent trail for the scan to catch.
+  \item \textbf{Fix}: run \texttt{nixnan.so} \textbf{directly}, unwhitelisted,
+    no \texttt{autonixnan} --- found the real exceptions immediately.
+  \item \textit{Guidance: prefer direct \texttt{nixnan.so} whenever the target
+    is small enough to instrument in full.}
+\end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------
+\section{Real-World Impact}
+
+\begin{frame}{Real-World Impact: the SRU NaN Bug}
+\begin{itemize}
+  \item \textbf{SRU} (Simple Recurrent Unit): a CUDA implementation of a
+    recurrent unit used from PyTorch.
+  \item Open issue: \url{github.com/asappresearch/sru/issues/193} --- users
+    reported \textbf{NaN outputs} from the library's own example code.
+  \item Case study performed by Dr.\ Xinyi Li (GPU-FPX's original author),
+    later adapted to run under NixNan.
+  \item This is not a synthetic teaching example --- it is a \textbf{real,
+    user-filed bug} in a published library.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{SRU Case Study: Root Cause and Fix}
+\begin{itemize}
+  \item Running the reported-buggy example under NixNan: \textbf{NaN
+    exceptions written into memory} appear almost immediately --- far
+    upstream of where the user first observed corrupted output.
+  \item Following the exception back to source: an \textbf{uninitialized
+    tensor}.
+\begin{lstlisting}[language=Python]
+torch.randn(20, 32, 128).cuda()   # was uninitialized memory before the fix
+\end{lstlisting}
+  \item Initializing it (instead of leaving it as garbage device memory)
+    eliminates the NaNs. Before/after NixNan logs confirm: exceptions
+    written into memory before the fix, none after.
+  \item \textit{Exactly the pattern this tutorial is about: an exception
+    generated far from where a user would ever look, made visible by
+    instruction-level instrumentation.}
+\end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------
+\section{Case Studies}
+
+\begin{frame}{Four Case Studies}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Case study & Workload & Focus \\
+\midrule
+\texttt{rd\_nixnan} & Reaction-diffusion PDE solver & FP64 vs.\ FP32 dynamic range \\
+\texttt{lu\_solve\_gpu} & LU factorization, partial pivot & Ill-conditioning $\to$ NaN \\
+\texttt{tc\_matmult} & Tensor-Core GEMM (WMMA) & Tensor cores + real overhead \\
+\texttt{mpir\_gpu} & Mixed-precision iterative refinement & Precision hierarchy at scale \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{1em}
+All four run on an NVIDIA RTX 3090 / RTX-class Ampere GPU (sm\_80/sm\_86),
+instrumented with \texttt{LD\_PRELOAD=nixnan.so}.
+\end{frame}
+
+\begin{frame}{Case Study 1: \texttt{rd\_nixnan} --- Reaction-Diffusion}
+\[
+\frac{\partial u}{\partial t} = D\frac{\partial^2 u}{\partial x^2} + \lambda u,
+\qquad \lambda = 25,\ T=4
+\]
+\begin{itemize}
+  \item Growth factor by $t{=}4$: $e^{100}\approx2.7\times10^{43}$ --- inside
+    FP64's range, well past FP32's ($\approx3.4\times10^{38}$).
+\end{itemize}
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+ & FP64 & FP32 \\
+\midrule
+Max $|u|$ at $t=3.52$ & $1.11\times10^{38}$ & $1.10\times10^{38}$ \\
+Max $|u|$ at $t=3.60$ & $8.09\times10^{38}$ & Overflows to Inf \\
+Max $|u|$ at $t=4.00$ & $1.70\times10^{43}$ & NaN (propagated) \\
+NixNan exceptions & 0 & 36 NaN / 16 Inf / 40 $-$Inf \\
+\bottomrule
+\end{tabular}
+\end{center}
+FP64 completes cleanly; FP32 overflows between $t=3.52$ and $t=3.60$, then NaN
+propagates for the rest of the run --- the CPU tutorial's lesson, reproduced on GPU.
+\end{frame}
+
+\begin{frame}{\texttt{rd\_nixnan}: A Silent-Failure Wrinkle}
+\begin{itemize}
+  \item The reduction that reports the running max mirrors
+    \texttt{std::max\_element}'s NaN hazard on purpose: \texttt{v > best}
+    (not \texttt{fmax}).
+  \item Once the array goes non-finite, \emph{every} comparison against
+    \texttt{best} fails --- \texttt{best} never leaves its seed value,
+    \texttt{0.0} (a boundary point, pinned by the Dirichlet condition).
+  \item Result: the program prints a \textbf{plausible, finite \texttt{0.0}}
+    from $t{=}3.60$ onward --- not \texttt{nan}, not \texttt{inf}.
+  \item This \textbf{silently defeats the program's own}
+    \texttt{std::isfinite()} \textbf{self-check} --- it never fires, because
+    the reported value genuinely is finite.
+  \item NixNan is unaffected: it instruments the FADD/FFMA \emph{inside} the
+    step kernel, before the corrupted value ever reaches the reduction. It
+    reports the real NaN/Inf (and, with \texttt{INSTR\_MEM}, confirms
+    36{,}928 NaN values actually written to global memory) regardless.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Case Study 2: \texttt{lu\_solve\_gpu} --- LU Factorization}
+$PA = LU$, partial pivoting, forward/backward substitution, $20\times20$
+system, ``snap near-epsilon values to zero'' elimination rule.
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+ & \texttt{matrix.csv} (well-cond.) & \texttt{bad\_matrix.csv} (ill-cond.) \\
+\midrule
+Residual $\lVert Ax-b\rVert_2$ & $9.68\times10^{-16}$ & \texttt{nan} \\
+FP64 NaN (repeats) & 0 & 316 (2171) \\
+FP64 Infinity & 0 & 4 \\
+FP64 Division-by-zero & 0 & 4 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{itemize}
+  \item Mechanism: a near-zero pivot is snapped to exactly \texttt{0.0} by
+    the epsilon-clamp rule; the subsequent division by that zero pivot
+    produces $\pm\infty$, and NaN propagates through the rest of the solve.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{lu\_solve\_gpu}: A Binary-Instrumentation False Positive}
+\begin{itemize}
+  \item The ill-conditioned run also reports \textbf{6 FP32 NaN detections}
+    --- despite the solver computing exclusively in \texttt{double}.
+  \item Root cause, found via the flagged SASS: \texttt{FFMA R8, RZ, R5, R3}
+    --- \texttt{ptxas}'s ``multiply-by-the-zero-register'' idiom for a
+    \textbf{register move} ($0{\times}R5+R3=R3$), used to shuffle the two
+    32-bit halves of a 64-bit double across the register file.
+  \item NixNan correctly classifies \texttt{FFMA} as an \texttt{f32}
+    instruction and correctly notices \texttt{R5}'s bit pattern decodes as
+    NaN --- but that 32-bit word is \emph{half of a double}, never
+    interpreted as an \texttt{f32} value by the program.
+  \item \textbf{Takeaway}: a nonzero count in a format the source never uses
+    does not necessarily mean that format's arithmetic ran --- a known class
+    of false positive for any SASS-level FP exception detector.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Case Study 3: \texttt{tc\_matmult} --- Tensor Cores Under NixNan}
+\begin{itemize}
+  \item WMMA-based FP16/BF16 GEMM (row-major $\times$ row-major), plus
+    hand-written SIMT FP32/FP16 comparison kernels.
+  \item \textbf{Confirmed empirically}: NixNan's instruction table matches
+    tensor-core \texttt{HMMA.16816.F32} directly --- tensor-core MMA
+    instructions are \emph{not} invisible to this instrumentation, despite
+    operating on packed fragment registers rather than scalar values.
+\end{itemize}
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Kernel & Latency & vs.\ SIMT (same precision) \\
+\midrule
+FP16, tensor core & $\approx0.178$~ms & \\
+FP16, SIMT & $\approx0.865$~ms & $\approx\!4.9\times$ faster (TC) \\
+\midrule
+BF16, tensor core & $\approx0.177$~ms & \\
+FP32, SIMT & $\approx0.845$~ms & $\approx\!4.8\times$ faster (TC) \\
+\bottomrule
+\end{tabular}
+\end{center}
+(All $1024^3$, uninstrumented baselines.)
+\end{frame}
+
+\begin{frame}{\texttt{tc\_matmult}: Measuring NixNan's Real Overhead}
+Four instrumentation levels, one FP16 tensor-core kernel ($128^3$, row-major
+$\times$ row-major):
+\begin{center}
+\scriptsize
+\begin{tabular}{lrr}
+\toprule
+Instrumentation level & Latency & Slowdown \\
+\midrule
+No NixNan (baseline) & $0.008$~ms & $1\times$ \\
+Sampled + histogram (misleading, see next slide) & $0.015$~ms & $\approx\!1.9\times$ \\
+Unsampled, default exception checking only & $0.706$~ms & $\approx\!88\times$ \\
+Unsampled, exceptions + \texttt{count:1} histogram & $257.009$~ms & $\approx\!32{,}126\times$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{itemize}
+  \item Finest-granularity histogramming (\texttt{count:1}) is
+    \textbf{drastically} more expensive than exception checking alone ---
+    every single occurrence in a watched bin sends a report.
+  \item \textit{Instrumentation cost is a real design parameter, not an
+    afterthought --- choose granularity deliberately.}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{tc\_matmult}: \texttt{SAMPLING} and a Downsizing Lesson}
+\begin{itemize}
+  \item The ``sampled'' row above (\texttt{SAMPLING=128}) looks almost free
+    ($1.9\times$) --- but this is misleading: this kernel launches only
+    $\sim\!88$ times total, so \texttt{SAMPLING=128} instruments only launch
+    \#0, never one of the 80 \emph{timed} repeats.
+  \item \textbf{Original attempt} at $1024^3$ with \texttt{count:1}: the
+    kernel executes $\sim\!262{,}000$ HMMA instructions per launch --- the
+    resulting report volume through NixNan's channel meant the run never
+    finished in 10+ minutes.
+  \item \textbf{Fix}: rerun at $128^3$ ($1/512$ the work) --- tractable in
+    under a minute, same code, same watched exponent ranges (re-verified
+    empirically for the smaller sample count).
+  \item At $128^3$ the tensor-core-vs-SIMT speedup itself collapses to
+    $\approx\!1.4\times$ (fixed launch overhead dominates at this size) ---
+    a reminder that microbenchmark \emph{size} shapes what you can conclude.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Case Study 4: \texttt{mpir\_gpu} --- Mixed-Precision Iterative Refinement}
+\begin{itemize}
+  \item Carson--Higham iterative refinement Cholesky solve, $n{=}4096$,
+    six formats: F64, F32, TF32, F16, BF16-truncated (B16T), BF16-stochastic (B16S).
+  \item Ill-conditioned regime ($\kappa$ up to $10^5$): \textbf{all} formats
+    break down (\texttt{niter=-1}) --- expected, by design of the test matrices.
+  \item Well-conditioned regime ($n{=}256$): convergence-iteration count
+    tracks precision directly.
+\end{itemize}
+\begin{center}
+\scriptsize
+\begin{tabular}{lcccccc}
+\toprule
+$\kappa$ & F64 & F32 & TF32 & F16 & B16T & B16S \\
+\midrule
+$10$ & 0 & 0 & 0 & 2 & 2 & 4 \\
+$10^3$ & 1 & 1 & 1 & 3 & 10 & 12 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Iterations to reach relative error $<10^{-6}$ --- lower precision needs more refinement steps, especially as $\kappa$ grows.
+\end{frame}
+
+\begin{frame}{\texttt{mpir\_gpu}: Subnormal Storms and Extreme Overhead}
+Overflow stress test ($\kappa=10^3$, amplified residual $b_{\text{scaled}}=10^5b$),
+NixNan-instrumented:
+\begin{center}
+\scriptsize
+\begin{tabular}{lrrr}
+\toprule
+Format & Baseline & Instrumented & Slowdown \\
+\midrule
+F16 & 90~ms & 76{,}238~ms & $847\times$ \\
+B16T & 155~ms & 79{,}530~ms & $513\times$ \\
+F32 & 1.5~ms & 82{,}727~ms & $55{,}152\times$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{itemize}
+  \item F16/B16T overhead traces to $\sim$128 \textbf{subnormal (underflow)}
+    exceptions per GEMM inside HMMA tensor-core kernels --- F16's 5-bit
+    exponent ($\min\approx6{\times}10^{-5}$) is simply too narrow once
+    intermediate values are scaled.
+  \item F32's overhead is driven by NaN/Inf in QR preprocessing (Householder
+    reflections), \emph{not} tensor cores --- a different failure mode
+    entirely, same tool catches both.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{mpir\_gpu}: Exceptions Are Not the Same as Failure}
+\begin{itemize}
+  \item At $\kappa=10^3$, \textbf{every} format shows NixNan-detected
+    exceptions (subnormal, div0, NaN, infinity) in QR/factorization ---
+    \textbf{yet all still converge}, given enough refinement iterations.
+  \item Sweeping $\kappa$ upward: B16T/B16S \textbf{fail} (breakdown,
+    \texttt{niter=-1}) at $\kappa\geq2000$; F32/F64 keep converging through
+    $\kappa=5000$ (limit of the tested range).
+  \item \textbf{Key insight}: the presence of exceptions is not the
+    convergence-killer. It is the format's \textbf{precision capacity} ---
+    whether iterative refinement has enough headroom to correct the damage
+    ---that determines success or failure.
+  \item \textit{NixNan tells you exceptions are happening; it does not by
+    itself tell you whether that matters for your algorithm's correctness.
+    That judgment still belongs to the practitioner.}
+\end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------
+\section{Lessons and Guidance}
+
+\begin{frame}{Cross-Cutting Lessons for HPC Practitioners}
+\begin{itemize}
+  \item \textbf{Overflow-then-NaN-propagation} is the single most common
+    failure mode across all four case studies --- and it is exactly the
+    pattern instruction-level instrumentation is built to catch early.
+  \item \textbf{A program's own diagnostics can be fooled}: NaN-hazard
+    reductions (\texttt{std::max\_element}-style comparisons) can mask real
+    non-finite data behind a plausible finite summary value
+    (\texttt{rd\_nixnan}).
+  \item \textbf{Instrumentation overhead varies by orders of magnitude}: from
+    $\approx\!2\times$ (sparse sampling) to $\approx\!30{,}000\times$
+    (unsampled, finest histogram granularity) to $\approx\!55{,}000\times$
+    (exception-dense kernels) --- always measure it for your own workload.
+  \item \textbf{Binary-level detection has real false positives}
+    (\texttt{lu\_solve\_gpu}'s register-move idiom) \textbf{and real blind
+    spots} (the histogram scan's zero/Inf exclusion) --- know both before
+    trusting a report uncritically.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Practical Guidance}
+\begin{itemize}
+  \item \textbf{Start here for a small/medium target}: run
+    \texttt{nixnan.so} \textbf{directly}, unwhitelisted, default
+    \texttt{INSTRUMENT\_EXCEPTIONS=1} --- no scan-phase blind spot.
+\begin{lstlisting}[language=bash]
+LD_PRELOAD=./nixnan.so ./target [args...]
+\end{lstlisting}
+  \item \textbf{For a large/unfamiliar library-heavy binary}: use
+    \texttt{autonixnan}'s 3-phase workflow to triage first, but verify its
+    Phase-2 kernel selection against a direct run before trusting a
+    ``clean'' Phase-3 result.
+  \item \textbf{For a hot kernel}: use \texttt{BIN\_SPEC\_FILE} with
+    \texttt{doublings} rather than \texttt{count:1} unsampled --- keeps logs
+    legible and overhead bounded while still sampling every decade of
+    occurrence.
+  \item \textbf{Always cross-check} a per-format exception count against
+    what the source code actually computes in that format.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Conclusion}
+\begin{itemize}
+  \item NixNan brings instruction-level, no-hardware-trap-required FP
+    exception detection to both SIMT cores \emph{and} Tensor Cores on NVIDIA
+    GPUs --- including inside closed, precompiled libraries.
+  \item Four independent case studies --- a PDE solver, an LU factorization,
+    a tensor-core GEMM, and a mixed-precision iterative refinement solver ---
+    all reproduce the same central lesson: \textbf{low precision and
+    ill-conditioning fail the same way, overflow then NaN propagation, and
+    that failure is often invisible until instrumented.}
+  \item A real, user-filed library bug (SRU) was found and fixed the same way.
+  \item NixNan itself is under active development --- this tutorial's own
+    case studies found and fixed two concurrency bugs in the tool.
+\end{itemize}
+\vspace{1em}
+\centering
+\url{https://github.com/parfloat/nixnan}
+\end{frame}
+
+\end{document}
