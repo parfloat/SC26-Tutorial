@@ -351,6 +351,86 @@ exists too, at a much smaller $8{\times}8{\times}4$ tile. Out of scope for this 
 but worth knowing it isn't only FP16/BF16/TF32/INT8 that get tensor-core paths on this
 architecture family.
 
+\section{Observing the FP16 Tensor-Core Kernel Under \texttt{nixnan}}
+\label{sec:nixnan}
+
+As a further exercise, the FP16 tensor-core kernel (\texttt{leimao-mm.cu}) was run under
+\texttt{nixnan}, the project's NVBit-based FP exception/histogram instrumentation tool
+(see \texttt{rd\_nixnan/} elsewhere in this repository), to (a) confirm it can observe
+tensor-core instructions at all, and (b) measure what that observation actually costs.
+
+\paragraph{Downsizing to $128^3$.} The first attempt instrumented the original $1024^3$
+kernel with \texttt{BIN\_SPEC\_FILE}'s finest granularity, \texttt{"count":\,1} (report
+every single occurrence of a value in a watched exponent range). That kernel executes on
+the order of 262{,}000 HMMA instructions per launch; at \texttt{count:1} this produced an
+overwhelming volume of report messages through \texttt{nixnan}'s channel, and the runs
+were killed after running for over 10 minutes with no output. All measurements below use
+a $128\times128\times128$ variant of every file in this directory
+(\texttt{*-128x128.cu}, matrix sizes changed from 1024 to 128, otherwise identical) ---
+$1/512$ the work, which made \texttt{count:1} observation tractable (the longest run
+below completes in well under a minute).
+
+\paragraph{Confirmation: \texttt{nixnan} does instrument tensor-core instructions.} With
+\texttt{TOOL\_VERBOSE=1 HISTOGRAM=1}, \texttt{nixnan}'s instruction-matching table was
+confirmed to catch \texttt{HMMA.16816.F32} directly (e.g.\ \texttt{"Histogram
+instrumenting: HMMA.16816.F32 R8, R12.reuse, R22, R8 ;"}) --- tensor-core MMA
+instructions are not invisible to this instrumentation, despite operating on packed
+fragment registers rather than the scalar FP values \texttt{nixnan} was originally built
+to watch.
+
+\paragraph{Four instrumentation levels, one kernel.} All runs below are the row-major
+$A$~$\times$~row-major $B$ case (``\texttt{C = A * B}'' in \texttt{leimao-mm.cu}'s
+output, the one this report is scoped to), on the $128^3$ kernel, using the same 10
+warmup / 10 timed-repeat \texttt{measure\_performance} harness as every other benchmark
+in this report. Full commands, environment variables, and raw logs are in
+\texttt{tc\_matmult/Logs/}.
+
+\begin{center}
+\small
+\begin{tabular}{lrr}
+\toprule
+Instrumentation level & HMMA Latency & Slowdown \\
+\midrule
+No \texttt{nixnan} (baseline) & $0.008$~ms & $1\times$ \\
+\texttt{SAMPLING=128} + histogram (\texttt{count:1,doublings:6}) & $0.015$~ms & $\approx\!1.9\times$ \\
+Unsampled, default exceptions only & $0.706$~ms & $\approx\!88.3\times$ \\
+Unsampled, exceptions + histogram (\texttt{count:1,doublings:6}) & $257.009$~ms & $\approx\!32{,}126\times$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Why the \texttt{SAMPLING=128} row is misleadingly cheap.} \texttt{SAMPLING}
+gates instrumentation by \texttt{kernel\_count \% SAMPLING == 0}. Unlike
+\texttt{rd\_nixnan}'s workloads (1600+ kernel launches), \texttt{leimao-\allowbreak
+mm-128x128} launches its kernel only $\sim\!88$ times total (4 transpose combinations $\times$ (1
+correctness check + 10 warmups + 10 timed repeats)). With \texttt{SAMPLING=128}, only
+launch \#0 --- the very first correctness check, never a \emph{timed} launch --- is ever
+instrumented; every one of the 80 timed repeats that \texttt{measure\_performance}
+actually reports on runs completely uninstrumented. The $0.015$~ms figure is therefore
+close to true baseline by construction, not evidence that histogramming is cheap. The
+remaining three rows, run \emph{unsampled} (every launch instrumented, matching what a
+real observation session would use), show the real cost.
+
+\paragraph{The exponent ranges watched.} The histogram runs used \texttt{count:1,
+doublings:6} (report on the 1st, 2nd, 4th, 8th, \ldots, 64th occurrence in a bin, then
+reset), watching FP16 exponent ranges $[-9,-8]$ and $[7,8]$. These were chosen
+empirically, not by convention: a plain \texttt{HISTOGRAM=1} run (no
+\texttt{BIN\_SPEC\_FILE}) against this exact $128^3$ kernel reports \texttt{"Exponent
+range for f16: [-9, 8]"} --- narrower at the low end than the $1024^3$ kernel's
+\texttt{[zero, 8]}, since fewer samples means less chance of hitting the rarest,
+near-zero bin. The project's other usual convention of watching FP16's full-range
+extremes, $[-14,-13]$ and $[14,15]$, would see zero occurrences on this workload
+(\texttt{uniform(-256,256)}-sourced input data never reaches those exponents here) and
+was not used.
+
+\paragraph{Log volume.} The unsampled default-exceptions-only run produced a 6{,}798-line
+log, committed in full. The unsampled exceptions+histogram run produced
+1{,}054{,}204 lines (336~MB) --- far too large to commit; \texttt{Logs/} holds a
+truncated summary (header, first/last lines, and full per-threshold-level counts computed
+over the complete original file) instead. The \texttt{SAMPLING=128} run's 99{,}310-line
+(32~MB) log is likewise truncated the same way. Both are captured in
+\texttt{tc\_matmult/Logs/}, named for their configuration.
+
 \section{Conclusion}
 
 For row-major $A$ times row-major $B$ (Section~\ref{sec:scope}): FP16 works today,

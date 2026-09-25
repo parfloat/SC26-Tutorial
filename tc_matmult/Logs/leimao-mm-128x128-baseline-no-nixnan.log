@@ -1,0 +1,13 @@
+Matrix Sizes
+M: 128
+N: 128
+K: 128
+FP16 HMMA
+C = A^T * B^T
+HMMA Latency: 0.009 ms
+C = A^T * B
+HMMA Latency: 0.008 ms
+C = A * B^T
+HMMA Latency: 0.009 ms
+C = A * B
+HMMA Latency: 0.008 ms
