@@ -8,12 +8,26 @@
 \usepackage{graphicx}
 \usepackage{tikz}
 \usepackage{pgfplots}
+\usetikzlibrary{arrows.meta, positioning, fit, shapes.geometric}
 \pgfplotsset{compat=1.16}
 \usepackage{xcolor}
 \usepackage{array}
 \usepackage{mathptmx}
 
 \geometry{margin=1in}
+
+\tikzset{
+  matbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm,
+                 align=center, font=\scriptsize, fill=gray!8},
+  outbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm,
+                 align=center, font=\scriptsize, fill=green!12},
+  kernbox/.style={draw, thick, rounded corners=2pt, minimum width=2.6cm,
+                  minimum height=1.5cm, align=center, font=\scriptsize,
+                  fill=blue!7, text width=2.4cm},
+  flowarrow/.style={-{Stealth[length=2.2mm, width=1.6mm]}, thick},
+  contnode/.style={draw, circle, thick, minimum size=5mm, inner sep=0pt,
+                   font=\scriptsize\bfseries},
+}
 
 \title{MPIR GPU: Multiple Precision Integer Arithmetic Research\\
 \large Floating-Point Precision Limits on NVIDIA RTX 3090}
@@ -85,6 +99,74 @@ Update $x_{i+1} = x_i + d_i$ & FP32 & FP32 & FP32 & FP32 & FP32 & FP32 \\
   \item \textbf{Factorization Details}: F64 uses cuSOLVER \texttt{Dpotrf} (FP64); F32/TF32/F16/B16T use cuSOLVER \texttt{Spotrf} (FP32) with GemmEx for low-precision input packing; B16S uses custom kernel for BF16 factorization with FP32 panel-base-block structure.
 \end{itemize}
 
+\subsection{Workflow Diagram: \texttt{Code2.cu}}
+\label{sec:workflow}
+
+The driver in \texttt{main()} (\texttt{Code2.cu}) is one straight-line setup
+followed by a repeating refinement loop; folded into three row-blocks
+(continuity markers \textcircled{\scriptsize A}, \textcircled{\scriptsize
+B}).
+
+\begin{center}
+\begin{tikzpicture}[node distance=5mm and 6mm]
+  % Row 1
+  \node[matbox] (params) {$\kappa$,\\seed,\\scale};
+  \node[kernbox, right=of params] (mk) {\texttt{make\_\allowbreak
+    problem}\\QR-conditioned:\\\texttt{cusolverDn\allowbreak Dgeqrf},\\\texttt{cusolverDn\allowbreak Dorgqr}};
+  \node[matbox, right=of mk, minimum width=1.9cm, text width=1.7cm] (Abx) {$A$: $n{\times}n$\\(fp64)\\$b$, $x_{\mathrm{ref}}$: $n$};
+  \node[kernbox, right=of Abx] (fact) {\texttt{factorize}\\config-dependent:\\\texttt{cusolverDn\allowbreak Dpotrf}/\texttt{Spotrf}\\+ custom BF16\\panel kernels};
+  \node[contnode, right=6mm of fact] (contA) {A};
+
+  \draw[flowarrow] (params) -- (mk);
+  \draw[flowarrow] (mk) -- (Abx);
+  \draw[flowarrow] (Abx) -- (fact);
+  \draw[flowarrow] (fact) -- (contA);
+
+  % Row 2
+  \node[contnode, below=13mm of params] (contA2) {A};
+  \node[matbox, right=6mm of contA2] (L) {$L$\\factors\\(prec.-dep.)};
+  \node[kernbox, right=of L] (init) {\texttt{corr\_solve}\\initial solve:\\\texttt{cublasStrsv}/\\\texttt{Dtrsv}};
+  \node[outbox, right=of init] (x0) {$x_0$\\$n$};
+  \node[contnode, right=6mm of x0] (contB) {B};
+
+  \draw[flowarrow] (contA2) -- (L);
+  \draw[flowarrow] (L) -- (init);
+  \draw[flowarrow] (init) -- (x0);
+  \draw[flowarrow] (x0) -- (contB);
+
+  % Row 3
+  \node[contnode, below=13mm of contA2] (contB2) {B};
+  \node[kernbox, right=6mm of contB2] (resid) {residual\\\texttt{cublasDgemv}\\$r{=}b{-}Ax$, FP64};
+  \node[matbox, right=of resid] (r) {$r$\\$n$};
+  \node[kernbox, right=of r] (corr) {\texttt{corr\_solve}\\correction solve\\(reuses $L$)};
+  \node[matbox, right=of corr] (d) {$d$\\$n$};
+  \node[kernbox, right=of d] (upd) {update\\\texttt{cublasSaxpy}\\$x\mathrel{+}=\theta d$, FP32};
+  \node[outbox, right=of upd] (x) {$x$\\$n$};
+
+  \draw[flowarrow] (contB2) -- (resid);
+  \draw[flowarrow] (resid) -- (r);
+  \draw[flowarrow] (r) -- (corr);
+  \draw[flowarrow] (corr) -- (d);
+  \draw[flowarrow] (d) -- (upd);
+  \draw[flowarrow] (upd) -- (x);
+\end{tikzpicture}
+\end{center}
+
+\noindent If \texttt{factorize} reports breakdown ($bd>0$, its
+\texttt{cusolverDnDpotrf}/\texttt{Spotrf} call failing), the run stops
+immediately after Row~1 with \texttt{status=breakdown, niter=-1} --- Row~2
+and Row~3 never execute (this is the universal outcome for every $n{=}4096$
+run in Phases 1--5, Section~\ref{sec:phase1}). Otherwise, Row~3 (residual,
+correction solve, update) repeats once per refinement iteration, up to
+\texttt{maxit=60}, until $\lVert x-x_{\mathrm{ref}}\rVert_\infty /
+\lVert x_{\mathrm{ref}}\rVert_\infty \leq 10^{-6}$ (\texttt{status=converged}),
+three non-decreasing steps in a row (\texttt{status=fail}), or the iteration
+budget is exhausted. \texttt{corr\_solve} is precision-\emph{config}
+dependent: F64 solves in double via \texttt{cublasDtrsv}; F32/TF32/F16/B16T
+reuse the FP32 factor \texttt{Lf} via \texttt{cublasStrsv}; B16S instead runs
+the custom kernel pair \texttt{k\_bf\_trsv} (forward then transposed) on a
+genuinely BF16-typed factor.
+
 \subsection{Test Matrix Parameters}
 \begin{itemize}
   \item \textbf{Matrix Size}: $n = 4096 \times 4096$
@@ -97,6 +179,7 @@ Update $x_{i+1} = x_i + d_i$ & FP32 & FP32 & FP32 & FP32 & FP32 & FP32 \\
 The complete test pipeline consists of five phases:
 
 \subsection{Phase 1: Calibration Sweep}
+\label{sec:phase1}
 \textbf{Objective}: Identify breakdown points across the full condition number range.
 
 \textbf{Configuration}: All 5 formats $\times$ 9 condition numbers $\times$ 1 seed = 45 runs

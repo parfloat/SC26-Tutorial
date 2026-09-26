@@ -6,11 +6,26 @@
 \usepackage{listings}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, shapes.geometric}
 
 \hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
 \definecolor{codebg}{rgb}{0.96,0.96,0.96}
 \lstset{basicstyle=\ttfamily\small, backgroundcolor=\color{codebg}, breaklines=true,
   columns=fullflexible, frame=single, framesep=3pt, xleftmargin=3pt, xrightmargin=3pt}
+
+\tikzset{
+  matbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm,
+                 align=center, font=\scriptsize, fill=gray!8},
+  outbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm,
+                 align=center, font=\scriptsize, fill=green!12},
+  kernbox/.style={draw, thick, rounded corners=2pt, minimum width=3.4cm,
+                  minimum height=1.5cm, align=center, font=\scriptsize,
+                  fill=blue!7, text width=3.2cm},
+  flowarrow/.style={-{Stealth[length=2.2mm, width=1.6mm]}, thick},
+  contnode/.style={draw, circle, thick, minimum size=5mm, inner sep=0pt,
+                   font=\scriptsize\bfseries},
+}
 
 \title{Precision Support for Row-Major $\times$ Row-Major GPU Matrix\\
 Multiplication: FP16, BF16, and FP32 on Tensor Cores}
@@ -65,6 +80,124 @@ launch_wmma_mm(A, B, C, m, n, k, /*is_A_transpose=*/true, /*is_B_transpose=*/tru
 B\^{}T}''. That label is accurate to the code's internal naming convention but
 \emph{not} a mathematical transpose of the matrices this report cares about: it is
 exactly $C = A \times B$ with both operands read as ordinary row-major arrays.
+
+\section{Workflow Diagrams}
+\label{sec:workflow}
+
+One diagram per distinct kernel design in this directory. Each covers both
+the $1024^3$ file and its \texttt{*-128x128.cu} counterpart (identical
+code, only \texttt{matrix\_size\_m/n/k} differs) --- ten \texttt{.cu} files,
+six diagrams.
+
+\subsection{\texttt{leimao-mm.cu} / \texttt{leimao-mm-128x128.cu} --- FP16 tensor core, float accumulator}
+
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 9mm]
+  \node[matbox] (a) {$A$\\half\\$M{\times}K$};
+  \node[matbox, below=4mm of a] (b) {$B$\\half\\$K{\times}N$};
+  \node[kernbox, right=of a] (k) {\texttt{wmma\_gemm\_\allowbreak
+    a\_col\_major\_\allowbreak b\_col\_major}\\\texttt{<half,\,float>}\\HMMA via
+    \texttt{nvcuda::wmma}, $K/16$ tiles\\$\times4$ transpose combos};
+  \node[outbox, right=of k] (c) {$C$\\float\\$M{\times}N$};
+
+  \draw[flowarrow] (a) -- (k);
+  \draw[flowarrow] (b) -| (k);
+  \draw[flowarrow] (k) -- (c);
+\end{tikzpicture}
+\end{center}
+
+\subsection{\texttt{leimao-simt-variant-fp32.cu} / \texttt{-128x128.cu} --- FP32 SIMT}
+
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 9mm]
+  \node[matbox] (a) {$A$\\fp32\\$M{\times}K$};
+  \node[matbox, below=4mm of a] (b) {$B$\\fp32\\$K{\times}N$};
+  \node[kernbox, right=of a] (k) {\texttt{simt\_gemm\_\allowbreak
+    row\_major\_a\_\allowbreak row\_major\_b\_\allowbreak fp32}\\shared-mem
+    tiled, \texttt{TILE=32}\\ordinary \texttt{FFMA}, no WMMA};
+  \node[outbox, right=of k] (c) {$C$\\fp32\\$M{\times}N$};
+
+  \draw[flowarrow] (a) -- (k);
+  \draw[flowarrow] (b) -| (k);
+  \draw[flowarrow] (k) -- (c);
+\end{tikzpicture}
+\end{center}
+
+\subsection{\texttt{leimao-simt-variant-fp16.cu} / \texttt{-128x128.cu} --- FP16 SIMT, float accumulate}
+
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 9mm]
+  \node[matbox] (a) {$A$\\half\\$M{\times}K$};
+  \node[matbox, below=4mm of a] (b) {$B$\\half\\$K{\times}N$};
+  \node[kernbox, right=of a] (k) {\texttt{simt\_gemm\_\allowbreak
+    row\_major\_a\_\allowbreak row\_major\_b\_\allowbreak fp16}\\\texttt{TILE=32},
+    \texttt{\_\_half2float}\\float accumulate, no WMMA};
+  \node[outbox, right=of k] (c) {$C$\\float\\$M{\times}N$};
+
+  \draw[flowarrow] (a) -- (k);
+  \draw[flowarrow] (b) -| (k);
+  \draw[flowarrow] (k) -- (c);
+\end{tikzpicture}
+\end{center}
+
+\subsection{\texttt{leimao-tc-variant-bf16.cu} / \texttt{-128x128.cu} --- BF16 tensor core}
+
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 9mm]
+  \node[matbox] (a) {$A$\\bf16\\$M{\times}K$};
+  \node[matbox, below=4mm of a] (b) {$B$\\bf16\\$K{\times}N$};
+  \node[kernbox, right=of a] (k) {\texttt{wmma\_gemm\_\allowbreak
+    row\_major\_a\_\allowbreak row\_major\_b\_\allowbreak bf16}\\HMMA/BMMA via
+    \texttt{nvcuda::wmma}\\float accumulator (only type\\the header
+    defines for BF16)};
+  \node[outbox, right=of k] (c) {$C$\\float\\$M{\times}N$};
+
+  \draw[flowarrow] (a) -- (k);
+  \draw[flowarrow] (b) -| (k);
+  \draw[flowarrow] (k) -- (c);
+\end{tikzpicture}
+\end{center}
+
+\subsection{\texttt{leimao-mm-128x128-overflow.cu} --- forced FP16 overflow, tensor core}
+
+Same two input matrices feed \emph{two} kernel instantiations of the same
+WMMA kernel, differing only in accumulator type --- see
+Section~\ref{sec:overflow}.
+
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 9mm]
+  \node[matbox] (a) {$A$\\half\\$128{\times}128$\\$(\pm2000)$};
+  \node[matbox, below=4mm of a] (b) {$B$\\half\\$128{\times}128$\\$(\pm2000)$};
+  \node[kernbox, right=of a, yshift=8mm] (kf) {\texttt{launch\_wmma\_mm}\\\texttt{<half,\,float>}\\control: wide accumulator};
+  \node[outbox, right=of kf] (cf) {$C$\\float\\finite};
+  \node[kernbox, right=of a, yshift=-8mm] (kh) {\texttt{launch\_wmma\_mm}\\\texttt{<half,\,half>}\\narrow accumulator};
+  \node[outbox, right=of kh] (ch) {$C$\\half\\$\pm$Inf};
+
+  \draw[flowarrow] (a) -| (kf);
+  \draw[flowarrow] (b) -| (kf);
+  \draw[flowarrow] (a) -| (kh);
+  \draw[flowarrow] (b) -| (kh);
+  \draw[flowarrow] (kf) -- (cf);
+  \draw[flowarrow] (kh) -- (ch);
+\end{tikzpicture}
+\end{center}
+
+\subsection{\texttt{leimao-simt-variant-\allowbreak fp16-128x128-overflow.cu} --- forced FP16 overflow, SIMT}
+
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 9mm]
+  \node[matbox] (a) {$A$\\half\\$128{\times}128$\\$(\pm2000)$};
+  \node[matbox, below=4mm of a] (b) {$B$\\half\\$128{\times}128$\\$(\pm2000)$};
+  \node[kernbox, right=of a] (k) {\texttt{simt\_gemm\_\allowbreak\ldots\_\allowbreak
+    fp16\_\allowbreak pure\_half}\\pure \texttt{\_\_half} accumulate,
+    \texttt{TILE=32}\\no float promotion, no WMMA};
+  \node[outbox, right=of k] (c) {$C$\\half\\$\pm$Inf};
+
+  \draw[flowarrow] (a) -- (k);
+  \draw[flowarrow] (b) -| (k);
+  \draw[flowarrow] (k) -- (c);
+\end{tikzpicture}
+\end{center}
 
 \section{FP16 (HMMA): Working, and Already in the File}
 \label{sec:fp16}

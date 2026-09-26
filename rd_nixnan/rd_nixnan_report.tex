@@ -10,8 +10,23 @@
 \usepackage{mathptmx}
 \usepackage{listings}
 \usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, shapes.geometric}
 
 \geometry{margin=1in}
+
+\tikzset{
+  matbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm,
+                 align=center, font=\scriptsize, fill=gray!8},
+  outbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm,
+                 align=center, font=\scriptsize, fill=green!12},
+  kernbox/.style={draw, thick, rounded corners=2pt, minimum width=3.1cm,
+                  minimum height=1.5cm, align=center, font=\scriptsize,
+                  fill=blue!7, text width=2.9cm},
+  flowarrow/.style={-{Stealth[length=2.2mm, width=1.6mm]}, thick},
+  contnode/.style={draw, circle, thick, minimum size=5mm, inner sep=0pt,
+                   font=\scriptsize\bfseries},
+}
 
 \definecolor{codebg}{gray}{0.95}
 \lstset{
@@ -109,6 +124,36 @@ precision.
   \item \textbf{Compilation}: \texttt{nvcc -std=c++17 -g -O2 -lineinfo -arch=sm\_86}
   \item \textbf{Instrumentation}: \texttt{LD\_PRELOAD=../../nixnan.so}
 \end{itemize}
+
+\section{Workflow Diagram: \texttt{reaction\_diffusion\_gpu.cu}}
+\label{sec:workflow}
+
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 9mm]
+  \node[matbox] (u0) {$u_0$\\[1pt]$N{=}101$};
+  \node[kernbox, right=of u0] (step) {\texttt{rd\_step\_kernel}\\FTCS update\\$\times M{=}80000$,\\\texttt{swap(u,u\_next)}};
+  \node[outbox, right=of step] (ufinal) {$u$\\[1pt]$N{=}101$\\(final)};
+
+  \node[kernbox, below=of step] (reduce) {\texttt{max\_reduce\_kernel}\\naive pairwise max\\$\times 50$, every\\1600 steps};
+  \node[outbox, right=of reduce] (maxout) {$\max(t)$\\scalar,\\printed};
+
+  \draw[flowarrow] (u0) -- (step);
+  \draw[flowarrow] (step) -- (ufinal);
+  \draw[flowarrow] (step) -- (reduce);
+  \draw[flowarrow] (reduce) -- (maxout);
+\end{tikzpicture}
+\end{center}
+
+\noindent Single time-stepping kernel (\texttt{rd\_step\_kernel}) advances the
+whole interior of $u$ one FTCS step at a time, ping-ponging between two
+device buffers (\texttt{d\_u}/\texttt{d\_u\_next}, swapped by pointer after
+every launch) for $M{=}80000$ steps. Every 1600 steps
+(\texttt{print\_interval\allowbreak{} = M/50}), a side branch launches
+\texttt{max\_reduce\_kernel} on the
+\emph{current} $u$ buffer to compute and print the running maximum --- this
+is the naive \texttt{v > best} reduction discussed in
+Section~\ref{sec:silent-failure}, not part of the main time-stepping
+recurrence.
 
 \section{FP64 vs FP32: Dynamic Range}
 \label{sec:dynamic-range}
