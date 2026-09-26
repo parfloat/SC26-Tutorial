@@ -492,6 +492,123 @@ over the complete original file) instead. The \texttt{SAMPLING=128} run's 99{,}3
 (32~MB) log is likewise truncated the same way. Both are captured in
 \texttt{tc\_matmult/Logs/}, named for their configuration.
 
+\section{Forcing FP16 Overflow: Tensor Core vs.\ SIMT}
+\label{sec:overflow}
+
+Every run so far (Section~\ref{sec:nixnan}) produced \emph{zero} FP exceptions
+of any kind. That is a property of the input magnitude, not of the
+hardware: \texttt{leimao-mm.cu}'s HMMA path accumulates in \texttt{float}
+(\texttt{launch\_wmma\_mm<\_\_half, float>}), and the SIMT comparison kernels
+(Sections~\ref{sec:benchmark}, \ref{sec:benchmark-bf16}) were deliberately
+built to match that same wide-accumulator contract for a fair timing
+comparison. This section asks the question directly: raise the input
+magnitude and force a genuinely \emph{narrow} (\texttt{\_\_half}) accumulator
+instead --- does a tensor core overflow then, and does an ordinary SIMT-core
+FP16 kernel overflow on its own, with zero tensor-core instructions
+involved at all?
+
+\subsection{Two new files}
+
+\begin{itemize}
+  \item \texttt{leimao-mm-128x128-overflow.cu}: the same WMMA kernel as
+    \texttt{leimao-mm-128x128.cu}, but every transpose combination now runs
+    \emph{both} \texttt{launch\_wmma\_mm<\_\_half, float>} (control, wide
+    accumulator) \emph{and} \texttt{launch\_wmma\_mm<\_\_half, \_\_half>}
+    (narrow accumulator) back to back, with the output matrix scanned for
+    NaN/Inf independent of nixnan as a sanity check.
+  \item \texttt{leimao-\allowbreak simt-\allowbreak variant-\allowbreak
+    fp16-\allowbreak 128x128-\allowbreak overflow.cu}: unlike
+    \texttt{leimao-\allowbreak simt-\allowbreak variant-\allowbreak
+    fp16-\allowbreak 128x128.cu} (Section~\ref{sec:benchmark},
+    which accumulates in \texttt{float} via \texttt{\_\_half2float}), this
+    kernel accumulates in \texttt{\_\_half} the entire way --- ordinary
+    \texttt{operator*}/\texttt{operator+} on device \texttt{\_\_half} values
+    resolve to real half-precision \texttt{\_\_hmul}/\texttt{\_\_hadd}, no
+    promotion to \texttt{float} anywhere, and no WMMA/tensor-core
+    instruction anywhere in the kernel.
+\end{itemize}
+
+Both raise the input magnitude from the earlier baseline's uniform range
+$(-256, 256)$ to $(-2000, 2000)$ --- already
+sign-dithered, since a distribution symmetric about 0 draws each sign with
+equal probability. At this magnitude, individual products $a_i b_i$ can
+reach $\sim\!4{,}000{,}000$, about $61\times$ past FP16's $\sim\!65504$ max
+finite value.
+
+\subsection{Results: host-side sanity check (independent of nixnan)}
+
+All four transpose combinations, $128^3$, before any instrumentation is
+involved at all:
+
+\begin{center}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Kernel & finite & NaN & +Inf & $-$Inf \\
+\midrule
+Tensor core, \texttt{float} accumulator (control) & 16384/16384 & 0 & 0 & 0 \\
+Tensor core, \texttt{\_\_half} accumulator & 0/16384 & 0 & $\approx\!8200$ & $\approx\!8180$ \\
+SIMT, pure \texttt{\_\_half} accumulate & 0/16384 & 0 & 8114 & 8270 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The \texttt{float}-accumulator control never overflows, on any of the four
+combinations, exactly matching Section~\ref{sec:nixnan}'s zero-exception
+runs. The \texttt{\_\_half}-accumulator tensor-core kernel and the pure-half
+SIMT kernel both overflow \emph{completely} --- every one of the 16{,}384
+output elements is $\pm$Infinity, roughly split between signs, with zero
+NaN at this magnitude and seed. \textbf{This settles the question
+directly}: a tensor core can and does overflow FP16 once its accumulator is
+narrow; what protects \texttt{leimao-mm.cu}'s actual HMMA path is
+specifically its choice of a wide (\texttt{float}) accumulator, not
+anything inherent to tensor-core hardware. And ordinary SIMT-core FP16
+arithmetic, with no tensor core involved at all, overflows the same way.
+
+\subsection{Results: caught by nixnan}
+
+Both files were rerun unsampled, default exception checking, and nixnan
+independently confirms each overflow at the exact instruction responsible:
+
+\begin{center}
+\small
+\begin{tabular}{lrr}
+\toprule
+Kernel & FP16 Infinity / $-$Infinity & Instruction \\
+\midrule
+Tensor core, \texttt{\_\_half} accumulator & 16 sites / 7664 repeats (each sign) & \texttt{HMMA.16816.F16} \\
+SIMT, pure \texttt{\_\_half} accumulate & 66 / 64 sites, 130{,}486 repeats (each sign) & \texttt{HFMA2} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The SIMT case is the cleanest possible confirmation of the underlying
+question: \texttt{HFMA2} (packed half-precision fused-multiply-add) is an
+ordinary CUDA-core instruction, not a tensor-core one --- nixnan catches
+plain SIMT-core FP16 additions overflowing to Infinity, with zero
+tensor-core instructions anywhere in the kernel. The tensor-core case shows
+the matching FP32 epilogue arithmetic (the \texttt{alpha*acc+beta*c\_prev}
+scale step, promoted to \texttt{float} for the multiply since \texttt{float}
+and \texttt{\_\_half} have no unambiguous \texttt{operator*} together)
+inheriting and re-reporting the same Infinity coming out of the
+\texttt{\_\_half} accumulator: 64 FP32 sites / 4032 repeats per sign,
+directly downstream of the 16 \texttt{HMMA.16816.F16} sites.
+
+\paragraph{A buffer-reuse pitfall, caught and fixed during this experiment.}
+An earlier version of \texttt{leimao-mm-128x128-overflow.cu} reused the same
+device output buffer across all four transpose combinations without
+clearing it between runs. Since the epilogue computes $\beta \cdot
+c_{\mathrm{prev}}$ with $\beta{=}0$, this looks harmless --- except
+$0 \times \mathrm{NaN} = \mathrm{NaN}$ in IEEE arithmetic, so once one combo's
+\texttt{\_\_half}-accumulator run overflowed, its leftover NaN/Inf silently
+leaked into the \emph{next} combo's ``prior C'' read, turning 3 of the 4
+combinations' outputs into all-NaN rather than the true, combo-isolated
+all-Infinity result. Zeroing both output buffers with \texttt{cudaMemset}
+before every launch fixed this. Left in as a real, if minor, illustration
+of the same class of bug this whole tutorial is about: an exception from
+one computation silently contaminating a later, logically unrelated one
+through reused state.
+
 \section{Conclusion}
 
 For row-major $A$ times row-major $B$ (Section~\ref{sec:scope}): FP16 works today,
