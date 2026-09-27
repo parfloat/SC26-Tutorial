@@ -427,24 +427,26 @@ result (torch 2.3.1+cu121 here correctly propagates the NaN -- the
 silent-corruption bug is reproduced in the issue's own newer
 2.10.0+cu128 environment, not this one).
 
-### Direct (non-iter) attempts -- both stalled, no useful log
+### Direct (non-iter) attempts, short timeout -- both looked stalled
 ```bash
 cd pytorch_slogdet
-LD_PRELOAD=../external/nixnan/nixnan.so python3 reproducer.py                  # killed after 120s
-LD_PRELOAD=../external/nixnan/nixnan.so SAMPLING=512 python3 reproducer.py     # same wall, killed
+timeout 120 env LD_PRELOAD=../external/nixnan/nixnan.so python3 reproducer.py               # killed at 120s
+timeout 120 env LD_PRELOAD=../external/nixnan/nixnan.so SAMPLING=512 python3 reproducer.py  # same wall, killed
 ```
 Both stuck mid-SASS-rewrite on a large cuSOLVER `getrf`-family kernel
 before the target program ever printed a line of output (documented in
 `autonixnan-doc.tex` Sec 2.8 as a real example of the one-time
 instrumentation-insertion cost). `SAMPLING` doesn't help here, since it
 gates per-launch report volume, not the one-time rewrite cost, and the
-reproducer only launches each kernel once or twice.
+reproducer only launches each kernel once or twice. Logs from these two
+attempts were kept out of `git` (confirmed truncated mid-instrumentation,
+never reaching the program's own output).
 
-### iter-autonixnan -- succeeded where the direct attempts stalled
+### iter-autonixnan -- succeeded where the short-timeout direct attempts stalled
 ```bash
 cd pytorch_slogdet
 ../external/nixnan/bin/iter-autonixnan -s 8 -t 60 -- python3 reproducer.py \
-  > iter-autonixnan.log 2>&1
+  > Logs/iter-autonixnan.log 2>&1
 ```
 Result: all 19 kernels visited, no timeouts (~32.5s each -- almost
 entirely PyTorch's own CUDA/cuSOLVER startup cost, confirmed against
@@ -454,6 +456,20 @@ propagation path through `slogdet`'s CUDA kernels: `getrf_pivot`
 (cuSOLVER's LU factorization -- 7 distinct NaN sites/5 repeats) ->
 `sign_kernel_cuda` (2, then 1 distinct NaN site) -> `log_kernel_cuda`
 (2 NaN sites, 1 Infinity site) -> a final `reduce_kernel` (10 distinct
-NaN sites). Splitting into 19 separate single-kernel-whitelisted runs is
-apparently what makes this tractable where the combined
-every-kernel-instrumented-at-once direct attempt was not.
+NaN sites).
+
+### Direct (non-iter), unsampled, no timeout cap -- turns out it does finish
+```bash
+cd pytorch_slogdet
+LD_PRELOAD=../external/nixnan/nixnan.so python3 reproducer.py \
+  > Logs/slogdet-nixnan-unsampled-default-exceptions.log 2>&1
+```
+The exact invocation that was killed at 120s above, this time given a
+long background allowance instead: **it genuinely completes** -- all 19
+kernels instrumented together in one process, reaches the program's own
+output and nixnan's final report (832 lines). 21 distinct FP32 NaN sites
+(5 repeats), 1 Infinity site, 1 memory NaN -- consistent in magnitude
+with `iter-autonixnan`'s per-kernel sweep (22 total NaN sites split
+across the same four kernels). Resolves the earlier open question: the
+one-time instrumentation-insertion cost for cuSOLVER's large kernels
+here is *slow* (well past 120s), not an actual hang.
