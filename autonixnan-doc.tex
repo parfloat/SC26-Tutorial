@@ -459,6 +459,65 @@ harmless noise from \texttt{autonixnan}'s point of view, but they do
 inflate the log file and are worth knowing about if reading a
 \texttt{LOG\_KERNELS} log by hand.
 
+\subsection{\texttt{TIME\_KERNELS} Under Full Instrumentation: the First-Launch Cost}
+\label{sec:time-kernels-first-launch}
+
+The previous subsection covers \texttt{TIME\_KERNELS} under
+\texttt{LOG\_KERNELS} mode, where instrumentation is disabled entirely.
+Run \texttt{TIME\_KERNELS=1} on its own instead --- \texttt{LD\_PRELOAD}
+and \texttt{TIME\_KERNELS=1}, nothing else, so
+\texttt{INSTRUMENT\_EXCEPTIONS} stays at its default (on) --- against
+\texttt{lu\_solve\_gpu} (this repository's \texttt{lu\_solve\_gpu/},
+well-conditioned \texttt{matrix.csv}) and every one of its 8 kernels'
+timings tells the same story:
+
+\begin{center}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Kernel & Launches & First launch & Typical (median) & Ratio \\
+\midrule
+\texttt{init\_identity\_kernel} & 2 & 312{,}451~\textmu s & 21~\textmu s & $\approx\!14{,}900\times$ \\
+\texttt{find\_pivot\_kernel} & 19 & 298{,}100~\textmu s & 20~\textmu s & $\approx\!14{,}900\times$ \\
+\texttt{swap\_rows\_kernel} & 19 & 290{,}205~\textmu s & 25~\textmu s & $\approx\!11{,}600\times$ \\
+\texttt{compute\_multipliers\_kernel} & 19 & 295{,}432~\textmu s & 20~\textmu s & $\approx\!14{,}800\times$ \\
+\texttt{eliminate\_kernel} & 19 & 278{,}808~\textmu s & 20~\textmu s & $\approx\!13{,}900\times$ \\
+\texttt{apply\_permutation\_kernel} & 1 & 300{,}320~\textmu s & --- & --- \\
+\texttt{forward\_substitution\_kernel} & 1 & 326{,}736~\textmu s & --- & --- \\
+\texttt{backward\_substitution\_kernel} & 1 & 324{,}597~\textmu s & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\emph{Every} kernel's first launch costs $\approx\!280$--$330$ms;
+every later launch of an already-seen kernel costs $\approx\!20$--$25$
+microseconds --- four to five orders of magnitude faster, a gap this
+consistent across five structurally different kernels that it cannot be
+explained by anything the kernels themselves do differently. The reason
+is Section~\ref{sec:init}'s own finding, seen here as a direct timing
+measurement rather than inferred from source: \texttt{instrument\_function}
+rewrites a kernel's SASS \emph{only the first time that kernel function is
+launched} (guarded by an \texttt{std::unordered\_set<CUfunction>} of
+functions already instrumented), and \texttt{TIME\_KERNELS}'s clock
+starts before that one-time rewrite and stops after it --- so the first
+measurement for every kernel is dominated by SASS instrumentation-insertion
+cost, not by anything the kernel computes. The three kernels launched only
+once (\texttt{apply\_permutation\_kernel},
+\texttt{forward\_substitution\_kernel}, \texttt{backward\_substitution\_kernel})
+never get to show a fast, already-instrumented timing at all --- every
+number \texttt{TIME\_KERNELS} ever reports for them is this one-time cost.
+This is the same phenomenon at much larger scale behind the instrumentation
+overhead \texttt{tc\_matmult/tc\_matmult\_report.tex} measures directly, and
+behind this session's own attempt to run \texttt{pytorch\_slogdet/}
+(elsewhere in this repository) under full instrumentation: cuSOLVER's
+large, heavily-templated kernels made the one-time SASS rewrite alone take
+long enough that a 120-second run was killed mid-instrumentation, before
+the target program ever printed a line of its own output. Here, on a
+20-row LU solve with only 8 small, simple kernels, the same cost is small
+enough in absolute terms to see cleanly, kernel by kernel, in a single log
+--- rather than dominating the whole run the way it does for a
+library-heavy binary.
+
 \subsection{\texttt{NIXNAN\_TIMEOUT}: Re-Enabled, Confirmed Active}
 \label{sec:timeout-reenabled}
 
