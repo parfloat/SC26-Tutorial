@@ -87,11 +87,14 @@ matters: every quirk of \texttt{autonixnan}'s behavior traces back to
 either (a) what environment variable combination it chose to set for a
 given phase, or (b) what \texttt{nixnan.so} actually does --- which is
 sometimes \emph{not} what its own \texttt{--help} banner or
-\texttt{autonixnan}'s comments say it does (Section~\ref{sec:timeout-dead}).
+\texttt{autonixnan}'s comments say it does (Section~\ref{sec:limitations}) ---
+and can also change between checkouts, as Section~\ref{sec:timeout-reenabled}
+found out the hard way.
 
 \section{Part I --- \texttt{nixnan.so}}
 
 \subsection{Initialization: \texttt{nvbit\_at\_init}}
+\label{sec:init}
 
 NVBit calls \texttt{nvbit\_at\_init()} once, before the target's
 \texttt{main()} runs, but after CUDA driver initialization has begun
@@ -104,8 +107,10 @@ is the ``NVBit core environment variables'' banner every instrumented run
 of this session emitted. That banner is not decorative: it is a direct
 enumeration of every env var the running binary actually reads, in the
 order it reads them. \textbf{If a variable does not appear in the banner,
-the running binary does not consult it, full stop} --- this becomes the
-key diagnostic in Section~\ref{sec:timeout-dead}.
+the running binary does not consult it, full stop} --- this is the
+diagnostic Section~\ref{sec:timeout-reenabled} uses to confirm
+\texttt{NIXNAN\_TIMEOUT} is (now) genuinely read, not just to find dead
+code.
 
 Table~\ref{tab:envvars} lists every variable read by \texttt{nixnan.cu}
 itself, in banner order, plus two read by a header it includes
@@ -126,6 +131,7 @@ itself, in banner order, plus two read by a header it includes
 \texttt{INSTR\_MEM} & 0 & Also instrument 32/64/128-bit global-memory stores (\texttt{STG}) for NaN, Section~\ref{sec:memcheck}. \\
 \texttt{HISTOGRAM} & 0 & Set implicitly to 1 if \texttt{BIN\_SPEC\_FILE} is non-empty; enables the exponent-histogram/bin-threshold mechanism, Section~\ref{sec:histogram}. \\
 \texttt{BIN\_SPEC\_FILE} & (empty) & Path to a JSON file describing which exponent ranges, per format, should be watched; auto-created as a template and the process exits if the file does not yet exist. \\
+\texttt{NIXNAN\_TIMEOUT} & 0 (disabled) & Seconds before the process gracefully self-terminates (\texttt{nnterminate}); confirmed active, Section~\ref{sec:timeout-reenabled}. \\
 \texttt{LOGFILE} & (empty) & Redirect all \texttt{nnout()} output (everything prefixed \texttt{\#nixnan:}) from \texttt{stderr} to this file. \\
 \texttt{LINE\_INFO} & 1 & Attempt to resolve source file:line for each instrumented instruction (wrapped in a \texttt{SIGSEGV} handler --- see \texttt{recording.cu}). \\
 \texttt{LOG\_KERNELS} & (empty) & Path to a log file; if set, \textbf{disables all instrumentation} and instead just logs every kernel launch and its wall-clock execution time. Section~\ref{sec:logkernels}. \\
@@ -134,7 +140,7 @@ itself, in banner order, plus two read by a header it includes
 \texttt{FUNCTION\_WHITELIST} & (empty) & Path to a newline-separated file of function names; only these are instrumented. \\
 \texttt{FUNCTION\_BLACKLIST} & (empty) & Complement of the above; mutually exclusive with it (the process exits with an error if both are set). \\
 \bottomrule
-\caption{Environment variables consulted by the running \texttt{nixnan.so} binary, in the order \texttt{nvbit\_at\_init} reads them. Absence from this table (e.g.\ \texttt{NIXNAN\_TIMEOUT}) means the variable is \emph{not currently wired up} -- see Section~\ref{sec:timeout-dead}.}
+\caption{Environment variables consulted by the running \texttt{nixnan.so} binary, in the order \texttt{nvbit\_at\_init} reads them (as of the current \texttt{print\_histo\_instrn} checkout). Absence from this table means the variable is \emph{not currently wired up} -- confirmed by grep against the current source, not just by a variable's absence from a possibly-stale banner capture.}
 \label{tab:envvars}
 \end{longtable}
 
@@ -453,8 +459,18 @@ harmless noise from \texttt{autonixnan}'s point of view, but they do
 inflate the log file and are worth knowing about if reading a
 \texttt{LOG\_KERNELS} log by hand.
 
-\subsection{The (currently) dead \texttt{NIXNAN\_TIMEOUT}}
-\label{sec:timeout-dead}
+\subsection{\texttt{NIXNAN\_TIMEOUT}: Re-Enabled, Confirmed Active}
+\label{sec:timeout-reenabled}
+
+\textbf{Update:} an earlier version of this document, checked against an
+earlier build on this same branch, found this timer disconnected and
+called it dead. That finding is now stale. \texttt{git log -- src/timer.cu}
+on the current checkout (\texttt{print\_histo\_instrn}) shows a commit
+titled \texttt{Re-enable timer} sitting a handful of commits before the
+tip --- the wiring below was reconnected after this document's original
+``dead'' finding was written, and the rest of this section documents the
+\emph{current}, active state, verified directly against a freshly rebuilt
+\texttt{nixnan.so} rather than assumed from the earlier text.
 
 \texttt{src/timer.h}/\texttt{timer.cu} implement a self-contained,
 graceful internal timeout: \texttt{nixnan::timer::init()} reads
@@ -464,42 +480,53 @@ spawns a background thread that sleeps for that many seconds and then
 calls \texttt{nnterminate("Timeout reached.")} --- a graceful,
 in-process \texttt{SIGINT} to itself, flushing the log first.
 
-\textbf{This code is never called.} A full read of \texttt{nixnan.cu}'s
-\texttt{nvbit\_at\_init}, \texttt{nvbit\_tool\_init}, and
-\texttt{nvbit\_at\_ctx\_term} --- the only three places that call into
-any other \texttt{namespace}'s \texttt{init}/\texttt{tool\_init}/\texttt{term}
---- shows calls into \texttt{nixnan::fp\_histogram::\{init,tool\_init,term\}}
-only. There is no call anywhere in the tree into
-\texttt{nixnan::timer::\{init,tool\_init,term\}}. This was confirmed two
-independent ways during this session:
-
+\textbf{This code is called.} In \texttt{nixnan.cu}, the
+init hook reads \texttt{NIXNAN\_TIMEOUT} via
+\texttt{nixnan::timer::init()}, and the tool-init hook spawns the
+timeout thread via \texttt{nixnan::timer::tool\_init(ctx)} --- both
+confirmed directly in the current source, not inferred:
+\begin{lstlisting}[language=C++]
+void nvbit_at_init() {
+  ...
+  nixnan::fp_histogram::init();
+  nixnan::timer::init();               // reads NIXNAN_TIMEOUT
+}
+void nvbit_tool_init(CUcontext ctx) {
+  ...
+  nixnan::timer::tool_init(ctx);       // spawns the timeout thread
+}
+\end{lstlisting}
+This was confirmed two independent ways, both against a \texttt{nixnan.so}
+rebuilt fresh from the current checkout:
 \begin{itemize}
-\item \texttt{grep -rn "timer::" src/} outside of \texttt{timer.cu} itself
-  returns nothing.
-\item The \texttt{GET\_VAR\_INT} macro used to read \texttt{NIXNAN\_TIMEOUT}
-  \emph{always} prints a banner line when it runs, regardless of the
-  value found. Every banner captured this session (which comes from
-  \texttt{nvbit\_at\_init}, run unconditionally) lists
-  \texttt{INSTR\_BEGIN} through \texttt{FUNCTION\_BLACKLIST} --- and never
-  \texttt{NIXNAN\_TIMEOUT}. If the variable were actually being read, its
-  banner line would be there.
+\item \textbf{The banner includes it.} \texttt{NIXNAN\_TIMEOUT} now
+  appears in the ``NVBit core environment variables'' banner (between
+  \texttt{BIN\_SPEC\_FILE} and \texttt{LOGFILE} in banner order --- see
+  Table~\ref{tab:envvars}), which by the diagnostic established in
+  Section~\ref{sec:init} means the running binary genuinely consults it.
+\item \textbf{It actually terminates the process.} Run directly:
+\begin{lstlisting}[language=bash]
+NIXNAN_TIMEOUT=3 LD_PRELOAD=./nixnan.so ./some_long_running_target
+\end{lstlisting}
+produces \texttt{\#nixnan: Terminating early: Timeout reached.} in the
+log at $\approx\!3.5$s, and the process exits with \texttt{SIGTERM}
+(exit code 143) --- a real, graceful, in-process shutdown, not an
+external kill.
 \end{itemize}
 
 The practical consequence: \texttt{bin/autonixnan}'s
 \texttt{find\_extreme\_values()} sets \texttt{NIXNAN\_TIMEOUT} and
 documents (in its own docstring) that this is what lets ``the target's
 own timer, rather than the hard kill here'' end a long-running scan
-gracefully. In the currently built \texttt{nixnan.so}, that never
-happens --- \texttt{NIXNAN\_TIMEOUT} is silently ignored, and \emph{every}
-timeout this session observed (``\texttt{Error: target program exceeded
-Ns timeout}'') was Python's own \texttt{subprocess.run(timeout=\ldots)}
-hard-killing the child with \texttt{SIGKILL} after the full
-\texttt{args.timeout + TIMEOUT\_GRACE} (30s) window, not a graceful
-internal exit. This does not make \texttt{autonixnan} incorrect --- the
-external kill still bounds run time correctly --- but it does mean the
-30-second grace period is not, in practice, ``slack given in case the
-internal timer is a little late''; it is dead weight, since nothing
-internal is ever going to fire first.
+gracefully --- and, on the current \texttt{nixnan.so}, it does exactly
+that. The internal timer fires at \texttt{-t} seconds; the external
+\texttt{subprocess.run(timeout=\ldots)} hard-kill is set to
+\texttt{args.timeout + TIMEOUT\_GRACE} (30s) specifically so the graceful
+internal exit has a 30-second window to complete --- flush its log,
+tear down the GPU context --- before the external \texttt{SIGKILL} would
+otherwise cut it off mid-shutdown. With the timer reconnected, that grace
+period is no longer dead weight: it is now doing exactly the job its own
+name describes.
 
 \section{Part II --- \texttt{bin/autonixnan}}
 
@@ -553,7 +580,7 @@ the terminal.
 bs = _make_binspec(1, max_reports)   # count=1: report every single hit, capped at max_reports/kernel
 env["BIN_SPEC_FILE"] = spec_file
 env["LOGFILE"] = log_file
-env["NIXNAN_TIMEOUT"] = str(timeout)      # see Sec 2.9 -- currently a no-op
+env["NIXNAN_TIMEOUT"] = str(timeout)      # see Sec 2.9 -- confirmed active
 env["INSTRUMENT_EXCEPTIONS"] = "0"        # exception checker off; histogram checker still runs
 elapsed = run_with_env(program_args, timeout + TIMEOUT_GRACE, env, check=False)
 \end{lstlisting}
@@ -642,7 +669,7 @@ reproduction from this session.
 Phase & Hard kill after & Notes \\
 \midrule
 1: baseline & \texttt{-t} exactly & No grace period; catches slow startup too. \\
-2: exponent scan & \texttt{-t + 30s} & Grace period, currently pointless (Sec.~\ref{sec:timeout-dead}). \\
+2: exponent scan & \texttt{-t + 30s} & Grace period for the internal timer to shut down gracefully first (Sec.~\ref{sec:timeout-reenabled}). \\
 3: deep dive & \texttt{-t} exactly & Same value re-used; not separately configurable. \\
 \bottomrule
 \end{tabular}
@@ -679,10 +706,17 @@ above.
   mechanism's zero/inf exclusion is by design (Section~\ref{sec:histogram}),
   and the FP32 attribution is simply an accurate report of which SASS
   instruction type executed on the bad value.
-\item \textbf{The dead internal timeout} (Section~\ref{sec:timeout-dead})
-  means every \texttt{-t} this session used was enforced purely
-  externally, with a pointless 30s grace period tacked onto the scan
-  phase.
+\item \textbf{The internal timeout, at the time of the runs this
+  session's numbers come from}, was disconnected --- every \texttt{-t}
+  used here was enforced purely externally, with a (then-)pointless 30s
+  grace period tacked onto the scan phase. \textbf{This is no longer
+  true}: a later check against a freshly rebuilt \texttt{nixnan.so} on
+  this same branch found the timer reconnected (a
+  \texttt{Re-enable timer} commit sits between the two checks) and
+  genuinely terminating the process on schedule --- see
+  Section~\ref{sec:timeout-reenabled} for the direct verification. This
+  item is kept as an accurate record of what this session's own runs
+  actually exercised, not as a current statement about the tool.
 \item \textbf{\texttt{LOG\_KERNELS} noise scales with library surface
   area, not with actual kernel diversity.} A cuSOLVER/cuBLAS-heavy binary
   produced 10{,}000+ log lines from related-function enumeration alone,
