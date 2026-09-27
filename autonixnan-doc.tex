@@ -126,7 +126,7 @@ itself, in banner order, plus two read by a header it includes
 \texttt{TOOL\_VERBOSE} & 0 & Extra diagnostic printing during instrumentation setup. \\
 \texttt{ENABLE\_FUN\_DETAIL} & 0 & Print the full mangled kernel name every time a kernel re-runs, not just the first time. \\
 \texttt{PRINT\_ILL\_INSTR} & 0 & (declared, not read further in the code paths exercised here). \\
-\texttt{SAMPLING} & 0 & Instrument only every $N$th launch of a repeated kernel. \\
+\texttt{SAMPLING} & 0 & Use the already-instrumented SASS only on every $N$th launch of a repeated kernel (others run the original, uninstrumented version); Section~\ref{sec:sampling-launch-gate}. \\
 \texttt{INSTRUMENT\_EXCEPTIONS} & 1 & Master switch for the NaN/Inf/Subnormal/Div-by-0 instrumentation described in Section~\ref{sec:exceptions}. \\
 \texttt{INSTR\_MEM} & 0 & Also instrument 32/64/128-bit global-memory stores (\texttt{STG}) for NaN, Section~\ref{sec:memcheck}. \\
 \texttt{HISTOGRAM} & 0 & Set implicitly to 1 if \texttt{BIN\_SPEC\_FILE} is non-empty; enables the exponent-histogram/bin-threshold mechanism, Section~\ref{sec:histogram}. \\
@@ -152,14 +152,38 @@ and once on exit, for the CUDA driver calls that launch work
 (\texttt{cuLaunchKernel} and its cooperative variants). On entry
 (\texttt{is\_exit == false}):
 
+\textbf{Update:} the code quoted in this subsection for the launch
+callback and \texttt{should\_instrument} was accurate for an earlier
+checkout, but \texttt{SAMPLING} has since been refactored onto a
+different, and simpler, mechanism --- verified directly against the
+current \texttt{print\_histo\_instrn} source, not assumed from the
+earlier text. The corrected code and explanation follow; see also
+Section~\ref{sec:sampling-launch-gate} for what this means for
+\texttt{SAMPLING} specifically.
+
 \begin{lstlisting}[language=C++]
+std::string kernel_name = nvbit_get_func_name(ctx, p->f);
+...
 bool enable_instr = instrument_function(ctx, p->f);
-if (enable_instr) {
-  int count = analyzed_kernels[short_name]++;
-  if (count == 0) nnout() << "running kernel [" << short_name << "] ...";
+if (analyzed_kernels[kernel_name] == 0) {
+  nnout() << "running kernel [" << kernel_name << "] ...";
+} else if (func_details) {
+  nnout() << "running kernel [" << kernel_name << "] ...";
 }
-nvbit_enable_instrumented(ctx, p->f, true);
+auto kernel_count = analyzed_kernels[kernel_name]++;
+nvbit_enable_instrumented(ctx, p->f,
+    sampling > 0 ? kernel_count % sampling == 0 : true);
 \end{lstlisting}
+
+Two things changed from the earlier reading of this code. First, the
+``running kernel'' print is no longer gated on \texttt{enable\_instr} at
+all --- it fires on a kernel's first-ever launch unconditionally, and
+also on every later launch if \texttt{ENABLE\_FUN\_DETAIL} (the
+\texttt{func\_details} flag) is set, whether or not that particular
+launch ends up instrumented. Second, and more importantly, the final
+argument to \texttt{nvbit\_enable\_instrumented} is no longer a bare
+\texttt{true} --- this is where \texttt{SAMPLING} now lives, discussed
+below.
 
 \texttt{instrument\_function} walks the kernel plus every ``related
 function'' NVBit knows it might call (\texttt{nvbit\_get\_related\_functions}
@@ -167,16 +191,23 @@ function'' NVBit knows it might call (\texttt{nvbit\_get\_related\_functions}
 \emph{possible} callee, which is why a single cuBLAS \texttt{nrm2\_kernel}
 launch can enumerate dozens of unrelated-looking function names; see
 Section~\ref{sec:logkernels}). For each such function it calls
-\texttt{should\_instrument}, which is where whitelist/blacklist filtering,
-sampling, and --- critically --- \texttt{LOG\_KERNELS} mode all converge:
+\texttt{should\_instrument}, which is where whitelist/blacklist filtering
+and --- critically --- \texttt{LOG\_KERNELS} mode converge. On the current
+checkout, \texttt{should\_instrument} carries \emph{no} sampling logic at
+all:
 
 \begin{lstlisting}[language=C++]
 bool should_instrument(CUcontext ctx, CUfunction f) {
-  ...
-  enable_instr &= !kernel_logging_enabled;   // <-- LOG_KERNELS forces this to false
-  if (sampling != 0 && analyzed_kernels.count(func_name)) {
-    if (analyzed_kernels[func_name] % sampling != 0) enable_instr = false;
+  std::string func_name = nvbit_get_func_name(ctx, f);
+  bool enable_instr = false;
+  if (!kernel_whitelist.empty()) {
+    enable_instr = kernel_whitelist.count(func_name);
+  } else if (!kernel_blacklist.empty()) {
+    enable_instr = !kernel_blacklist.count(func_name);
+  } else {
+    enable_instr = true;
   }
+  enable_instr &= !kernel_logging_enabled;   // <-- LOG_KERNELS forces this to false
   return enable_instr;
 }
 \end{lstlisting}
@@ -184,12 +215,62 @@ bool should_instrument(CUcontext ctx, CUfunction f) {
 So \texttt{LOG\_KERNELS} does not merely add logging on top of the normal
 instrumentation --- it hard-disables \texttt{should\_instrument} for
 \emph{every} function, meaning \texttt{instrument\_function} inserts zero
-device-side calls anywhere, and the ``running kernel [\ldots]'' print above
-never fires either (since \texttt{enable\_instr} is false). The kernel
-still runs, at essentially native speed, because
-\texttt{nvbit\_enable\_instrumented} is called unconditionally and simply
-makes NVBit run the (uninstrumented, in this case identical-to-original)
-version.
+device-side calls anywhere. The kernel still runs, at essentially native
+speed, because \texttt{nvbit\_\allowbreak enable\_\allowbreak instrumented}
+is still called on
+every launch (per the callback above) and, with nothing ever instrumented
+in the first place, simply runs the (uninstrumented, in this case
+identical-to-original) version regardless of what its \texttt{SAMPLING}
+argument evaluates to.
+
+\subsubsection*{Where \texttt{SAMPLING} actually lives now}
+\label{sec:sampling-launch-gate}
+
+\texttt{SAMPLING} is checked once per launch, in the callback above, as
+the boolean argument to
+\texttt{nvbit\_\allowbreak enable\_\allowbreak instrumented}:
+\begin{lstlisting}[language=C++]
+sampling > 0 ? kernel_count % sampling == 0 : true
+\end{lstlisting}
+This is a structurally different mechanism from
+\texttt{should\_\allowbreak instrument}'s whitelist, blacklist, and
+\texttt{LOG\_KERNELS} checks, and the two are decoupled:
+\texttt{should\_\allowbreak instrument} (via
+\texttt{instrument\_\allowbreak function}) decides, once per kernel
+\emph{function}, the first time it is ever seen, whether its SASS gets
+rewritten with device-side checks inserted at all; \texttt{SAMPLING}, by
+contrast, is re-evaluated on \emph{every launch} of that function and
+decides whether \emph{this specific launch} runs the already-rewritten
+instrumented version or the original uninstrumented one --- a launch-time
+toggle between two SASS variants, not a rewrite decision.
+
+This also means the key-mismatch bug \texttt{lu\_solve\_gpu\_report.tex}
+documented (the sampling lookup keyed on a function's full mangled
+signature while the counter it read was incremented under a
+\texttt{cut\_kernel\_name}-truncated name, so the two never matched) does
+not exist in this code path: \texttt{kernel\_count} and the modulo check
+both key off the same \texttt{kernel\_name} variable, read once at the top
+of the callback --- there is no truncated name anywhere in this
+mechanism. For a kernel launched $L$ times (\texttt{kernel\_count} running
+$0,\dots,L{-}1$), \texttt{SAMPLING=}$N$ enables instrumentation exactly
+where \texttt{kernel\_count \% }$N$\texttt{ == 0} --- e.g.\ against
+\texttt{lu\_solve\_gpu}'s $L{=}19$-launch loop kernels, \texttt{SAMPLING=16}
+should enable only \texttt{kernel\_count}~0 and~16, two of the nineteen.
+
+An open question, not resolved here: running \texttt{lu\_solve\_\allowbreak
+gpu} with \texttt{SAMPLING=16} against
+\texttt{bin\_spec\_\allowbreak whole.json} reduced total
+threshold-report volume by only $\approx\!20\%$ (131$\to$105 reports for
+\texttt{matrix.csv}, 111$\to$97 for \texttt{bad\_matrix.csv}) --- much
+smaller than the $\approx\!85$--$90\%$ reduction the two-enabled-launches-
+out-of-nineteen picture above would suggest if report volume scaled
+roughly with each launch's share of the total work (LU elimination's
+per-iteration cost shrinks as the remaining submatrix shrinks, so the
+$\mathtt{kernel\_count}{=}0$ launch alone touches the full
+$20\times20$ matrix while later launches touch a shrinking corner of it
+--- plausibly enough to explain \emph{some} of the gap, but this session
+did not verify it directly, e.g.\ by instrumenting in a way that
+attributes individual reports back to a specific launch index).
 
 For every instruction NVBit hands back for a function that \emph{is}
 selected, \texttt{instruction\_info::get\_reginfo(instr)} decides whether
