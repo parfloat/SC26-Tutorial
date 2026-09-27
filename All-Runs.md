@@ -473,3 +473,93 @@ with `iter-autonixnan`'s per-kernel sweep (22 total NaN sites split
 across the same four kernels). Resolves the earlier open question: the
 one-time instrumentation-insertion cost for cuSOLVER's large kernels
 here is *slow* (well past 120s), not an actual hang.
+
+---
+
+## Karpathy-NGram/
+
+`gpt_finite_state.py`: a from-Colab notebook export (pushed directly to
+this repo, not authored in this session) implementing Andrej Karpathy's
+"GPT as a finite-state Markov chain" demo -- a tiny decoder-only GPT
+(12,656 parameters, `n_layer=4, n_head=4, n_embd=16`) over a 2- or
+3-symbol vocabulary, used to visualize (via `graphviz`) how a GPT's
+next-token distribution is just a probabilistic transition table over
+`context_length`-token states.
+
+### gpt_finite_state.py as pushed -- 0 CUDA kernels
+```bash
+cd Karpathy-NGram
+../external/nixnan/bin/iter-autonixnan -s 0 -t 60 -- python3 gpt_finite_state.py \
+  > Logs/iter-autonixnan-nosampling.log 2>&1
+```
+Result: **0 unique kernels found, 0 total launches** -- the script never
+calls `.cuda()`/`.to(device)` on the model or any tensor, so every op
+(embedding, attention, MLP, softmax, the training loop, the sampling
+loop) runs as host PyTorch code. `nixnan` instruments CUDA kernels via
+NVBit/`LD_PRELOAD`, so it has nothing to attach to; Phase 1's
+`LOG_KERNELS` scan and Phase 2 (0 kernels to whitelist) both confirm this
+cleanly, in 3.2s.
+
+### gpt_finite_state_cuda.py, full-pipeline first attempt -- aborted
+A `.cuda()`/`.to(device)` variant was written, keeping the notebook's
+full pipeline unchanged otherwise: 3 separate `GPT` configs, each driving
+`plot_model()` over every state of its `vocab_size ** context_length`
+state space (8, then 8 again post-training, then 9 for a `vocab_size=3,
+context_length=2` variant), plus a 50-step training loop and a 20-step
+sampling loop. Confirmed to run correctly, unsampled/un-instrumented, in
+well under a second on CPU-equivalent wall time.
+
+Under `nixnan` this turned out to be impractical:
+```bash
+cd Karpathy-NGram
+LD_PRELOAD=../external/nixnan/nixnan.so LOG_KERNELS=/tmp/gfs_cuda_kernels.log \
+  python3 gpt_finite_state_cuda.py   # this is exactly iter-autonixnan's Phase 1
+```
+NVBit has to enumerate every function in PyTorch's loaded CUDA fatbinary
+(cuBLAS/cuDNN/aten -- tens of thousands of templated kernel
+instantiations) the first time each distinct kernel shape is touched --
+a one-time cost that is **independent of nixnan's own instrumentation**
+and present even under `LOG_KERNELS` (which disables instrumentation
+entirely; the `WARNING: Do not call CUDA memory allocation in
+nvbit_at_ctx_init()` message is NVBit's own per-module-load hook firing,
+not anything nixnan-specific). This dominated so heavily that Phase 1
+alone -- just collecting kernel names, no instrumentation -- had not
+finished after ~50 minutes of wall-clock time, having gotten through only
+2 of the first `plot_model()` call's 8 states (each new state's first
+touch of a not-yet-seen kernel shape appeared to cost another 10-15+
+minutes). The run was aborted (`kill -9`) rather than let continue; no
+log from this attempt was kept (never reached a usable state).
+
+### gpt_finite_state_cuda.py, single-transition variant -- the plan
+Every GPT forward pass runs through the exact same handful of CUDA
+kernels (embedding lookup, attention matmuls/softmax, MLP, layernorm)
+regardless of which state (input token sequence) it's called on -- any
+floating-point exception `nixnan` would find is expected to look the
+same across states. `gpt_finite_state_cuda.py` was rewritten around this:
+it builds the `vocab_size=2, context_length=3` GPT on
+`device = torch.device("cuda")`, performs **exactly one** forward pass
+(state `[1, 1, 1]`), prints the resulting transition probabilities in
+`S --p--> S1` form, and exits -- no training, no sampling, no looping
+over the state space. Verified directly (no `nixnan`) to run correctly
+in a few seconds:
+```
+number of parameters: 12656
+input [1, 1, 1] ---> [0.4520467519760132, 0.5479532480239868]
+  111 --0.452--> 110
+  111 --0.548--> 111
+```
+Plan: run this reduced script under `iter-autonixnan -s 0` (no
+sampling), same as every other case study in this file, logging to
+`Karpathy-NGram/Logs/iter-autonixnan-cuda-nosampling.log`:
+```bash
+cd Karpathy-NGram
+../external/nixnan/bin/iter-autonixnan -s 0 -t 1800 -- python3 gpt_finite_state_cuda.py \
+  > Logs/iter-autonixnan-cuda-nosampling.log 2>&1
+```
+A generous 1800s per-run timeout is used given the enumeration cost
+observed above -- Phase 1 (collecting the handful of kernels this single
+forward pass launches) is expected to still be slow the first time each
+kernel shape is touched, but bounded now to just the kernels one forward
+pass actually needs, rather than 8-9 states x 3 configs x (training +
+sampling). Result pending at the time of this writing; this section will
+be updated once the run completes.
