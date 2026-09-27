@@ -1,0 +1,9 @@
+{
+    "count": 4,
+    "doublings": 10,
+    "max_reports": 0,
+    "bf16 (record_inst)": [[-126, 127]],
+    "f16 (record_inst)": [[-14, 15]],
+    "f32 (record_inst)": [[-126, 127]],
+    "f64 (record_inst)": [[-1022, 1023]]
+}
