@@ -1,0 +1,29 @@
+[
+generate_seed_pseudo(unsigned long long, unsigned long long, curandStatePhilox4_32_10*) : n ;
+void gen_sequenced_Philox<curandStatePhilox4_32_10, double4, normal_args_double_st, &(double4 curand_normal_scaled4_double<curandStatePhilox4_32_10>(curandStatePhilox4_32_10*, normal_args_double_st)), false, 128>(curandStatePhilox4_32_10*, double4*, unsigned long, unsigned long, normal_args_double_st) : n ;
+copy_info_kernel(int, int*) : n ;
+void geqr2_smem_domino_fast<double, double, 8, 512>(int, int, double*, int, double*, int*, int*) : n ;
+void orgqr_step1_kernel<double, 5, 3>(int, int, int, double*, int) : n ;
+void cutlass::Kernel2<cutlass_80_tensorop_d884gemm_32x32_16x5_tn_align1>(cutlass_80_tensorop_d884gemm_32x32_16x5_tn_align1::Params) : n ;
+void larft_T_64_batch<double>(int, double*, int, double const*) : n ;
+void cutlass::Kernel2<cutlass_80_tensorop_d884gemm_32x32_16x5_nn_align1>(cutlass_80_tensorop_d884gemm_32x32_16x5_nn_align1::Params) : n ;
+void batch_eye_kernel<double, 5, 3>(long, long, double*, unsigned long, long long, int) : n ;
+void lacpy_kernel<double, double, 5, 3>(long, long, double const*, long, double*, long, int, int) : n ;
+k_colscale(double*, double const*, int) : n ;
+void cutlass::Kernel2<cutlass_80_tensorop_d884gemm_32x32_16x5_nt_align1>(cutlass_80_tensorop_d884gemm_32x32_16x5_nt_align1::Params) : n ;
+k_d2s(double const*, float*, long) : n ;
+k_s2d(float const*, double*, long) : n ;
+void gemv2N_kernel<int, int, double, double, double, double, 128, 32, 4, 4, 1, false, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<double const>, cublasGemvTensorStridedBatched<double const>, cublasGemvTensorStridedBatched<double>, double> >(cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<double const>, cublasGemvTensorStridedBatched<double const>, cublasGemvTensorStridedBatched<double>, double>) : n ;
+xxtrf4_set_info_ker(int, int*) : n ;
+void kernel<getrf_wo_pivot_params_<double, 0, 256, 1, 64, 64, 64, 16, 1, 1> >(int, int, void*, int, void*, int, int, int, int, int, int*) : n ;
+dtrsv_init(int*) : n ;
+void trsv_ln_exec<double, 32u, 32u, 4u, false>(int, double const*, long, double*, long, int*) : n ;
+dtrsv_init_up(int*, int) : n ;
+void trsv_lt_exec<double, 32u, 32u, 4u, false, false>(int, double const*, long, double*, long, int*) : n ;
+void iamax_kernel<int, float, float, 256>(cublasIamaxParams<int, float, float>) : n ;
+void kernel<getrf_wo_pivot_params_<float, 0, 128, 1, 32, 32, 32, 8, 1, 1> >(int, int, void*, int, void*, int, int, int, int, int, int*) : n ;
+void scal_kernel_val<float, float>(cublasScalParamsVal<float, float>) : n ;
+void trsv_ln_exec<float, 32u, 32u, 4u, false>(int, float const*, long, float*, long, int*) : n ;
+void trsv_lt_exec<float, 32u, 32u, 4u, false, false>(int, float const*, long, float*, long, int*) : n ;
+void axpy_kernel_val<float, float>(cublasAxpyParamsVal<float, float, float>) : n ;
+]
