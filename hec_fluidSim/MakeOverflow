@@ -1,0 +1,47 @@
+#===============================================================================
+# MakeOverflow -- builds main_overflow.cu (see that file's header for why):
+# a deliberately numerically-unstable omega, to force real FP exceptions out
+# of the `lbm` kernel that never occur under main.cu's default, stable
+# omega=1.2. No -DVERIFY here (see main_overflow.cu's header for why).
+#===============================================================================
+CC        = nvcc
+OPTIMIZE  = yes
+DEBUG     = no
+ARCH      = sm_60
+LAUNCHER  ?=
+
+program = main_overflow
+
+source = main_overflow.cu kernels.cu
+
+obj = $(source:.cu=.o)
+
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall -arch=$(ARCH)
+
+LDFLAGS =
+
+ifeq ($(DEBUG),yes)
+  CFLAGS += -g -DDEBUG
+  LDFLAGS  += -g
+endif
+
+ifeq ($(OPTIMIZE),yes)
+  CFLAGS += -O3
+endif
+
+$(program): $(obj) MakeOverflow
+	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+
+kernels.o: kernels.cu utils.h MakeOverflow
+	$(CC) $(CFLAGS) -c $< -o $@
+
+main_overflow.o: main_overflow.cu utils.h MakeOverflow
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf $(program) $(obj)
+
+# 60 iterations: enough margin past the ~38 iterations the header comment
+# in main_overflow.cu estimates for overflow at omega=1e8.
+run: $(program)
+	$(LAUNCHER) ./$(program) 60

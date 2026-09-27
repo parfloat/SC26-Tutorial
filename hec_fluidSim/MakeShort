@@ -1,0 +1,72 @@
+#===============================================================================
+# MakeShort -- a much shorter `run` variant of the upstream Makefile here,
+# for quick local sanity checks instead of the full HeCBench workload.
+# See README.md for where this came from and what changed.
+#===============================================================================
+# User Options
+#===============================================================================
+
+# Compiler can be set below, or via environment variable
+CC        = nvcc
+OPTIMIZE  = yes
+DEBUG     = no
+ARCH      = sm_60
+VERIFY    = yes
+LAUNCHER  ?=
+
+#===============================================================================
+# Program name & source code list
+#===============================================================================
+program = main
+
+source = main.cu kernels.cu
+
+obj = $(source:.cu=.o)
+
+#===============================================================================
+# Sets Flags
+#===============================================================================
+
+# Standard Flags
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Xcompiler -Wall -arch=$(ARCH)
+
+# Linker Flags
+LDFLAGS =
+
+# Debug Flags
+ifeq ($(DEBUG),yes)
+  CFLAGS += -g -DDEBUG
+  LDFLAGS  += -g
+endif
+
+# Optimization Flags
+ifeq ($(OPTIMIZE),yes)
+  CFLAGS += -O3
+endif
+
+ifeq ($(VERIFY),yes)
+  CFLAGS += -DVERIFY
+endif
+#===============================================================================
+# Targets to Build
+#===============================================================================
+
+$(program): $(obj) MakeShort
+	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
+
+kernels.o: kernels.cu utils.h MakeShort
+	$(CC) $(CFLAGS) -c $< -o $@
+
+main.o: main.cu reference.h utils.h MakeShort
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf $(program) $(obj)
+
+# Only difference from the upstream Makefile's run target: 1 iteration
+# instead of 10000 -- a quick smoke test, not a benchmark measurement.
+# The 256x256 grid itself is a compile-time constant in main.cu (lbm_width/
+# lbm_height), not a CLI argument, so it can't be shrunk from here -- see
+# run_reduced.sh for a configurable-iteration-count alternative.
+run: $(program)
+	$(LAUNCHER) ./$(program) 1
