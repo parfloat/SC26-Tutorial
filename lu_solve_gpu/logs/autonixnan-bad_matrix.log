@@ -1,0 +1,82 @@
+======================================================================
+Auto-nixnan Kernel Report
+======================================================================
+
+Unique Kernels (8, longest to shortest):
+  init_identity_kernel(double*, int)
+    baseline:    2 calls, 5050 us total (2525 us avg)
+  swap_rows_kernel(double*, double*, double*, int, int, int const*)
+    baseline:    19 calls, 188 us total (10 us avg)
+  find_pivot_kernel(double const*, int, int, int*)
+    baseline:    19 calls, 187 us total (10 us avg)
+  eliminate_kernel(double*, double const*, int, int)
+    baseline:    19 calls, 184 us total (10 us avg)
+  compute_multipliers_kernel(double const*, double*, int, int)
+    baseline:    19 calls, 181 us total (10 us avg)
+  apply_permutation_kernel(double const*, double const*, double*, int)
+    baseline:    1 call, 15 us total (15 us avg)
+  forward_substitution_kernel(double const*, double const*, double*, int)
+    baseline:    1 call, 15 us total (15 us avg)
+  backward_substitution_kernel(double const*, double const*, double*, int)
+    baseline:    1 call, 14 us total (14 us avg)
+
+Timing:
+  Baseline:     0.466s
+
+Kernel Call Sequence (81 calls):
+  0001. init_identity_kernel(double*, int)
+  0002. init_identity_kernel(double*, int)
+  0003. find_pivot_kernel(double const*, int, int, int*)
+  0004. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0005. compute_multipliers_kernel(double const*, double*, int, int)
+  0006. eliminate_kernel(double*, double const*, int, int)
+  0007. find_pivot_kernel(double const*, int, int, int*)
+  0008. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0009. compute_multipliers_kernel(double const*, double*, int, int)
+  0010. eliminate_kernel(double*, double const*, int, int)
+  0011. find_pivot_kernel(double const*, int, int, int*)
+  0012. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0013. compute_multipliers_kernel(double const*, double*, int, int)
+  0014. eliminate_kernel(double*, double const*, int, int)
+  0015. find_pivot_kernel(double const*, int, int, int*)
+  0016. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0017. compute_multipliers_kernel(double const*, double*, int, int)
+  0018. eliminate_kernel(double*, double const*, int, int)
+  0019. find_pivot_kernel(double const*, int, int, int*)
+  0020. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0021. compute_multipliers_kernel(double const*, double*, int, int)
+  0022. eliminate_kernel(double*, double const*, int, int)
+  0023. find_pivot_kernel(double const*, int, int, int*)
+  0024. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0025. compute_multipliers_kernel(double const*, double*, int, int)
+  ... (31 calls omitted) ...
+  0057. compute_multipliers_kernel(double const*, double*, int, int)
+  0058. eliminate_kernel(double*, double const*, int, int)
+  0059. find_pivot_kernel(double const*, int, int, int*)
+  0060. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0061. compute_multipliers_kernel(double const*, double*, int, int)
+  0062. eliminate_kernel(double*, double const*, int, int)
+  0063. find_pivot_kernel(double const*, int, int, int*)
+  0064. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0065. compute_multipliers_kernel(double const*, double*, int, int)
+  0066. eliminate_kernel(double*, double const*, int, int)
+  0067. find_pivot_kernel(double const*, int, int, int*)
+  0068. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0069. compute_multipliers_kernel(double const*, double*, int, int)
+  0070. eliminate_kernel(double*, double const*, int, int)
+  0071. find_pivot_kernel(double const*, int, int, int*)
+  0072. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0073. compute_multipliers_kernel(double const*, double*, int, int)
+  0074. eliminate_kernel(double*, double const*, int, int)
+  0075. find_pivot_kernel(double const*, int, int, int*)
+  0076. swap_rows_kernel(double*, double*, double*, int, int, int const*)
+  0077. compute_multipliers_kernel(double const*, double*, int, int)
+  0078. eliminate_kernel(double*, double const*, int, int)
+  0079. apply_permutation_kernel(double const*, double const*, double*, int)
+  0080. forward_substitution_kernel(double const*, double const*, double*, int)
+  0081. backward_substitution_kernel(double const*, double const*, double*, int)
+
+======================================================================
+Extreme-Value Exponent Analysis
+======================================================================
+  No extreme exponent values detected in any regime.
