@@ -2,3 +2,6 @@
 	path = external/nixnan
 	url = https://github.com/parfloat/nixnan.git
 	branch = auto-nixnan
+[submodule "external/HeCBench"]
+	path = external/HeCBench
+	url = https://github.com/zjin-lcf/HeCBench
