@@ -548,18 +548,42 @@ input [1, 1, 1] ---> [0.4520467519760132, 0.5479532480239868]
   111 --0.452--> 110
   111 --0.548--> 111
 ```
-Plan: run this reduced script under `iter-autonixnan -s 0` (no
-sampling), same as every other case study in this file, logging to
-`Karpathy-NGram/Logs/iter-autonixnan-cuda-nosampling.log`:
+### iter-autonixnan attempt -- ran, but revealed the per-kernel sweep cost doesn't scale
 ```bash
 cd Karpathy-NGram
 ../external/nixnan/bin/iter-autonixnan -s 0 -t 1800 -- python3 gpt_finite_state_cuda.py \
   > Logs/iter-autonixnan-cuda-nosampling.log 2>&1
 ```
-A generous 1800s per-run timeout is used given the enumeration cost
-observed above -- Phase 1 (collecting the handful of kernels this single
-forward pass launches) is expected to still be slow the first time each
-kernel shape is touched, but bounded now to just the kernels one forward
-pass actually needs, rather than 8-9 states x 3 configs x (training +
-sampling). Result pending at the time of this writing; this section will
-be updated once the run completes.
+Phase 1 found **14 unique kernels, 71 total launches**, and took
+**1707.7s (~28.5 min)** -- this single forward pass alone touches 14
+distinct kernel shapes (`arange` for position ids, an embedding gather,
+elementwise add/mul/compare/copy/GELU, layernorm, 2 `cublasGemvEx`-family
+GEMM-small-N kernels, 2 softmax-warp variants, a masked-fill, and a
+`gemvx` kernel). Phase 2's kernel 1/14 (the `arange` index kernel) then
+took **another 1713.9s (~28.6 min)** on its own (0 exceptions, as
+expected for a pure index-generation kernel) -- confirming NVBit's
+one-time fatbinary-enumeration cost recurs **per fresh process**,
+independent of how few kernels are actually whitelisted. At that rate the
+full 14-kernel sweep was on pace for **~6.5 hours** total wall time. This
+run was aborted mid-kernel-2/14 in favor of `ksel-autonixnan` instead,
+which pays that enumeration cost only once by whitelisting every kernel
+**together** in a single combined process, rather than once per kernel.
+
+### ksel-autonixnan -- combined whitelist of all 14 kernels
+```bash
+cd Karpathy-NGram
+TOOL=../external/nixnan/bin/ksel-autonixnan
+$TOOL -phase1 --ksel-file ./ksel -t 2100 -- python3 gpt_finite_state_cuda.py
+# writes ./ksel, all 14 kernels defaulted to 'n'
+sed -i 's/ : n ;/ : y ;/' ksel   # mark all 14 'y' -- exceptions (if any)
+                                  # are expected to look similar across
+                                  # every state transition, so there is no
+                                  # reason to exclude any of this one
+                                  # forward pass's own kernels
+$TOOL -ksel --ksel-file ./ksel -s 0 -t 2100 -- python3 gpt_finite_state_cuda.py \
+  > Logs/ksel-autonixnan-cuda-allkernels-nosampling.log 2>&1
+```
+`-phase1` (`-t 2100`, since the default 300s undershot the ~1708s Phase 1
+actually needs) reproduced the same 14-kernel/71-launch baseline in
+1720.4s. Result of the combined `-ksel` run pending at the time of this
+writing; this section will be updated once it completes.
