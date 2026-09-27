@@ -459,6 +459,46 @@ harmless noise from \texttt{autonixnan}'s point of view, but they do
 inflate the log file and are worth knowing about if reading a
 \texttt{LOG\_KERNELS} log by hand.
 
+\paragraph{An extra bit of detail: no first-launch cost here.} Run
+\texttt{lu\_solve\_gpu} again, this time with \emph{only}
+\texttt{LOG\_KERNELS} set (to a log file path; \texttt{TIME\_KERNELS} left
+at its default, relying on the \texttt{kernel\_logging\_enabled} half of
+the gate above) --- same binary, same input, same 8 kernels as
+Section~\ref{sec:time-kernels-first-launch}'s table:
+
+\begin{center}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Kernel & Launches & First launch & Typical (median) \\
+\midrule
+\texttt{init\_identity\_kernel} & 2 & 5{,}006~\textmu s & 31~\textmu s \\
+\texttt{find\_pivot\_kernel} & 19 & 21~\textmu s & 10~\textmu s \\
+\texttt{swap\_rows\_kernel} & 19 & 16~\textmu s & 10~\textmu s \\
+\texttt{compute\_multipliers\_kernel} & 19 & 15~\textmu s & 10~\textmu s \\
+\texttt{eliminate\_kernel} & 19 & 14~\textmu s & 9~\textmu s \\
+\texttt{apply\_permutation\_kernel} & 1 & 25~\textmu s & --- \\
+\texttt{forward\_substitution\_kernel} & 1 & 15~\textmu s & --- \\
+\texttt{backward\_substitution\_kernel} & 1 & 14~\textmu s & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+No $\approx\!300$ms first-launch spike anywhere in this table --- every
+kernel's first launch is within a small constant factor of its own later
+launches (the one partial exception, \texttt{init\_identity\_kernel}'s
+5{,}006~\textmu s vs.\ its own 31~\textmu s second launch, is ordinary
+CUDA-driver/context warm-up on the very first kernel launch of the whole
+process, not SASS rewriting --- it is two orders of magnitude smaller than
+any first-launch cost in Section~\ref{sec:time-kernels-first-launch}'s
+table, and every other kernel here shows no such spike at all). This is
+exactly the confirming half of that section's causal claim: under
+\texttt{LOG\_KERNELS}, \texttt{should\_instrument} forces
+\texttt{enable\_instr} to false for every function
+(\texttt{enable\_instr \&= !kernel\_logging\_enabled}), so
+\texttt{instrument\_function} never rewrites any kernel's SASS at all ---
+and with no rewrite to pay for, the first-launch cost simply does not
+appear.
+
 \subsection{\texttt{TIME\_KERNELS} Under Full Instrumentation: the First-Launch Cost}
 \label{sec:time-kernels-first-launch}
 
