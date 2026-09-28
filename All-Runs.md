@@ -620,3 +620,68 @@ end-to-end effect here -- the same "real exception, benign to the final
 answer" pattern documented for `hec_fluidSim`'s false positives, but this
 time inside PyTorch/cuDNN's own compiled kernel rather than a
 tutorial-authored one.
+
+---
+
+## sru_study/
+
+Reproducer for [asappresearch/sru#193](https://github.com/asappresearch/sru/issues/193)
+("Nan in output from example code") -- the exact example from the `sru`
+README (2 stacked `SRU` layers, `input_size=hidden_size=128`, causal,
+`highway_bias=-2`) produces `NaN` in both its output and recurrent state
+immediately, on first use. `sru==2.6.0` (matching the issue's own
+reported version) is already installed in this environment; running
+`reproducer.py` directly confirms it reproduces here too (`output NaN:
+True`, `c_states NaN: True`). See `README.md` in that directory for the
+full issue text.
+
+Unusually for this session, the root cause was **already diagnosed in
+the issue thread itself** before this case study was built: a comment
+using a different tool, [GPU-FPX](https://github.com/LLNL/GPU-FPX.git)
+(LLNL), identifies `torch.FloatTensor(20, 32, 128).cuda()` as the culprit
+-- it allocates GPU memory without initializing it, so `x` starts out as
+whatever garbage bits were already sitting in that memory, which can
+decode as `NaN`/`Inf` in FP32. `torch.randn(...)` fixes it. This case
+study is included specifically to see whether `nixnan`, run independently
+and knowing nothing about that diagnosis, converges on the same
+mechanism.
+
+### iter-autonixnan (no sampling)
+```bash
+cd sru_study
+../external/nixnan/bin/iter-autonixnan -s 0 -t 600 -- python3 reproducer.py \
+  > Logs/iter-autonixnan-nosampling.log 2>&1
+```
+Fast: Phase 1 (4 unique kernels, 10 total launches) took 3.876s baseline;
+each of Phase 2's 4 per-kernel whitelisted runs took ~4.3-4.4s -- SRU's
+own CUDA extension is small and un-templated (unlike PyTorch's
+cuBLAS/cuSOLVER fatbinary in the `pytorch_slogdet`/`Karpathy-NGram`
+studies), so none of the enumeration-cost problems seen there appear
+here. ~21s total wall time for the whole sweep.
+
+**nixnan independently confirms the same mechanism GPU-FPX already
+diagnosed, and localizes it further:**
+- `FillFunctor` (zeroing the initial hidden state `h0`): 0 exceptions.
+- **`ampere_sgemm_32x128_nn`** (cuBLAS SGEMM, the linear projection of the
+  raw input `x` -- the very first kernel to actually read the
+  uninitialized tensor's garbage bytes): FP32 **712 distinct NaN sites
+  (1,950,152 repeats)**, 72 distinct Infinity (8,905 repeats), 94 distinct
+  -Infinity (9,122 repeats), 692 distinct Subnormal (270,188 repeats) --
+  all `FFMA` instructions accumulating the matmul, exactly where garbage
+  input bits first get multiplied and summed. This is `nixnan` locating,
+  at the SASS-instruction level, precisely the kernel GPU-FPX's authors
+  identified by inspection.
+- **`sru_cuda_forward_kernel_simple`** (SRU's own custom recurrent
+  kernel): FP32 91 distinct NaN (123,073 repeats), 13 distinct Infinity
+  (15,507 repeats), 22 distinct Subnormal (3,661 repeats); FP16 4 distinct
+  NaN (5,468 repeats); FP32 memory operations 3 distinct NaN (5,397
+  repeats) -- the corruption from the GEMM propagates through and is
+  amplified by the recurrence itself, across every timestep.
+- `CatArrayBatchedCopy` (concatenating the 2 stacked layers' outputs for
+  the final return value): 0 exceptions (pure data movement, no
+  arithmetic).
+
+Net result: `nixnan` traces the exact same root cause as GPU-FPX
+(uninitialized input reaching a GEMM) independently, and additionally
+pinpoints the second-order effect inside SRU's own recurrent kernel that
+GPU-FPX's comment didn't detail.
