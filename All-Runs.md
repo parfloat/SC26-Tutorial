@@ -585,5 +585,38 @@ $TOOL -ksel --ksel-file ./ksel -s 0 -t 2100 -- python3 gpt_finite_state_cuda.py 
 ```
 `-phase1` (`-t 2100`, since the default 300s undershot the ~1708s Phase 1
 actually needs) reproduced the same 14-kernel/71-launch baseline in
-1720.4s. Result of the combined `-ksel` run pending at the time of this
-writing; this section will be updated once it completes.
+1720.4s. The combined `-ksel` run (all 14 whitelisted together) took
+**1720.1s** -- essentially identical to a single kernel's own enumeration
+cost, confirming the hypothesis: NVBit's fatbinary-enumeration tax is
+paid once per **process**, not once per **whitelisted kernel**. This
+combined-whitelist approach finished the whole thing in ~29 minutes
+total (`-phase1` + `-ksel` run), vs. the ~6.5 hours the abandoned
+`iter-autonixnan` sweep was on pace for -- roughly a 13x wall-time
+reduction for the same 14 kernels, at the cost of losing per-kernel
+attribution (all 14 kernels' exceptions are pooled into one report
+instead of one report per kernel).
+
+**Result: real exceptions found.** FP32: 71 distinct NaN sites (508
+repeats), 22 distinct -Infinity sites (114 repeats). FP16: 6 distinct NaN
+sites (34 repeats), 2 distinct -Infinity sites (6 repeats). Zero in
+BF16/FP64. All of it traces to the two `softmax_warp_forward` kernels
+(the attention softmax over the causally-masked 3x3 score matrix, and the
+final 2-class output softmax) -- specifically the `FADD`/`FFMA`/
+`MUFU.EX2` instruction sequence implementing `exp(x)` as
+`exp2((x - max) * log2(e))` with a Kahan-style hi/lo correction term
+(`1.4426950216293334961` = log2(e), `1.925963033500011079e-08` = its
+correction). `CausalSelfAttention`'s own `masked_fill(mask == 0,
+float('-inf'))` puts genuine `-inf` values into the row being
+softmax-ed; once that `-inf` reaches the hi/lo log2(e) split, the two
+correction terms combine as `-inf - (-inf)`-shaped arithmetic and produce
+real, instruction-level NaN/-Infinity -- inside PyTorch's own library
+softmax kernel, not user code. Notably, **the script's own final printed
+output was unaffected** (`input [1, 1, 1] ---> [0.452, 0.548]`, a normal
+probability pair) -- these NaN/-Inf values are transient, internal to the
+masked-softmax computation, and get resolved (softmax of `-inf` legitimately
+evaluates to `0`) before reaching the kernel's output. A genuine,
+reproducible in-library floating-point exception with no visible
+end-to-end effect here -- the same "real exception, benign to the final
+answer" pattern documented for `hec_fluidSim`'s false positives, but this
+time inside PyTorch/cuDNN's own compiled kernel rather than a
+tutorial-authored one.
