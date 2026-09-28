@@ -685,3 +685,35 @@ Net result: `nixnan` traces the exact same root cause as GPU-FPX
 (uninitialized input reaching a GEMM) independently, and additionally
 pinpoints the second-order effect inside SRU's own recurrent kernel that
 GPU-FPX's comment didn't detail.
+
+### Straight nixnan (no sampling, no whitelist -- all kernels together)
+```bash
+cd sru_study
+LD_PRELOAD=../external/nixnan/nixnan.so python3 -u reproducer.py \
+  > Logs/straight-nixnan.log 2>&1
+```
+Took 78.8s wall time (no per-kernel enumeration cost here, since all 4
+kernels are instrumented together in a single process rather than
+re-enumerated per fresh process as in the `iter-autonixnan` sweep).
+**Pitfall hit while running this**: an initial attempt wrapped in `timeout
+120 ...` produced a suspiciously short, 50-line log that stopped right
+after the initial NVBit/nixnan banner and Python's own startup warnings,
+with `timeout`'s wrapped process nonetheless reporting exit code 0 --
+looked like a clean, near-instant completion but was actually a truncated
+run (likely nixnan/NVBit catching `SIGTERM` and exiting 0 without
+finishing). Removing the `timeout` wrapper and measuring wall-clock
+directly (`time (... > log 2>&1)`) showed the real run genuinely needs
+~79s and produces the complete 1365-line log with both the "Finalizing
+GPU context" line and the final report -- always verify a suspiciously
+short/fast nixnan log actually reaches "Finalizing GPU context" before
+trusting it, independent of the wrapping shell's own reported exit code.
+
+Result: FP32 819 distinct NaN sites (2,418,941 repeats), 13 distinct
+Infinity (15,635 repeats), 744 distinct Subnormal (283,678 repeats); FP16
+4 distinct NaN (5,436 repeats), 1 distinct Subnormal (63 repeats); FP32
+memory 3 distinct NaN (5,373 repeats) -- same overall picture as the
+`iter-autonixnan` per-kernel sweep (GEMM-then-recurrence NaN
+propagation), with counts differing somewhat run-to-run, as expected
+given the bug's root cause is genuinely uninitialized GPU memory (its
+exact garbage content, and thus exactly how much of it is NaN/Inf/
+subnormal, is not deterministic across runs).
