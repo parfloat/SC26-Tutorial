@@ -595,9 +595,11 @@ and \texttt{TIME\_KERNELS=1}, nothing else, so
 \texttt{INSTRUMENT\_EXCEPTIONS} stays at its default (on) --- against
 \texttt{lu\_solve\_gpu} (this repository's \texttt{lu\_solve\_gpu/},
 well-conditioned \texttt{matrix.csv}) and every one of its 8 kernels'
-timings tells the same story:
+timings tells the same story, shown in
+Table~\ref{tab:time-kernels-first-launch}:
 
-\begin{center}
+\begin{table}[!htb]
+\centering
 \small
 \begin{tabular}{lrrrr}
 \toprule
@@ -613,7 +615,15 @@ Kernel & Launches & First launch & Typical (median) & Ratio \\
 \texttt{backward\_substitution\_kernel} & 1 & 324{,}597~\textmu s & --- & --- \\
 \bottomrule
 \end{tabular}
-\end{center}
+\caption{Per-kernel first-launch cost vs.\ typical (median) later-launch
+cost, \texttt{TIME\_KERNELS=1} against \texttt{lu\_solve\_gpu} (8
+kernels, well-conditioned \texttt{matrix.csv}). Every kernel's first
+launch pays NVBit's one-time SASS-instrumentation-insertion cost
+($\approx$280--330ms); every later launch of an already-instrumented
+kernel costs $\approx$20--25 microseconds -- four to five orders of
+magnitude faster.}
+\label{tab:time-kernels-first-launch}
+\end{table}
 
 \emph{Every} kernel's first launch costs $\approx\!280$--$330$ms;
 every later launch of an already-seen kernel costs $\approx\!20$--$25$
