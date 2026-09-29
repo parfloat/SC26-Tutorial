@@ -39,14 +39,19 @@
 \begin{abstract}
 This document explains, from the source code, how \texttt{bin/autonixnan}
 (``AutoNixNan'') and the \texttt{nixnan.so} NVBit tool it drives actually
-work. It is not a user guide; it is a line-level account of the
-mechanism, written after reading every file involved
+work, and how its two newer siblings, \texttt{iter-autonixnan} and
+\texttt{ksel-autonixnan} (Part III), extend it with different
+kernel-scoping strategies. It is not a user guide; it is a line-level
+account of the mechanism, written after reading every file involved
 (\texttt{bin/autonixnan}, \texttt{src/nixnan.cu}, and the eleven
 supporting headers/translation units under \texttt{src/}), and after
-empirically exercising the tool against several real CUDA programs. Where
-the code's behavior diverges from what its own comments or the project
-README claim, that divergence is called out explicitly and is backed by
-a repeatable observation, not speculation.
+empirically exercising the tools against several real CUDA programs --
+from small, purpose-built kernels through a full HeCBench port, a
+PyTorch/cuSOLVER routine, a toy GPT, a recurrent network, and (Part III,
+Section~\ref{sec:limitations}) a 7-billion-parameter, 4-bit-quantized
+production LLM. Where the code's behavior diverges from what its own
+comments or the project README claim, that divergence is called out
+explicitly and is backed by a repeatable observation, not speculation.
 \end{abstract}
 
 \tableofcontents
@@ -859,6 +864,132 @@ Every phase re-uses the \emph{same} \texttt{-t} value from the command
 line; there is no way to give the baseline phase a short budget and the
 scan phase a long one from the CLI as it stands.
 
+\section{Part III --- \texttt{iter-autonixnan} and \texttt{ksel-autonixnan}}
+\label{sec:iter-ksel}
+
+Both tools were added to \texttt{bin/} to sidestep Phase 2's
+exponent-scan blind spot (Section~\ref{sec:phase2},
+Section~\ref{sec:limitations} item 1) entirely, by never depending on it
+to pick a kernel in the first place. Neither reads or writes a
+\texttt{BIN\_SPEC\_FILE} unless the caller supplies one with \texttt{-b};
+by default both simply run every kernel they touch under full exception
+checking (\texttt{INSTRUMENT\_EXCEPTIONS=1}, forced, regardless of the
+ambient environment).
+
+\subsection{\texttt{iter-autonixnan}: one kernel at a time}
+
+\begin{lstlisting}[language=bash]
+iter-autonixnan -s SAMPLING [-t TIMEOUT] [-b BIN_SPEC_FILE] -- PROGRAM [ARGS...]
+\end{lstlisting}
+
+Phase 1 is the same \texttt{collect\_kernels()} baseline as
+\texttt{autonixnan}'s own Phase 1 (Section~\ref{sec:phase2}'s sibling,
+re-implemented rather than imported). Phase 2 then loops over every
+kernel name \texttt{k} found, and for each one, in turn: writes a
+\texttt{FUNCTION\_WHITELIST} file containing \emph{only} \texttt{k}, and
+launches an entirely fresh process with \texttt{SAMPLING=<-s value>},
+\texttt{INSTRUMENT\_EXCEPTIONS=1}, and \texttt{BIN\_SPEC\_FILE=<-b
+value>} if one was given. Every other kernel is completely uninstrumented
+for that run (native speed); the target program runs to completion (or
+its own timeout) once per kernel in \texttt{KN}.
+
+This gives clean, unambiguous per-kernel attribution: each kernel's
+exceptions are reported in complete isolation from every other kernel's.
+The cost is $|KN| + 1$ full process launches of the target program.
+For a target with a handful of custom kernels (e.g.\
+\texttt{lu\_solve\_gpu}, 8 kernels; \texttt{rd\_nixnan}, 2--4 kernels)
+this is cheap. For a target whose kernels come from a large, heavily
+templated library (PyTorch, cuSOLVER, cuBLAS), it can be
+\textbf{catastrophically expensive} -- see
+Section~\ref{sec:limitations} item 4, where sweeping just 14 kernels
+this way was projected at roughly 6.5 hours and abandoned partway
+through.
+
+\subsection{\texttt{ksel-autonixnan}: a hand-picked combination, together}
+
+\begin{lstlisting}[language=bash]
+ksel-autonixnan -phase1 [--ksel-file FILE] [-t TIMEOUT] -- PROGRAM [ARGS...]
+ksel-autonixnan -ksel [--ksel-file FILE] -s SAMPLING [-t TIMEOUT] [-b BIN_SPEC_FILE] -- PROGRAM [ARGS...]
+\end{lstlisting}
+
+\texttt{-phase1} and \texttt{-ksel} are mutually exclusive and one is
+required. \texttt{-phase1} runs the same kernel-collection baseline as
+\texttt{iter-autonixnan}'s own Phase 1, then writes a \emph{selection
+file} (default path \texttt{./ksel}) -- one line per kernel, of the form
+
+\begin{lstlisting}
+<exact kernel name> : n ;
+\end{lstlisting}
+
+every kernel defaulted to \texttt{n} (not selected). The intended
+workflow is to hand-edit this file, flipping \texttt{n} to \texttt{y} for
+whichever kernels should be examined, then re-run with \texttt{-ksel}.
+\texttt{parse\_ksel\_file} splits each line on the \emph{last}
+\texttt{" : "} occurrence (via a regex that requires no further
+\texttt{:} after the match, \texttt{\textbackslash s:\textbackslash
+s(?=[\^{}:]*\$)}), specifically so that a kernel name itself containing
+C++'s \texttt{::} scope operator is never mistaken for the field
+separator.
+
+\texttt{-ksel} collects every kernel marked \texttt{y}, writes them
+\emph{all into one} \texttt{FUNCTION\_WHITELIST} file, and launches the
+target \textbf{exactly once}, with all of them whitelisted together for
+that single run. Unlike \texttt{iter-autonixnan}, there is no
+per-kernel isolation: if two selected kernels both produce exceptions,
+the final aggregate report pools them together indistinguishably.
+
+The payoff is cost: whatever one-time cost NVBit's fatbinary enumeration
+carries is paid \textbf{once}, for the single combined process, no
+matter how many kernels are selected. Section~\ref{sec:limitations}
+item 4 gives the direct head-to-head measurement -- for the same 14
+kernels that were projected to need $\sim$6.5 hours under
+\texttt{iter-autonixnan}, the \texttt{ksel-autonixnan} combined run
+completed in 1720.1 seconds (about the same as \emph{one} kernel's own
+enumeration cost under \texttt{iter-autonixnan}), and found real
+exceptions in the process.
+
+\subsection{Choosing between the three}
+
+{\small
+\begin{longtable}{p{2.1cm}p{3.0cm}p{2.6cm}p{2.6cm}p{3.4cm}}
+\toprule
+& \textbf{\texttt{autonixnan}} & \textbf{\texttt{iter-autonixnan}} & \textbf{\texttt{ksel-autonixnan}} & \textbf{direct \texttt{nixnan.so}} \\
+\midrule
+\endhead
+\textbf{Kernel selection} &
+  automatic (Phase 2's exponent scan picks one) &
+  every kernel, one at a time &
+  hand-picked subset, all together &
+  everything (or a manual whitelist/blacklist) \\
+\textbf{Process launches} &
+  3 (baseline, scan, deep-dive) &
+  $|KN|+1$ &
+  2 (\texttt{-phase1} then \texttt{-ksel}) &
+  1 \\
+\textbf{Exception attribution} &
+  single kernel (whichever Phase 2 flagged) &
+  per-kernel, fully isolated &
+  pooled across the selected subset &
+  pooled across everything instrumented \\
+\textbf{Dominant cost} &
+  Phase 2's full histogram-scan pass over the whole binary &
+  fatbinary-enumeration cost paid $|KN|+1$ times &
+  fatbinary-enumeration cost paid once &
+  fatbinary-enumeration cost paid once \\
+\textbf{Blind spot} &
+  hard finite-to-Inf/NaN jumps invisible to Phase 2 (item 1 below); wrong kernel can get whitelisted &
+  none from exponent-scan bias; only the enumeration-cost blowup (item 4) &
+  same as \texttt{iter-autonixnan}, plus needing a human to pick the subset (or select everything, degrading to direct) &
+  none from selection bias; must fit the full instrumentation cost in one run \\
+\textbf{Best for} &
+  a first, unattended look at an unfamiliar binary &
+  a handful of small/custom kernels needing individual attribution &
+  a library-heavy binary where enumeration cost dominates and pooled attribution is acceptable &
+  anything small/fast enough to instrument whole, with no scan-bias risk \\
+\bottomrule
+\end{longtable}
+}
+
 \section{Empirically Observed Limitations}
 \label{sec:limitations}
 
@@ -902,6 +1033,73 @@ above.
   produced 10{,}000+ log lines from related-function enumeration alone,
   none of which affect \texttt{autonixnan}'s parsed output but which do
   make the raw log file unwieldy to read by hand.
+\item \textbf{NVBit's one-time fatbinary-enumeration cost is paid per
+  \emph{process}, not per \emph{instrumented kernel}.}
+  (\texttt{Karpathy-NGram/}, full data in that repository's
+  \texttt{All-Runs.md}.) \texttt{gpt\_finite\_\allowbreak state\_cuda.py} -- a trivial,
+  12{,}656-parameter toy GPT, reduced to a single forward pass -- was run
+  under \texttt{iter-autonixnan}. Phase 1 found 14 distinct kernels this
+  one forward pass touches and took 1707.7s just to enumerate them once,
+  uninstrumented. Phase 2's very first per-kernel whitelisted run (the
+  \texttt{arange} index kernel alone) took \emph{another} 1713.9s on its
+  own -- essentially the same cost all over again, for a single kernel,
+  with 13 more still to go. At that rate the full 14-kernel sweep was on
+  pace for roughly 6.5 hours and was abandoned. Switching to
+  \texttt{ksel-autonixnan} (Section~\ref{sec:iter-ksel}) -- whitelisting
+  all 14 kernels together in \emph{one} combined process instead of 14
+  separate ones -- completed the equivalent work in 1720.1s: essentially
+  identical to the cost of enumerating \emph{one} kernel under
+  \texttt{iter-autonixnan}, roughly a 13x wall-time reduction for the
+  same 14-kernel coverage, and it found real exceptions doing so (71
+  distinct FP32 NaN sites, 22 distinct FP32 -Infinity sites, 6 distinct
+  FP16 NaN sites, inside PyTorch's own
+  \texttt{softmax\_warp\_\allowbreak forward} kernel -- traced to the
+  causal attention mask's \texttt{-inf} values
+  interacting with the kernel's \texttt{exp2}-based, Kahan-split
+  \texttt{exp(x)} decomposition; the model's own final output was
+  unaffected, since softmax of \texttt{-inf} legitimately evaluates to
+  \texttt{0}). This confirms the dominant cost is NVBit's one-time
+  analysis of the \emph{entire loaded CUDA fatbinary} per fresh process,
+  independent of how many (or how few) kernels are actually whitelisted
+  for instrumentation -- a real, practical reason to prefer
+  \texttt{ksel-autonixnan}'s combined-whitelist strategy over
+  \texttt{iter-autonixnan}'s per-kernel sweep for any library-heavy
+  binary (PyTorch, cuSOLVER, cuBLAS) needing more than one or two
+  kernels examined.
+\item \textbf{NVBit-based instrumentation is not fully robust at the
+  scale and architectural complexity of a real, production-sized LLM.}
+  (\texttt{biomistral-test/}, full report and logs in that directory.)
+  Attaching \texttt{nixnan.so} (\texttt{SAMPLING=512}) to a
+  \textbf{7-billion-parameter}, 4-bit-quantized (\texttt{bitsandbytes},
+  NF4) medical dialog model (BioMistral-7B) for a single conversational
+  turn reproducibly crashed with \texttt{SIGSEGV} before ever reaching
+  \texttt{nixnan}'s own final aggregate report, in every one of 4
+  attempts. Two of those attempts were the \emph{identical} command run
+  twice, to check for a transient race: they reproduced almost exactly
+  (45 distinct kernels touched both times, near-identical exception
+  counts, and the identical last-logged kernel before the crash),
+  confirming this is deterministic, not a fluke. \texttt{SAMPLING} does
+  not mitigate it, since sampling only gates the runtime per-launch
+  enable/disable toggle (Section~\ref{sec:sampling-launch-gate}), not the
+  one-time SASS rewrite where the fault appears to occur. Progressively
+  adding the last-logged kernel before each crash to a
+  \texttt{FUNCTION\_BLACKLIST} pushed the crash substantially later each
+  round -- from 45 distinct kernels successfully touched, to 91, reaching
+  well into \texttt{generate()}'s own token-sampling logic
+  (\texttt{ArgMaxOps}, an exponential-distribution sampling kernel) --
+  without ever reaching completion after 4 rounds. A proper stack trace
+  was attempted via Ubuntu's \texttt{apport} crash reporting, but the
+  resulting core dump was 57\,GB (a 7B-parameter model's GPU-mapped
+  memory counts toward the crashing process's own address space),
+  impractical to load into \texttt{gdb} in this environment. Despite
+  never completing, every attempt captured substantial, genuine exception
+  data (500+ distinct NaN sites, roughly 300 distinct -Infinity sites,
+  roughly 230--300 distinct subnormal sites per run, across $\sim$90
+  kernels once the two known crash-adjacent kernels were blacklisted) --
+  this is reported as a real reliability boundary of the tool at this
+  scale, not a defect specific to this model or input, and stands in
+  contrast to every other (much smaller-scale) case study in this
+  repository completing cleanly under the same \texttt{nixnan.so} build.
 \end{enumerate}
 
 \section{Practical Summary}
@@ -928,5 +1126,24 @@ is small enough to instrument in full and the exponent-scan's blind spot
 (hard overflow jumps) is a concern, since it is the only one of the three
 that does not depend on Phase 2 having correctly identified the kernel of
 interest.
+
+When that direct run is impractical (too many kernels to instrument all
+at once, or the process needs to survive with only a subset instrumented),
+reach for \texttt{iter-autonixnan} or \texttt{ksel-autonixnan}
+(Section~\ref{sec:iter-ksel}) instead of \texttt{autonixnan} itself --
+both sidestep Phase 2's exponent-scan blind spot entirely, by never
+depending on it to pick a kernel:
+
+\begin{lstlisting}[language=bash]
+# Every kernel, one at a time, fully isolated attribution -- cheap for a
+# handful of small/custom kernels, ruinously expensive for a
+# library-heavy binary (Section~\ref{sec:limitations} item 4)
+iter-autonixnan -s SAMPLING -- ./target [args...]
+
+# A hand-picked subset, all together in one combined run -- the
+# enumeration cost is paid once regardless of subset size
+ksel-autonixnan -phase1 -- ./target [args...]   # writes ./ksel; hand-edit it
+ksel-autonixnan -ksel -s SAMPLING -- ./target [args...]
+\end{lstlisting}
 
 \end{document}

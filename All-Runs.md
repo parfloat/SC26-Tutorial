@@ -717,3 +717,99 @@ propagation), with counts differing somewhat run-to-run, as expected
 given the bug's root cause is genuinely uninitialized GPU memory (its
 exact garbage content, and thus exactly how much of it is NaN/Inf/
 subnormal, is not deterministic across runs).
+
+---
+
+## Automation added this session
+
+Two ways to reproduce any case study's headline run without reading this
+file by hand:
+
+- `run_all_examples.sh` (repo root) -- one function per case study,
+  builds what it needs and reproduces that study's documented run to the
+  same `Logs/`/`logs/` paths used throughout this file. `./run_all_examples.sh
+  list` lists study names; `./run_all_examples.sh <name> [<name> ...]`
+  runs a subset; no arguments runs everything (~30+ minutes, dominated by
+  `karpathy_ngram`'s one-time CUDA fatbinary enumeration cost).
+- `<case-study>/run_example.sh` -- the same content as that study's
+  function in `run_all_examples.sh`, but self-contained: `cd` into any
+  one case study directory and run just that demo directly.
+- `hec_fluidSim/run_reduced.sh` was also extended with a `--overflow`
+  flag, so the deliberately-unstable `main_overflow` build (not just the
+  default, numerically-stable `main`) can be run at any iteration count
+  without a full `nixnan` instrumentation pass -- useful for finding the
+  minimum iteration count that actually produces NaN/Inf before paying
+  that cost. Verified: 5 iterations stays finite, 40 already overflows
+  (580,644/589,824 NaN cells).
+
+---
+
+## biomistral-test/
+
+Not a case study built from scratch in this repository -- it documents a
+`nixnan` run against a separate, private project
+(`~/repos/newmed/simple_medical_agent.py`: a medical dialog agent built
+on **BioMistral-7B**, 4-bit NF4-quantized via `bitsandbytes`), kept out
+of this repo since it depends on a 14GB local model checkpoint and its
+own `venv/`. Only the `nixnan` logs and a LaTeX report of the findings
+(`biomistral-test/nixnan-biomistral-report.{tex,pdf}`) live here.
+
+Goal: run a single conversational turn (`"dizzy"`) to completion under
+`nixnan` (`SAMPLING=512`), gathering exceptions. **This did not fully
+succeed** -- every attempt crashed (`SIGSEGV`) before reaching `nixnan`'s
+own final aggregate report.
+
+```bash
+cd ~/repos/newmed  # separate directory, not this repo
+source venv/bin/activate
+NIXNAN_LIB=~/repos/SC26-Tutorial/external/nixnan/nixnan.so
+
+# Attempt 1 (no blacklist) -- crashed; identical rerun (attempt 2)
+# confirmed the crash is deterministic, not a transient race
+printf 'dizzy\nquit\nn\n' | \
+  LD_PRELOAD=$NIXNAN_LIB SAMPLING=512 python3 -u simple_medical_agent.py \
+  > attempt1-sampling512.log 2>&1
+
+# Attempts 3-4: progressively blacklist the last-logged kernel before
+# each crash, to see how far the run can get
+printf 'dizzy\nquit\nn\n' | \
+  LD_PRELOAD=$NIXNAN_LIB SAMPLING=512 \
+  FUNCTION_BLACKLIST=/path/to/growing_blacklist.txt \
+  python3 -u simple_medical_agent.py \
+  > attemptN.log 2>&1
+```
+
+Results (full detail and a findings table in the LaTeX report):
+- **Attempts 1-2** (no blacklist): crashed identically both times --
+  45 distinct kernels touched, last kernel logged before the crash was a
+  fused `cutlass::Kernel2<..._relu_f16_256x64_32x4_tn_align8>` (FP16
+  GEMM+ReLU tensor-core kernel).
+- **Attempt 3** (that kernel blacklisted): got much further -- 91
+  distinct kernels touched -- before crashing again, this time at/near a
+  `CatArrayBatchedCopy_aligned16_contig` (KV-cache concatenation) kernel.
+- **Attempt 4** (both blacklisted): still 91 kernels touched, reaching
+  well into `generate()`'s own token-sampling logic (`ArgMaxOps`, an
+  exponential-distribution sampling kernel) -- still crashed. The
+  report's \S3.1 notes a caveat: `nixnan` logs "running kernel" at
+  launch-interception time regardless of whitelist/blacklist status, so
+  the last-logged kernel before a crash is not a fully reliable pointer
+  to the true fault site.
+- A proper stack trace was attempted via `apport`/`gdb`, but the
+  resulting core dump was **57GB** (a 7B-parameter model's GPU-mapped
+  memory counts toward the crashing process's address space) --
+  abandoned as impractical.
+- Despite never completing, every attempt captured substantial real
+  exception data: ~500-560 distinct NaN sites, ~300 distinct -Infinity
+  sites, ~230-300 distinct subnormal sites, across ~90 kernels. Two
+  already-recognized mechanisms account for most of it: subnormal-heavy
+  FP16 tensor-core GEMMs (4-bit dequantized weights through FP16's
+  narrow range), and the same causal-mask-softmax `-Infinity`/NaN
+  pattern already documented in the Karpathy-NGram case study above
+  (softmax of `-inf` legitimately evaluates to `0`, but the intermediate
+  arithmetic reaching it is real and instruction-level detectable).
+
+Treated as a genuine finding in `autonixnan-doc.tex`'s Empirically
+Observed Limitations (item 5): NVBit-based instrumentation is not fully
+robust at the scale/complexity of a real 7B-parameter production LLM,
+unlike every other (much smaller) case study in this repository, which
+all completed cleanly under the same `nixnan.so` build.
