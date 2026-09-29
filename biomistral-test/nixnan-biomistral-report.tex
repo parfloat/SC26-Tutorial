@@ -1,0 +1,299 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{parskip}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    breakatwhitespace=false,
+    columns=fullflexible,
+    frame=single,
+    backgroundcolor=\color{gray!10}
+}
+
+\title{Attaching nixnan to a Quantized 7B Medical Dialog Agent:\\
+Real Exceptions Found, and a Reproducible Instrumentation Crash}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Context}
+
+\texttt{simple\_medical\_agent.py} (in a separate, private project
+directory, \texttt{\textasciitilde/repos/newmed} -- not part of this
+repository, since it depends on a 14\,GB local model checkpoint and its
+own \texttt{venv/}) is a small, standalone medical-dialog chat script
+built on \textbf{BioMistral-7B} (\texttt{BioMistral/\allowbreak
+BioMistral-7B}), loaded in 4-bit quantization via \texttt{bitsandbytes}
+(\texttt{nf4}, double quantization, FP16 compute dtype). It is otherwise
+unrelated to the other \texttt{SC26-Tutorial} case studies except that it
+uses this repository's own \texttt{nixnan} instrumentation library
+(\texttt{external/nixnan/nixnan.so}) to look for floating-point
+exceptions inside the model's own CUDA kernels. This report and the logs
+behind it live here, in \texttt{biomistral-test/}, since they document a
+real \texttt{nixnan} run even though the target program itself does not
+live in this repository.
+
+The goal of this exercise: feed the agent a single symptom, \texttt{"dizzy"},
+attach \texttt{nixnan} with \texttt{SAMPLING=512}, and let generation run to
+completion while collecting exceptions.
+
+\textbf{Headline result: this did not fully succeed.} Every attempt crashed
+with a segmentation fault before \texttt{nixnan} printed its own final
+aggregate report or the model printed its answer. This document reports
+what was found anyway (substantial, real floating-point exception activity)
+and treats the crash itself as a finding, not a footnote -- a real,
+reproducible robustness limit of NVBit-based instrumentation on a model
+this large and architecturally complex, in contrast to every case study in
+the sibling \texttt{SC26-Tutorial} project, all of which completed cleanly
+under the same tool.
+
+\section{Setup}
+
+\begin{itemize}
+  \item \textbf{Model:} \texttt{BioMistral/\allowbreak BioMistral-7B}, 4-bit NF4
+    quantization (\texttt{bitsandbytes}), FP16 compute dtype, loaded via
+    \texttt{transformers}' \texttt{device\_map="auto"}.
+  \item \textbf{Input:} the single symptom \texttt{"dizzy"} (piped via
+    stdin, followed by \texttt{quit}/\texttt{n} to exit cleanly), generating
+    up to \texttt{max\_new\_tokens=300} with temperature 0.7, top-p 0.9,
+    top-k 50.
+  \item \textbf{Instrumentation:} \texttt{LD\_PRELOAD} pointed at this
+    session's \texttt{nixnan.so} (built from
+    \texttt{parfloat/\allowbreak nixnan}, branch \texttt{print\_histo\_\allowbreak instrn} -- the
+    same build used throughout \texttt{SC26-Tutorial}), \texttt{SAMPLING=512}
+    (samples 1 in every 512 repeat launches of an already-instrumented
+    kernel; the \emph{first} launch of every distinct kernel is always
+    instrumented, since sampling only gates the runtime enable/disable
+    toggle, not the one-time SASS rewrite -- see
+    \texttt{SC26-Tutorial/\allowbreak autonixnan-doc.tex}, \S2.2), exception
+    checking on by default.
+  \item \textbf{Environment:} torch 2.6.0+cu124, transformers 4.57.1,
+    bitsandbytes 0.48.1, accelerate 1.10.1, in this directory's own
+    \texttt{venv/}.
+\end{itemize}
+
+\section{Attempts}
+
+Four attempts were made. Each subsequent one added the previously-observed
+crash-adjacent kernel to a \texttt{FUNCTION\_BLACKLIST} file
+(\texttt{Logs/function\_blacklist\_final.txt} holds the final, 2-entry
+version) to see whether excluding it let the run progress further.
+
+\begin{longtable}{p{1.4cm}p{2.9cm}p{1.3cm}p{2.2cm}p{4.6cm}}
+\toprule
+\textbf{Att.} & \textbf{Blacklist} & \textbf{Lines} & \textbf{Kernels touched} & \textbf{Last kernel launch logged before the crash} \\
+\midrule
+\endhead
+1 &
+  none &
+  1581 &
+  45 &
+  cutlass fused FP16 GEMM+ReLU tensor-core kernel (full name: footnote~\footnotemark[1]) \\
+2 &
+  none (reproducibility check) &
+  1570 &
+  45 &
+  identical to attempt 1 \\
+3 &
+  the GEMM+ReLU kernel above &
+  1664 &
+  91 &
+  \texttt{CatArrayBatchedCopy\_\allowbreak aligned16\_\allowbreak contig} (KV-cache concatenation; full name: footnote~\footnotemark[2]) \\
+4 &
+  both of the above &
+  1683 &
+  91 &
+  same \texttt{CatArrayBatchedCopy} kernel again (see \S\ref{sec:caveat}) \\
+\bottomrule
+\end{longtable}
+\footnotetext[1]{\texttt{cutlass::Kernel2<cutlass\_80\_tensorop\_f16\_s16816gemm\_relu\_f16\_256x64\_32x4\_tn\_align8>}}
+\footnotetext[2]{\texttt{CatArrayBatchedCopy\_aligned16\_contig<OpaqueType<4u>, unsigned int, 3, 128, 1>} (template args abbreviated)}
+
+All four crashes were \texttt{SIGSEGV} (``Segmentation fault (core
+dumped)''), reported by the shell after the piped-stdin input had already
+been fully consumed (the \texttt{printf 'dizzy\textbackslash nquit\textbackslash nn\textbackslash n'} side of the
+pipe always finished normally).
+
+Attempts 1 and 2 are the same command run twice, to check whether the
+crash was a one-off race or a genuinely reproducible fault: it reproduced
+almost exactly (45 kernels touched both times, near-identical exception
+counts -- see Table~\ref{tab:exceptions} -- and the identical last-logged
+kernel), confirming this is deterministic, not transient.
+
+Each blacklist round did make real forward progress: attempt 3 more than
+doubled the number of distinct kernels successfully touched (45
+$\rightarrow$ 91) and got well past the point where attempts 1--2 died.
+Attempt 4 progressed further still within the log (558 vs.\ 530 distinct
+NaN sites, more sampling-related kernels touched -- \texttt{ArgMaxOps},
+an exponential-distribution kernel used in nucleus sampling), but still
+crashed.
+
+\subsection{A caveat on ``last kernel logged''}
+\label{sec:caveat}
+
+\texttt{nixnan} prints \texttt{running kernel [\ldots]} once per distinct
+kernel, at launch-interception time, independent of whether that kernel
+is actually whitelisted/blacklisted for instrumentation. This means the
+last line printed before a crash is not a reliable pointer to the actual
+crash site: if the true crash happens during NVBit's one-time SASS
+analysis of the \emph{next} distinct kernel, that kernel may crash before
+it ever gets to print its own ``running kernel'' line. This is the
+likely explanation for why attempt 4's last-logged kernel is the same
+\texttt{CatArrayBatchedCopy} kernel as attempt 3's, even though that
+specific kernel had already been blacklisted going into attempt 4 --
+the log line reflects a normal (blacklisted, uninstrumented, fast) launch
+of that kernel, not necessarily the fault. Pinpointing the true crash
+site conclusively would require a proper stack trace; this was attempted
+(via Ubuntu's \texttt{apport} crash report) but abandoned, since the
+resulting core dump was \textbf{57\,GB} -- a 7B-parameter model's
+GPU-mapped memory is counted in the crashing process's own address
+space -- making it impractical to load into \texttt{gdb} in this
+environment.
+
+\section{Exceptions found}
+\label{sec:exceptions}
+
+Despite never reaching completion, every attempt captured substantial,
+genuine floating-point exception activity, summed across all instrumented
+kernels in that run:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Attempt} & \textbf{NaN} & \textbf{-Infinity} & \textbf{Subnormal} & \textbf{NaN+Subnormal} & \textbf{Other combos} \\
+\midrule
+1 & 522 & 214 & 301 & 138 & 1 \\
+2 & 518 & 214 & 296 & 137 & 0 \\
+3 & 530 & 304 & 229 & 136 & 11 \\
+4 & 558 & 304 & 229 & 136 & 2 \\
+\bottomrule
+\end{tabular}
+\caption{Distinct exception sites (instruction + operand combinations),
+by category, per attempt. ``Other combos'' groups the rare
+\texttt{NaN,Infinity}, \texttt{NaN,-Infinity,subnormal} and
+\texttt{NaN,Infinity,subnormal} joint labels. These are counts of
+\emph{distinct} sites, not occurrence counts -- each site typically
+recurs many times across the model's 32 transformer layers and multiple
+attention heads.}
+\label{tab:exceptions}
+\end{table}
+
+Two distinct exception patterns stand out, both mechanisms already
+recognized from the \texttt{SC26-Tutorial} case studies rather than
+novel ones:
+
+\begin{itemize}
+  \item \textbf{Subnormal-heavy FP16 tensor-core GEMMs.} The bulk of the
+    \texttt{subnormal} sites are \texttt{HMMA.16816.F32} tensor-core
+    matrix-multiply-accumulate instructions inside
+    \texttt{cutlass::Kernel2} template instantiations -- i.e., the
+    dequantized 4-bit weights, multiplied through FP16 tensor cores,
+    routinely produce subnormal intermediate products. This is consistent
+    with 4-bit quantization's narrow dynamic range interacting with FP16's
+    already-narrow exponent range.
+  \item \textbf{\texttt{-Infinity} from causal-mask softmax.} A large share
+    of the \texttt{-infinity} and \texttt{NaN,-infinity} sites are
+    \texttt{FADD}/\texttt{FFMA}/\texttt{MUFU.EX2} sequences matching the
+    same \texttt{exp(x) = exp2((x - max) \(\times\) log2(e))} Kahan-style
+    decomposition already found to interact badly with causal-masked
+    \texttt{-inf} values in \texttt{SC26-Tutorial}'s
+    \texttt{Karpathy-NGram} case study (see that project's
+    \texttt{All-Runs.md}). The mechanism is the same: masked attention
+    positions carry a literal \texttt{-inf} into the softmax kernel, and
+    intermediate arithmetic on it produces detectable, instruction-level
+    \texttt{-Infinity}/\texttt{NaN} values -- resolved to a harmless
+    \texttt{0} by the time softmax finishes, in every previously-observed
+    case.
+\end{itemize}
+
+\section{The crash as a finding}
+
+Every other \texttt{nixnan} case study built in \texttt{SC26-Tutorial} --
+spanning custom CUDA kernels, HeCBench ports, a small PyTorch/cuSOLVER
+routine, a toy GPT, and a recurrent network -- completed to a clean final
+report, even when that required working around a large one-time NVBit
+enumeration cost (documented at length for the PyTorch-backed studies).
+BioMistral-7B is qualitatively different: it is dramatically larger (7
+billion parameters vs.\ a few thousand to a few million in every other
+study here), combines 4-bit quantization (\texttt{bitsandbytes}), FlashAttention,
+and \texttt{cutlass} fused-epilogue tensor-core kernels in one pipeline, and
+reproducibly crashes NVBit's instrumentation machinery partway through a
+single forward pass, regardless of \texttt{SAMPLING} (since sampling does
+not affect the one-time SASS rewrite that is presumably where the fault
+lies).
+
+This is worth stating plainly as a limitation of the tool at its current
+state, on workloads at this scale and complexity -- not a failure specific
+to this particular medical agent or to the \texttt{"dizzy"} input. The
+progressive-blacklisting results (\S3) suggest the fragility is not
+confined to one single kernel, but recurs across at least two distinct,
+unrelated kernel families (a fused tensor-core GEMM epilogue, and a tensor
+concatenation kernel used in KV-cache management), with the true trigger
+of the fourth crash not conclusively identified (\S\ref{sec:caveat}).
+
+\section{What was not tried}
+
+Given time constraints, the following mitigations were considered but not
+attempted, and would be reasonable next steps:
+
+\begin{itemize}
+  \item Continuing the blacklist-and-retry loop further (each round has
+    made genuine progress; it is unclear how many more distinct crash
+    sites remain).
+  \item Running without 4-bit quantization (\texttt{use\_4bit=False}), to
+    check whether \texttt{bitsandbytes}' own custom kernels
+    (\texttt{kQuantizeBlockwise}/\texttt{kDequantizeBlockwise}) are
+    implicated, independent of the \texttt{cutlass}/\texttt{CatArray}
+    kernels already isolated.
+  \item Capping \texttt{max\_new\_tokens} much lower (e.g.\ 8--16) to
+    shrink the number of distinct decode-step kernel launches per run,
+    trading completeness of the response for a better chance of reaching
+    \texttt{nixnan}'s final report.
+  \item Splitting the run \texttt{iter-autonixnan}-style (one kernel
+    whitelisted per fresh process) -- impractical for a single coherent
+    multi-token \texttt{generate()} call as used here, but could still be
+    adapted to at least identify every crash-triggering kernel
+    systematically, one process at a time.
+  \item Obtaining a proper stack trace via a more targeted core-dump
+    strategy (e.g.\ attaching \texttt{gdb} live with a breakpoint, rather
+    than post-mortem on a 57\,GB dump).
+\end{itemize}
+
+\section{Reproducing this}
+
+This requires \texttt{\textasciitilde/repos/newmed} (the private project
+directory holding \texttt{simple\_medical\_agent.py}, its \texttt{venv/},
+and the local BioMistral-7B checkpoint) alongside a checkout of this
+repository, for \texttt{external/nixnan/nixnan.so}:
+
+\begin{lstlisting}
+cd ~/repos/newmed
+source venv/bin/activate
+NIXNAN_LIB=~/repos/SC26-Tutorial/external/nixnan/nixnan.so
+BLACKLIST=~/repos/SC26-Tutorial/biomistral-test/Logs/function_blacklist_final.txt
+
+# Attempt 1 (no blacklist)
+printf 'dizzy\nquit\nn\n' | \
+  LD_PRELOAD=$NIXNAN_LIB SAMPLING=512 python3 -u simple_medical_agent.py \
+  > attempt1-sampling512.log 2>&1
+
+# Attempt 4 (both crash-adjacent kernels blacklisted)
+printf 'dizzy\nquit\nn\n' | \
+  LD_PRELOAD=$NIXNAN_LIB SAMPLING=512 FUNCTION_BLACKLIST=$BLACKLIST \
+  python3 -u simple_medical_agent.py \
+  > attempt4-blacklist-relu-gemm-and-catarray.log 2>&1
+\end{lstlisting}
+
+All four logs from the original run are in \texttt{Logs/} alongside this
+report.
+
+\end{document}
