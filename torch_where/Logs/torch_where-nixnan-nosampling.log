@@ -1,0 +1,292 @@
+------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
+NVBit core environment variables (mostly for nvbit-devs):
+ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
+            NVDISASM = nvdisasm - override default nvdisasm found in PATH
+            NOBANNER = 0 - if set, does not print this banner
+       NO_EAGER_LOAD = 1 - lazy module loading is now turned on by default. If you see deadlocks in your tool, set NO_EAGER_LOAD to 0
+---------------------------------------------------------------------------------
+         INSTR_BEGIN = 0 - Beginning of the instruction interval where to apply instrumentation
+           INSTR_END = 4294967295 - End of the instruction interval where to apply instrumentation
+        TOOL_VERBOSE = 0 - Enable verbosity inside the tool
+   ENABLE_FUN_DETAIL = 0 - Enable detailed function information for kernel
+     PRINT_ILL_INSTR = 0 - Print the instruction which caused the exception
+            SAMPLING = 0 - Instrument a repeat kernel every SAMPLING times
+INSTRUMENT_EXCEPTIONS = 1 - Enable instrumentation of exceptions
+           INSTR_MEM = 0 - Instrument memory instructions for NaN/Inf detection
+           HISTOGRAM = 0 - Enable FP exponent histogramming
+       BIN_SPEC_FILE =  - Specification for which exponent ranges to report. If the file does not exist, a template specification will be created.
+For example:
+{
+    "count": 128,
+    "doublings": 0,
+    "bf16": [],
+    "f16": [[0,5],[-4,-1]],
+    "f32": [],
+    "f64": []
+}
+will report every 128 occurrences of exponents in the ranges 0 to 5 and -4 to -1 for f16 numbers.
+A key of the form "<fmt> (record_inst)", e.g. "f16 (record_inst)", takes the same range syntax
+and additionally reports the specific instruction/source line that triggered each threshold hit,
+the same way exception reports do -- useful for root-causing how values reached a given range.
+
+If "doublings" is N (N>0), every bin starts reporting every "count" occurrences; each time a
+bin reports, its own threshold doubles (count -> 2*count -> 4*count -> ...). After a bin has
+doubled N times, the NEXT report resets every bin in that kernel back to the starting "count"
+and 0 doublings, then the cycle repeats. "doublings": 0 (the default) disables this -- every
+bin just reports every "count" occurrences forever, as before.
+      NIXNAN_TIMEOUT = 0 - Timeout for the nixnan instrumented process in seconds.
+             LOGFILE =  - Path to the optional log file. Default is to print to stderr. This is useful for the case when an instrumented program is capturing stderr.
+           LINE_INFO = 1 - Disable debug information for source code locations. Having this enabled may cause crashes, so set this to 0 if you encounter issues.
+         LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
+          MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
+        TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
+  FUNCTION_WHITELIST =  - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
+#nixnan: ----------------------------------------------------------------------------------
+/home/ganesh/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:619: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
+#nixnan: Initializing GPU context...
+#nixnan: Instrumenting all functions
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::compare_scalar_kernel<float>(at::TensorIteratorBase&, at::native::(anonymous namespace)::OpType, float)::{lambda(float)#1}, at::detail::Array<char*, 2> >(int, at::native::compare_scalar_kernel<float>(at::TensorIteratorBase&, at::native::(anonymous namespace)::OpType, float)::{lambda(float)#1}, at::detail::Array<char*, 2>)] ...
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R12, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R16, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R20, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R24, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R24, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R12, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R16, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R20, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R12, R8, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R14, R10, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R2, R4, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R2, R6, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R14, R10, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R12, R8, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R10, R6, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R8, R2, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R12, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R16, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R20, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R24, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R24, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R12, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R16, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R20, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R12, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R12, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R12, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R12, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R8, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R16, R8, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R14, R10, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R12, R8, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R10, R6, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R8, R2, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R4, R28, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R10, R24, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R10, R16, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R10, R30, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R4, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R4, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R4, R28, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R4, R24, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R4, R16, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R8, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R8, R4, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R4, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R4, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R6, R4, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R12, R8, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R14, R10, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R2, R4, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R2, R6, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R14, R10, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R12, R8, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R10, R6, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R8, R2, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R4, R20, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R4, R8, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R4, R12, +INF  ;
+#nixnan: #nixnan: warning: Infinite immediate found in operand 2 of DADD R4, R16, +INF  ;
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::exp_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, at::detail::Array<char*, 2> >(int, at::native::exp_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, at::detail::Array<char*, 2>)] ...
+#nixnan: error [infinity] detected in operand 0 of instruction FMUL R8, R8, R11 ; in function void at::native::vectorized_elementwise_kernel of type f32
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctorOnSelf_add<float>, at::detail::Array<char*, 2> >(int, at::native::CUDAFunctorOnSelf_add<float>, at::detail::Array<char*, 2>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::(anonymous namespace)::where_kernel_impl(at::TensorIterator&)::{lambda()#1}::operator()() const::{lambda()#7}::operator()() const::{lambda(bool, float, float)#1}, at::detail::Array<char*, 4> >(int, at::native::(anonymous namespace)::where_kernel_impl(at::TensorIterator&)::{lambda()#1}::operator()() const::{lambda()#7}::operator()() const::{lambda(bool, float, float)#1}, at::detail::Array<char*, 4>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> >, at::detail::Array<char*, 3> >(int, at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> >, at::detail::Array<char*, 3>)] ...
+#nixnan: error [infinity] detected in operand 1 of instruction FMUL R19, R19, R18 ; in function void at::native::vectorized_elementwise_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FMUL R19, R19, R18 ; in function void at::native::vectorized_elementwise_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction STG.E [R10.64], R19 ; in function void at::native::vectorized_elementwise_kernel of type f32
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctor_add<float>, at::detail::Array<char*, 3> >(int, at::native::CUDAFunctor_add<float>, at::detail::Array<char*, 3>)] ...
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R19, c[0x0][0x164], R18 ; in function void at::native::vectorized_elementwise_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R19, c[0x0][0x164], R18 ; in function void at::native::vectorized_elementwise_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction STG.E [R10.64], R19 ; in function void at::native::vectorized_elementwise_kernel of type f32
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::AbsFunctor<float>, at::detail::Array<char*, 2> >(int, at::native::AbsFunctor<float>, at::detail::Array<char*, 2>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::AUnaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 2> >(int, at::native::AUnaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 2>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 3> >(int, at::native::BinaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 3>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<bool, bool, bool, at::native::binary_internal::MulFunctor<bool> >, at::detail::Array<char*, 3> >(int, at::native::BinaryFunctor<bool, bool, bool, at::native::binary_internal::MulFunctor<bool> >, at::detail::Array<char*, 3>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<bool, bool, bool, at::native::BitwiseAndFunctor<bool> >, at::detail::Array<char*, 3> >(int, at::native::BinaryFunctor<bool, bool, bool, at::native::BitwiseAndFunctor<bool> >, at::detail::Array<char*, 3>)] ...
+#nixnan: running kernel [void at_cuda_detail::cub::DeviceReduceSingleTileKernel<at_cuda_detail::cub::DeviceReducePolicy<int, int, at_cuda_detail::cub::Sum>::Policy600, at_cuda_detail::cub::TransformInputIterator<bool, at::native::(anonymous namespace)::NonZeroOp<bool>, bool const*, long>, int*, int, at_cuda_detail::cub::Sum, int, int>(at_cuda_detail::cub::TransformInputIterator<bool, at::native::(anonymous namespace)::NonZeroOp<bool>, bool const*, long>, int*, int, at_cuda_detail::cub::Sum, int)] ...
+#nixnan: running kernel [void at_cuda_detail::cub::DeviceCompactInitKernel<at_cuda_detail::cub::ScanTileState<int, true>, int*>(at_cuda_detail::cub::ScanTileState<int, true>, int, int*)] ...
+#nixnan: running kernel [void at_cuda_detail::cub::DeviceSelectSweepKernel<at_cuda_detail::cub::DispatchSelectIf<at_cuda_detail::cub::CountingInputIterator<long, long>, at_cuda_detail::cub::TransformInputIterator<bool, at::native::(anonymous namespace)::NonZeroOp<bool>, bool const*, long>, long*, int*, at_cuda_detail::cub::NullType, at_cuda_detail::cub::NullType, int, false, false>::PtxSelectIfPolicyT, at_cuda_detail::cub::CountingInputIterator<long, long>, at_cuda_detail::cub::TransformInputIterator<bool, at::native::(anonymous namespace)::NonZeroOp<bool>, bool const*, long>, long*, int*, at_cuda_detail::cub::ScanTileState<int, true>, at_cuda_detail::cub::NullType, at_cuda_detail::cub::NullType, int, false>(at_cuda_detail::cub::CountingInputIterator<long, long>, at_cuda_detail::cub::TransformInputIterator<bool, at::native::(anonymous namespace)::NonZeroOp<bool>, bool const*, long>, long*, int*, at_cuda_detail::cub::ScanTileState<int, true>, at_cuda_detail::cub::NullType, at_cuda_detail::cub::NullType, int, int)] ...
+#nixnan: running kernel [void at::native::index_elementwise_kernel<128, 4, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<4> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<4> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&)::{lambda(int)#1}>(long, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<4> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<4> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&)::{lambda(int)#1})] ...
+#nixnan: running kernel [void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#6}::operator()() const::{lambda(double)#1}, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >(int, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#6}::operator()() const::{lambda(double)#1}, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1>)] ...
+#nixnan: running kernel [void at::native::reduce_kernel<512, 1, at::native::ReduceOp<double, at::native::func_wrapper_t<double, at::native::MinNanFunctor<double> >, unsigned int, double, 4> >(at::native::ReduceOp<double, at::native::func_wrapper_t<double, at::native::MinNanFunctor<double> >, unsigned int, double, 4>)] ...
+#nixnan: running kernel [void at::native::reduce_kernel<512, 1, at::native::ReduceOp<double, at::native::func_wrapper_t<double, at::native::MaxNanFunctor<double> >, unsigned int, double, 4> >(at::native::ReduceOp<double, at::native::func_wrapper_t<double, at::native::MaxNanFunctor<double> >, unsigned int, double, 4>)] ...
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R9, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R9, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::ceil_kernel_cuda(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, at::detail::Array<char*, 2> >(int, at::native::ceil_kernel_cuda(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, at::detail::Array<char*, 2>)] ...
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R12, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R7, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R9, -QNAN  ;
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<double, double, double, at::native::binary_internal::DivFunctor<double> >, at::detail::Array<char*, 3> >(int, at::native::BinaryFunctor<double, double, double, at::native::binary_internal::DivFunctor<double> >, at::detail::Array<char*, 3>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::compare_scalar_kernel<double>(at::TensorIteratorBase&, at::native::(anonymous namespace)::OpType, double)::{lambda(double)#1}, at::detail::Array<char*, 2> >(int, at::native::compare_scalar_kernel<double>(at::TensorIteratorBase&, at::native::(anonymous namespace)::OpType, double)::{lambda(double)#1}, at::detail::Array<char*, 2>)] ...
+tensor(101., device='cuda:0', grad_fn=<WhereBackward0>)
+#nixnan: error [NaN] detected in operand 1 of instruction FADD R7, |R10|, -RZ ; in function void at::native::vectorized_elementwise_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FADD R7, |R10|, -RZ ; in function void at::native::vectorized_elementwise_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction STG.E [R4.64], R7 ; in function void at::native::vectorized_elementwise_kernel of type f32
+tensor(nan, device='cuda:0')
+#nixnan: Finalizing GPU context...
+
+#nixnan: ------------ nixnan Report -----------
+
+#nixnan: --- FP16 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- BF16 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP32 Operations ---
+#nixnan: NaN:                    5 (0 repeats)
+#nixnan: Infinity:               2 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP64 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- BF16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- FP32 Memory  Operations ---
+#nixnan: NaN:                    3 (0 repeats)
+#nixnan: --- FP64 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)

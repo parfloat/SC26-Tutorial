@@ -813,3 +813,55 @@ Observed Limitations (item 5): NVBit-based instrumentation is not fully
 robust at the scale/complexity of a real 7B-parameter production LLM,
 unlike every other (much smaller) case study in this repository, which
 all completed cleanly under the same `nixnan.so` build.
+
+---
+
+## torch_where/
+
+Reproducer for [pytorch/pytorch#68425](https://github.com/pytorch/pytorch/issues/68425)
+("`torch.where` produces nan in backward pass for differentiable forward
+pass") -- `torch.where`'s backward computes gradients for *both*
+branches and masks the unused one to zero, but computing that unused
+branch's gradient can still involve an overflow (`d(exp(a))/da = exp(a)`
+at `a=100` is `Inf`); masking multiplies that `Inf` by `0`, producing a
+real `NaN` that still adds into the total gradient even though its
+branch was never selected. `reproducer.py` is the issue's own example,
+with tensors explicitly placed on `device=torch.device("cuda")` (the
+original snippet runs on CPU by default; `nixnan` needs the computation
+on GPU to have anything to instrument -- same adaptation as
+`Karpathy-NGram/gpt_finite_state_cuda.py`). See `README.md` in that
+directory for the full issue text and mechanism.
+
+### This environment's own reproduction
+Confirmed still open: torch 2.3.1+cu121 here reproduces it exactly,
+four major versions after the issue was filed against 1.9.1 --
+`b = tensor(101., ...)` (correct forward), `a.grad = tensor(nan, ...)`
+(buggy backward, expected `1.`).
+
+### Plain nixnan (no sampling, no wrapper tool)
+```bash
+cd torch_where
+LD_PRELOAD=../external/nixnan/nixnan.so python3 -u reproducer.py \
+  > Logs/torch_where-nixnan-nosampling.log 2>&1
+```
+**Pitfall hit again while running this** (same one first found with
+`sru_study`): an initial attempt wrapped in `timeout 120 ...` produced a
+77-line log that looked plausible but was actually truncated mid-static-SASS-analysis
+(a flood of compile-time `Infinite immediate found` warnings from a
+transcendental math-library device function, with no `running kernel`
+or final report ever reached) -- `timeout`'s `SIGTERM` again got caught
+and the wrapped process exited 0 without finishing. Removing the
+`timeout` wrapper (plain `nohup ... &`, waited out directly) produced
+the real, complete run: ~13 minutes wall time, reaching both the
+script's own printed output and `nixnan`'s final aggregate report.
+
+Result: FP32 5 distinct NaN sites, 2 distinct Infinity sites (0 repeats
+each -- this reproducer runs the computation exactly once, so every
+site is necessarily a first-and-only occurrence); FP32 memory 3 distinct
+NaN sites. The NaN sites are `FADD`/`FMUL`/`FFMA` instructions inside
+PyTorch's generic `vectorized_elementwise_kernel` template (the
+autograd engine's mask-and-combine step for `torch.where`'s backward),
+directly at the same mechanism the issue describes: `exp(100)` overflows
+to `Infinity` in the forward pass (caught directly: 2 distinct Infinity
+sites), and multiplying that by the zeroed-out mask weight during
+backward produces the `NaN` that ultimately corrupts `a.grad`.
