@@ -960,12 +960,15 @@ exceptions in the process.
 
 \subsection{Choosing between the three}
 
-{\small
-\begin{longtable}{p{2.1cm}p{3.0cm}p{2.6cm}p{2.6cm}p{3.4cm}}
+Table~\ref{tab:choosing-three} summarizes the tradeoffs.
+
+\begin{table}[p]
+\centering
+\small
+\begin{tabular}{p{2.1cm}p{3.0cm}p{2.6cm}p{2.6cm}p{3.4cm}}
 \toprule
 & \textbf{\texttt{autonixnan}} & \textbf{\texttt{iter-autonixnan}} & \textbf{\texttt{ksel-autonixnan}} & \textbf{direct \texttt{nixnan.so}} \\
 \midrule
-\endhead
 \textbf{Kernel selection} &
   automatic (Phase 2's exponent scan picks one) &
   every kernel, one at a time &
@@ -997,8 +1000,14 @@ exceptions in the process.
   a library-heavy binary where enumeration cost dominates and pooled attribution is acceptable &
   anything small/fast enough to instrument whole, with no scan-bias risk \\
 \bottomrule
-\end{longtable}
-}
+\end{tabular}
+\caption{Choosing between \texttt{autonixnan}, \texttt{iter-autonixnan},
+\texttt{ksel-autonixnan}, and a direct, unwrapped \texttt{nixnan.so}
+run -- kernel selection strategy, process-launch count, exception
+attribution granularity, dominant cost, blind spot, and best use case
+for each.}
+\label{tab:choosing-three}
+\end{table}
 
 \section{Empirically Observed Limitations}
 \label{sec:limitations}
