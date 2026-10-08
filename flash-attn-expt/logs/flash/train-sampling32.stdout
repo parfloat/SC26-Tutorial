@@ -46,6 +46,21 @@ bin just reports every "count" occurrences forever, as before.
   warnings.warn("Can't initialize NVML")
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 TinyGPT: 791,808 params, {'d': 128, 'h': 4, 'n_layers': 4}
-step     1  loss 2.5254  (6.1s)
-step   100  loss 1.0378  (242.9s)
-step   200  loss 0.4137  (480.2s)
+step     1  loss 2.5254  (5.7s)
+step   100  loss 1.0378  (230.6s)
+step   200  loss 0.4137  (458.0s)
+step   300  loss 0.3947  (684.5s)
+step   400  loss 0.3985  (910.7s)
+step   500  loss 0.3941  (1136.3s)
+step   600  loss 0.3940  (1362.4s)
+step   700  loss 0.3940  (1588.9s)
+step   800  loss 0.3939  (1815.9s)
+step   900  loss 0.3939  (2042.7s)
+step  1000  loss 0.3939  (2269.4s)
+step  1100  loss 0.3939  (2496.3s)
+step  1200  loss 0.3939  (2722.7s)
+step  1300  loss 0.3939  (2949.3s)
+step  1400  loss 0.3939  (3175.8s)
+step  1500  loss 0.3939  (3402.6s)
+train next-token accuracy 0.8353; words reproduced exactly 1/100
+saved tinygpt-nixnan.pt

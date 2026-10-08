@@ -31,8 +31,7 @@
   report (nonzero): FP16 Subnormal: 92 sites (2292 repeats); FP32 -Infinity: 644 sites (29820 repeats)
   flash_fwd_kernel                           580 sites  {'subnormal': 92, '-infinity': 644}
 ==================== logs/flash/train-sampling32.log
-  (no final report: run incomplete)
-  kernel launches logged: 50  (flash: {'flash_fwd_kernel': 1, 'flash_bwd': 3})
-  report (nonzero): all zero
-  flash_fwd_kernel                          1489 sites  {'subnormal': 1152, '-infinity': 1330, 'NaN': 2000, 'infinity': 801}
+  kernel launches logged: 60  (flash: {'flash_fwd_kernel': 1, 'flash_bwd': 3})
+  report (nonzero): FP16 NaN: 704 sites (14565356 repeats); FP16 Infinity: 404 sites (7588 repeats); FP16 -Infinity: 352 sites (7864 repeats); FP16 Subnormal: 800 sites (18404848 repeats); FP32 NaN: 1490 sites (78993020 repeats); FP32 Infinity: 751 sites (37938856 repeats); FP32 -Infinity: 1909 sites (495634629 repeats); FP32 Subnormal: 600 sites (4576082 repeats)
+  flash_fwd_kernel                          1493 sites  {'NaN': 2194, 'subnormal': 1308, '-infinity': 1479, 'infinity': 1083}
   flash_bwd                                  458 sites  {'infinity': 72, 'subnormal': 92, '-infinity': 448}

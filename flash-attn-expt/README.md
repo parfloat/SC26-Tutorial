@@ -92,7 +92,7 @@ binaries. The plan is in `PLAN.md`, and the full run recipe is in `run_all.sh`.
 
 | run | `SAMPLING` | log | result |
 |---|---|---|---|
-| training (step 7) | 32 | `train-sampling32.log` | TRAIN_RESULT (training still running when this was committed) |
+| training (step 7) | 32 | `train-sampling32.log` | finished: final loss 0.3939, next-token acc 0.8353, `tinygpt-nixnan.pt` completes 312 -> 312632. report (nonzero): FP16 NaN: 704 sites (14565356 repeats); FP16 Infinity: 404 sites (7588 repeats); FP16 -Infinity: 352 sites (7864 repeats); FP16 Subnormal: 800 sites (18404848 repeats); FP32 NaN: 1490 sites (78993020 repeats); FP32 Infinity: 751 sites (37938856 repeats); FP32 -Infinity: 1909 sites (495634629 repeats); FP32 Subnormal: 600 sites (4576082 repeats); flash_fwd_kernel                          1493 sites  {'NaN': 2194, 'subnormal': 1308, '-infinity': 1479, 'infinity': 1083}; flash_bwd                                  458 sites  {'infinity': 72, 'subnormal': 92, '-infinity': 448} |
 | `312` → 6 (step 8) | 0 (total) | `eval-312-full.log` | flash_fwd_kernel: 1,367 NaN, 57 +inf, 1,864 −inf, 461 subnormal operand reports |
 | combine A / B (step 9) | 0 | `lse-A-full.log`, `lse-B-full.log` | table above; oracle: `logs/lse-[AB]-oracle.txt` |
 | NF4 Linears (step 10) | 0 | `eval-312-full-nf4.log` | bitsandbytes kernels: 0 NaN/Inf, 19 subnormal sites |
