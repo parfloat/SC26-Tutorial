@@ -1,0 +1,48 @@
+------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
+NVBit core environment variables (mostly for nvbit-devs):
+ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
+            NVDISASM = nvdisasm - override default nvdisasm found in PATH
+            NOBANNER = 0 - if set, does not print this banner
+       NO_EAGER_LOAD = 1 - lazy module loading is now turned on by default. If you see deadlocks in your tool, set NO_EAGER_LOAD to 0
+---------------------------------------------------------------------------------
+         INSTR_BEGIN = 0 - Beginning of the instruction interval where to apply instrumentation
+           INSTR_END = 4294967295 - End of the instruction interval where to apply instrumentation
+        TOOL_VERBOSE = 0 - Enable verbosity inside the tool
+   ENABLE_FUN_DETAIL = 0 - Enable detailed function information for kernel
+     PRINT_ILL_INSTR = 0 - Print the instruction which caused the exception
+            SAMPLING = 0 - Instrument a repeat kernel every SAMPLING times
+INSTRUMENT_EXCEPTIONS = 1 - Enable instrumentation of exceptions
+           INSTR_MEM = 1 - Instrument memory instructions for NaN/Inf detection
+           HISTOGRAM = 0 - Enable FP exponent histogramming
+       BIN_SPEC_FILE =  - Specification for which exponent ranges to report. If the file does not exist, a template specification will be created.
+For example:
+{
+    "count": 128,
+    "doublings": 0,
+    "bf16": [],
+    "f16": [[0,5],[-4,-1]],
+    "f32": [],
+    "f64": []
+}
+will report every 128 occurrences of exponents in the ranges 0 to 5 and -4 to -1 for f16 numbers.
+A key of the form "<fmt> (record_inst)", e.g. "f16 (record_inst)", takes the same range syntax
+and additionally reports the specific instruction/source line that triggered each threshold hit,
+the same way exception reports do -- useful for root-causing how values reached a given range.
+
+If "doublings" is N (N>0), every bin starts reporting every "count" occurrences; each time a
+bin reports, its own threshold doubles (count -> 2*count -> 4*count -> ...). After a bin has
+doubled N times, the NEXT report resets every bin in that kernel back to the starting "count"
+and 0 doublings, then the cycle repeats. "doublings": 0 (the default) disables this -- every
+bin just reports every "count" occurrences forever, as before.
+      NIXNAN_TIMEOUT = 0 - Timeout for the nixnan instrumented process in seconds.
+             LOGFILE = logs/flash/sweep/T32.log - Path to the optional log file. Default is to print to stderr. This is useful for the case when an instrumented program is capturing stderr.
+           LINE_INFO = 1 - Disable debug information for source code locations. Having this enabled may cause crashes, so set this to 0 if you encounter issues.
+         LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
+          MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
+        TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
+  FUNCTION_WHITELIST = /home/ganesh/repos/SC26-Tutorial/flash-attn-expt/flash-kernels.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
+/home/ganesh/repos/newmed/venv/lib/python3.10/site-packages/torch/cuda/__init__.py:734: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
+completion (fp32 linears): 9458073021573681930364262129972 -> 9458073021573681930364262129972

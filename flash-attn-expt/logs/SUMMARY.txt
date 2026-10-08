@@ -1,0 +1,38 @@
+==================== logs/flash/eval-312-full-fp16.log
+  kernel launches logged: 32  (flash: {'flash_fwd_kernel': 2})
+  report (nonzero): FP16 NaN: 144 sites (752 repeats); FP16 Subnormal: 205 sites (3135 repeats); FP32 NaN: 509 sites (6778 repeats); FP32 -Infinity: 1828 sites (170282 repeats); FP32 Subnormal: 4 sites (0 repeats)
+  flash_fwd_kernel                          1725 sites  {'-infinity': 1828, 'subnormal': 168, 'NaN': 653}
+  cutlass::Kernel2                             8 sites  {'subnormal': 41}
+==================== logs/flash/eval-312-full.log
+  kernel launches logged: 31  (flash: {'flash_fwd_kernel': 2})
+  report (nonzero): FP16 NaN: 184 sites (3760 repeats); FP16 Infinity: 16 sites (0 repeats); FP16 Subnormal: 184 sites (3412 repeats); FP32 NaN: 1183 sites (31803 repeats); FP32 Infinity: 41 sites (0 repeats); FP32 -Infinity: 1873 sites (170580 repeats); FP32 Subnormal: 277 sites (146 repeats)
+  flash_fwd_kernel                          2091 sites  {'-infinity': 1864, 'subnormal': 461, 'NaN': 1367, 'infinity': 57}
+==================== logs/flash/eval-312-full-nf4.log
+  kernel launches logged: 38  (flash: {'flash_fwd_kernel': 2})
+  report (nonzero): FP16 NaN: 168 sites (1384 repeats); FP16 Subnormal: 156 sites (8582 repeats); FP32 NaN: 946 sites (11224 repeats); FP32 -Infinity: 1852 sites (170328 repeats); FP32 Subnormal: 274 sites (202 repeats)
+  flash_fwd_kernel                          1963 sites  {'-infinity': 1852, 'subnormal': 410, 'NaN': 1114}
+  kgemm_4bit_inference_naive                  19 sites  {'subnormal': 20}
+==================== logs/flash/lse-A-full.log
+  kernel launches logged: 35  (flash: {'flash_fwd_splitkv_kernel': 2, 'flash_fwd_splitkv_combine_kernel': 1})
+  report (nonzero): FP16 NaN: 285 sites (4267 repeats); FP16 -Infinity: 2 sites (1494 repeats); FP16 Subnormal: 432 sites (17764 repeats); FP32 NaN: 1876 sites (32640 repeats); FP32 Infinity: 1 sites (11 repeats); FP32 -Infinity: 1678 sites (276232 repeats); FP32 Subnormal: 466 sites (837 repeats)
+  flash_fwd_splitkv_kernel                  2589 sites  {'subnormal': 898, '-infinity': 1662, 'NaN': 2161}
+  flash_fwd_splitkv_combine_kernel            19 sites  {'-infinity': 18, 'infinity': 1}
+==================== logs/flash/lse-B-full.log
+  kernel launches logged: 35  (flash: {'flash_fwd_splitkv_kernel': 2, 'flash_fwd_splitkv_combine_kernel': 1})
+  report (nonzero): FP16 NaN: 522 sites (21866 repeats); FP16 -Infinity: 2 sites (1542 repeats); FP16 Subnormal: 495 sites (10917 repeats); FP32 NaN: 3209 sites (220905 repeats); FP32 Infinity: 1 sites (56 repeats); FP32 -Infinity: 1742 sites (277086 repeats); FP32 Subnormal: 58 sites (0 repeats)
+  flash_fwd_splitkv_kernel                  3197 sites  {'NaN': 3711, 'subnormal': 553, '-infinity': 1726}
+  flash_fwd_splitkv_combine_kernel            39 sites  {'-infinity': 18, 'infinity': 1, 'NaN': 20}
+==================== logs/flash/tile-T127.log
+  kernel launches logged: 22  (flash: {'flash_fwd_kernel': 1})
+  report (nonzero): FP16 Subnormal: 92 sites (2292 repeats); FP32 -Infinity: 644 sites (29820 repeats)
+  flash_fwd_kernel                           574 sites  {'subnormal': 92, '-infinity': 644}
+==================== logs/flash/tile-T128.log
+  kernel launches logged: 22  (flash: {'flash_fwd_kernel': 1})
+  report (nonzero): FP16 Subnormal: 92 sites (2292 repeats); FP32 -Infinity: 644 sites (29820 repeats)
+  flash_fwd_kernel                           580 sites  {'subnormal': 92, '-infinity': 644}
+==================== logs/flash/train-sampling32.log
+  (no final report: run incomplete)
+  kernel launches logged: 50  (flash: {'flash_fwd_kernel': 1, 'flash_bwd': 3})
+  report (nonzero): all zero
+  flash_fwd_kernel                          1489 sites  {'subnormal': 1152, '-infinity': 1330, 'NaN': 2000, 'infinity': 801}
+  flash_bwd                                  458 sites  {'infinity': 72, 'subnormal': 92, '-infinity': 448}

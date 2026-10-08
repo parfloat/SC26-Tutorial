@@ -1,0 +1,16 @@
+input B: ...528312 -> ...312000
+flash kernels launched (model + oracle calls): {'flash_fwd_splitkv_kernel': 24, 'flash_fwd_splitkv_combine_kernel': 24}
+call      layer     q x k  +inf LSE rows  -inf  NaN   block output rows non-finite
+prefill       0  301x301               4     0    0   45/301
+prefill       1  301x301             180     0    0   45/301
+prefill       2  301x301             180     0    0   45/301
+prefill       3  301x301             180     0    0   45/301
+decode1       0    1x302               0     0    0   1/1
+decode1       1    1x302               4     0    0   1/1
+decode1       2    1x302               4     0    0   1/1
+decode1       3    1x302               4     0    0   1/1
+decode2       0    1x303               0     0    0   1/1
+decode2       1    1x303               4     0    0   1/1
+decode2       2    1x303               4     0    0   1/1
+decode2       3    1x303               4     0    0   1/1
+combine guard fired on 568 (head,row) LSE entries; NaN LSE entries returned: 0

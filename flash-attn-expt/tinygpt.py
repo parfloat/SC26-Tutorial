@@ -95,7 +95,10 @@ class TinyGPT(nn.Module):
                 nn.init.normal_(m.weight, std=0.02)
 
     def forward(self, idx, cache=None, pos0=0):
-        x = self.emb(idx)
+        # one-hot @ weight rather than self.emb(idx): bit-identical in FP32 (no TF32),
+        # but avoids two kernels that hang NVBit (nixnan) at load time -- the
+        # embedding/index-select forward and the CUB radix sort in its backward
+        x = (idx[..., None] == torch.arange(VOCAB, device=idx.device)).float() @ self.emb.weight
         if self.ext_embed is not None:             # external input (experiment_lse.py)
             x = x + self.ext_embed[pos0:pos0 + idx.shape[1]].to(x.device)
         for b in self.blocks:

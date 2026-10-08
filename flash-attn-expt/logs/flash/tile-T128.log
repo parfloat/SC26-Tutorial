@@ -1,0 +1,801 @@
+#nixnan: ----------------------------------------------------------------------------------
+#nixnan: Initializing GPU context...
+#nixnan: Only instrumenting functions specified in /home/ganesh/repos/SC26-Tutorial/flash-attn-expt/flash-kernels.txt
+#nixnan: running kernel [void (anonymous namespace)::elementwise_kernel_with_index<int, at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}>(int, at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}, function_traits<at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}>::result_type*)] ...
+#nixnan: running kernel [void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl_nocast<at::native::BinaryFunctor<long, long, bool, at::native::(anonymous namespace)::CompareEqFunctor<long> > >(at::TensorIteratorBase&, at::native::BinaryFunctor<long, long, bool, at::native::(anonymous namespace)::CompareEqFunctor<long> > const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::BinaryFunctor<long, long, bool, at::native::(anonymous namespace)::CompareEqFunctor<long> > >(at::TensorIteratorBase&, at::native::BinaryFunctor<long, long, bool, at::native::(anonymous namespace)::CompareEqFunctor<long> > const&)::{lambda(int)#1})] ...
+#nixnan: running kernel [void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>, 4, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >(int, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1>)] ...
+#nixnan: running kernel [ampere_sgemm_32x128_nn] ...
+#nixnan: running kernel [void at::native::(anonymous namespace)::vectorized_layer_norm_kernel<float, float>(int, float, float const*, float const*, float const*, float*, float*, float*)] ...
+#nixnan: running kernel [ampere_sgemm_32x32_sliced1x4_tn] ...
+#nixnan: running kernel [void (anonymous namespace)::elementwise_kernel_with_index<int, at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#7}::operator()() const::{lambda(long)#1}>(int, at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#7}::operator()() const::{lambda(long)#1}, function_traits<at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#7}::operator()() const::{lambda(long)#1}>::result_type*)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::BUnaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 2ul> >(int, at::native::BUnaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 2ul>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<long>, std::array<char*, 1ul> >(int, at::native::FillFunctor<long>, std::array<char*, 1ul>)] ...
+#nixnan: running kernel [void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl<at::native::(anonymous namespace)::pow_tensor_tensor_kernel(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#7}::operator()() const::{lambda(float, float)#1}>(at::TensorIteratorBase&, at::native::(anonymous namespace)::pow_tensor_tensor_kernel(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#7}::operator()() const::{lambda(float, float)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl<at::native::(anonymous namespace)::pow_tensor_tensor_kernel(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#7}::operator()() const::{lambda(float, float)#1}>(at::TensorIteratorBase&, at::native::(anonymous namespace)::pow_tensor_tensor_kernel(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#7}::operator()() const::{lambda(float, float)#1} const&)::{lambda(int)#1})] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::reciprocal_kernel_cuda(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul> >(int, at::native::reciprocal_kernel_cuda(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::AUnaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 2ul> >(int, at::native::AUnaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 2ul>)] ...
+#nixnan: running kernel [void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_impl_nocast<at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> > >(at::TensorIteratorBase&, at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> > const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> > >(at::TensorIteratorBase&, at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> > const&)::{lambda(int)#1})] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::cos_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul> >(int, at::native::cos_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::sin_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul> >(int, at::native::sin_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>)] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctor_add<float>, std::array<char*, 3ul> >(int, at::native::CUDAFunctor_add<float>, std::array<char*, 3ul>)] ...
+#nixnan: running kernel [void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_impl_nocast<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1})] ...
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::float16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1}, std::array<char*, 2ul> >(int, at::native::float16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1}, std::array<char*, 2ul>)] ...
+#nixnan: running kernel [void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl_nocast<at::native::float16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::float16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::float16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::float16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1} const&)::{lambda(int)#1})] ...
+#nixnan: running kernel [void pytorch_flash::flash_fwd_kernel<pytorch_flash::Flash_fwd_kernel_traits<32, 128, 128, 4, false, false, cutlass::half_t, pytorch_flash::Flash_kernel_traits<32, 128, 128, 4, cutlass::half_t> >, false, true, false, false, true, true, false>(pytorch_flash::Flash_fwd_params)] ...
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R56, R8.reuse, R112, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R72, R8, R20.reuse, R68 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R152, R4, R20, R64 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R52, R8, R26, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R136, R8, R24, R76 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R36, R8, R22, R32 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R40, R12, R44, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R72, R8, R20.reuse, R68 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R28, R16, R44, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R64, R8, R40, R60 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R44, R8, R120, R44 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R92, R8, R132.reuse, R92 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R40, R207, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R40, R207, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R48, R8, R124, R80 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R125, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R125, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R40, -R71, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R6, -R71, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R6, -R71, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R40, R8, R42, R28 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R40, -R71, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R5, R128, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R8, R114, R24 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R5, R128, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R24, R8, R122, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R20, R8, R126, R32 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R8, R133, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R8, R133, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R71, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R71, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R20, R8, R52, R28 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R5, R132, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R5, R132, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R192, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R5, -R71, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R5, -R71, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R6, -R71, R8 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R6, -R71, R8 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R8, R134, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R8, R8, R54, R16 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R5, R5, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R5, R5, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R194, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R195, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R196, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R167, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R167, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R164, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R164, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R4, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R4, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R168, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R168, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R5, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R5, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R166, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R156, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R166, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R156, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R4, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R4, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R136, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R136, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R175, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R5, R5, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R5, R5, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R137, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R5, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R137, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R125, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R5, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R158, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R158, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R177, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R4, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R122, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R4, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R159, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R159, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R5, -R68.reuse, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R5, -R68.reuse, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R71, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R166, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R71, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R172, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R5, R5, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R165, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R5, R5, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R172, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R165, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R6, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R6, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R182, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R4, R173, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R6, -R71, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R5, R5, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R5, R5, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R4, R173, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R170, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R6, -R71, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R4, -R68, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R183, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R4, -R68, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R176, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R181, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R173, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R179, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R174, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R174, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R169, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R169, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R5, R179, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R198, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R5, R179, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R198, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R36, R4, R16, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R6, -R71, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R4, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R6, -R71, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R206, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R4, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R206, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R168, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R6, R197, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R6, R197, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R4, R12, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R6, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R32, R4.reuse, R18, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R6, -R68, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R20, R4, R14, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R172, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R5, R199, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R5, R199, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R4, R4, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R208, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R208, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R127, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R71, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R71, R5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R6, R6, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R44, R8.reuse, R16, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R164, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R131, R6 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R60, R8, R18, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R129, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R120, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R40, R8.reuse, R12, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R119, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R48, R8, R14, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R8, R210, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R8, R210, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R9, R211, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R9, R211, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R8, -R68, R8 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R8, -R68, R8 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R40, R40, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R40, R40, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R118, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R0, R209, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R0, R209, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R8, R8, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R71, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R8, R8, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R71, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R52, R4, R16, R28 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R68, R9 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R68, R9 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R56, R4, R24, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R212, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R212, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R112, R8 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R117, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R4, R26, R32 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R213, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R213, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R12, R4, R18, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R111, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R8, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R8, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R109, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R8, R8, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R8, R8, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R110, R8 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R64, R4.reuse, R16, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R16, R221, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R16, R221, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R219, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R219, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R36, R4, R24, R44 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R16, -R71, R16 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R16, -R71, R16 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R24, R4, R26, R60 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R224, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R224, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R32, R4, R18, R48 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R16, R16, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R16, R16, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R0, R220, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R0, R220, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R104, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R68, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R68, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R101, R16 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R4, R84, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R4, R84, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R103, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R85, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R85, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R102, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R70, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R70, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R40, R4, R8, R56 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R70, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R70, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R52, R4, R20, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R225, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R225, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R99, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R68, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R68, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R4, R10, R28 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R16, R4, R22, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R222, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R222, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R4, R228, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R4, R228, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R12, R229, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R12, R229, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R100, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R97, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R12, -R71, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R12, -R71, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R12, R12, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R12, R12, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R95, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R71, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R71, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R93, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R13, R95, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R13, R95, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R44, R4, R8, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R24, R4.reuse, R10, R24 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R157, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R94, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R157, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R48, R4, R20, R64 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R20, R245, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R20, R245, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R70, R13 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R32, R4, R22, R32 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R21, R247, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R21, R247, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R70, R13 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R36, R215, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R36, R215, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R20, -R71, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R20, -R71, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R242, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R242, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R36, -R69, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R36, -R69, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R92, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R36, R4, R10, R28 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R40, R4, R8, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R70, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R0, R243, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R70, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R90, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R214, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R214, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R0, R243, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R68, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R68, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R4.reuse, R12, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R244, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R36, R36, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R36, R36, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R16, R4, R14, R16 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R52, R134, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R244, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R53, R237, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R53, R237, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R69, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R69, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R89, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R20, R20, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R20, R20, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R52, R134, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R216, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R216, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R91, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R53, -R68, R53 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R53, -R68, R53 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R87, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R85, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R52, -R70, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R52, -R70, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R20, R246, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R86, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R88, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R20, -R68, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R20, R246, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R20, -R68, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R217, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R217, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R20, R20, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R20, R20, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R83, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R68, R21 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R4, R73, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R68, R21 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R4, R73, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R44, R4, R8, R44 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R79, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R84, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R249, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R249, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R24, R4.reuse, R10, R24 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R48, R4.reuse, R12, R48 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R80, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R12, R137, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R218, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R12, R137, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R218, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R251, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R69, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R251, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R12, -R68, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R69, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R12, -R68, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R52, R52, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R32, R4, R14, R32 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R52, R52, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R69, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R69, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R82, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R78, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R135, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R135, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R77, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R140, R4, R10, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R52, R236, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R75, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R52, R236, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R81, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R36, R4, R20, R28 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R52, -R68, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R52, -R68, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R0, R227, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R40, R4.reuse, R8, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R0, R227, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R76, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R12, R12, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R12, R12, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R156, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R69, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R156, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R69, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R4, R22, R16 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R72, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R223, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R223, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R4, R233, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R4, R233, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R69, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R69, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R16, R232, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R16, R232, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R16, -R70, R16 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R16, -R70, R16 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R68, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R137, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R137, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R136, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R136, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R67, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R16, R16, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R73, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R74, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R12, R234, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R65, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R16, R16, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R12, R234, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R70, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R66, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R70, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R63, R16 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R53, R53, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R53, R53, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R64, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R59, R53 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R235, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R52, R52, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R52, R52, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R235, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R230, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R69, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R230, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R69, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R60, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R231, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R32, R238, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R32, R238, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R231, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R32, -R70, R32 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R69, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R132, R4, R8, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R62, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R69, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R58, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R32, -R70, R32 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R40, R137, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R40, R137, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R140, R4.reuse, R10, R140 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R40, -R68, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R40, -R68, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R61, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R239, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R239, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R36, R4, R16, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R70, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R70, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R241, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R241, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R4, R18, R28 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R69, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R69, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R32, R32, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R32, R32, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R57, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R55, R32 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R56, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R156, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R0, R240, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R156, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R0, R240, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R53, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R68, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R68, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R69, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R8, R252, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R40, R40, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R8, R252, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R40, R40, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R136, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R136, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R69, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R51, R40 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R20, R154, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R20, R154, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R21, R151, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R4, R155, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R21, R151, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R4, R155, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R20, -R70, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R20, -R70, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R54, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R52, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R71, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R248, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R248, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R20, R20, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R20, R20, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R3, R250, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R3, R250, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R41, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R70, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P6 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P6 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R50, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R20, R150, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R20, R150, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R48, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R69, R8 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R69, R8 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R49, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R69, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R69, R4 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R70, R21 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R70, R21 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R132, R4, R12, R132 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R43, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R140, R4, R14, R140 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R42, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R0, R153, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R0, R153, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R40, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R4, R10, R28 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R69, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R69, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R152, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R152, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R152, R4, R8, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R3, -R69, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R3, -R69, R20 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R36, R148, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R36, R148, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R36, -R68, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R36, -R68, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P5 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R39, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P5 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R3, R3, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R37, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R0, R138, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R0, R138, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R38, R3 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R68, -R68, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R68, -R68, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R0, R149, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R0, R149, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P4 FMUL R36, R36, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P4 FMUL R36, R36, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction FMUL R2, R148, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FMUL R2, R148, c[0x0][0x238] ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R0, -R71, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R0, -R71, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 2 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction FADD R2, -R71, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R36, R36 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P3 FMUL R68, R68, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P3 FMUL R68, R68, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P2 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P2 FMUL R0, R0, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R68, R68 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction @!P1 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 0 of instruction @!P1 FMUL R2, R2, 0.5 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R9, R0 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R132, R156, R144, R132 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [-infinity] detected in operand 1 of instruction MUFU.EX2 R8, R2 ; in function void pytorch_flash::flash_fwd_kernel of type f32
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R140, R156, R146, R140 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R152, R156, R20, R152 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R156, R156, R22, R28 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::GeluCUDAKernelImpl(at::TensorIteratorBase&, at::native::GeluType)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul> >(int, at::native::GeluCUDAKernelImpl(at::TensorIteratorBase&, at::native::GeluType)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>)] ...
+#nixnan: running kernel [void cublasLt::splitKreduce_kernel<32, 16, int, float, float, float, float, true, false, false>(cublasLt::cublasSplitKParams<float>, float const*, float const*, float*, float const*, float const*, float const*, float const*, float*, void*, long, float*, int*)] ...
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R16, R4, R22, R12 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R32, R4, R22, R32 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R56, R12, R28, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R72, R12, R36, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R100, R12, R38.reuse, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R64, R12.reuse, R32, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R36, R12, R34.reuse, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R48, R12, R104, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R88, R12, R128, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R84, R12, R108, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R24, R12, R30, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R96, R12, R116, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R32, R12, R130, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R40, R12, R44, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R24, R12, R110, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R28, R12, R106, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R24, R12, R46, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R20, R12, R118, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R68, R16, R32.reuse, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R64, R12.reuse, R32, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R28, R4, R12, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R40, R8.reuse, R12, RZ ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R28, R4.reuse, R12, R52 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R48, R4.reuse, R12, R48 ; in function void pytorch_flash::flash_fwd_kernel of type f16
+#nixnan: Finalizing GPU context...
+
+#nixnan: ------------ nixnan Report -----------
+
+#nixnan: --- FP16 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:             92 (2292 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- BF16 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP32 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:            644 (29820 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP64 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- BF16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- FP32 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- FP64 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)

@@ -74,3 +74,16 @@ The experiment is designed to test points 1–4 empirically.
   2.6.0+cu124, bitsandbytes 0.48.1), so the flash kernels are byte-identical to
   the ones nixnan saw in BioMistral.
 * nixnan: `external/nixnan/nixnan.so` (branch `print_histo_instrn`).
+
+## Execution notes (what changed while executing)
+
+* Direct nixnan runs of PyTorch never finished start-up. NVBit takes about
+  30 s per cuBLAS kernel, and `F.embedding` (plus the CUB sort in its backward)
+  hangs it outright. All monitored runs therefore use `FUNCTION_WHITELIST`
+  (flash kernels; plus bitsandbytes or cuBLAS kernels for step 10), and the
+  embedding is computed as a one-hot matmul. The values are bit-identical.
+  Details are in README.md, "Getting nixnan to run on PyTorch at all".
+* Step 11 grew into a prompt-length sweep (T = 2…128), and a verbose run was
+  added to check which stores `INSTR_MEM` actually covers.
+* Step 7 writes `tinygpt-nixnan.pt`. `tinygpt.pt` (from step 4) stays the
+  committed model, so that every result uses the same weights.
