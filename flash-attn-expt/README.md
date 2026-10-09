@@ -133,3 +133,4 @@ causes, each fixed in this directory:
 | `summarize.py` | per-kernel summaries of nixnan logs |
 | `run_all.sh` | every run above, end to end |
 | `flash-kernels.txt`, `wl-nf4.txt`, `wl-fp16.txt` | nixnan whitelists |
+| `PyTorch_Instrumentation/` | flash attention's padding lanes and NaN guards dumped by instrumenting PyTorch 2.6's flash source (no nixnan); report in `PyT.md` |

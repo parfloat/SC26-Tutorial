@@ -1,0 +1,80 @@
+input B: ...528312 -> ...312000   (12 flash calls, 4 heads)
+Instrumented copy of PyTorch 2.6 flash (bitwise-equal outputs, see check_equivalence.py).
+
+=== call 0: layer 0, seqlen_q 301, seqlen_k 301, causal True, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 none: 1200, split 0 sum!=sum (NaN): 4, split 1 no key block (early exit): 1024, split 1 none: 176, split 1 sum!=sum (NaN): 4
+  splitkv softmax.h guard, pad rows  : split 0 none: 76, split 1 sum!=sum (NaN): 76
+  combine guard, valid rows: 1204 rows, fired 4 (lse_sum == 0: 4, lse_sum != lse_sum: 0); rows with non-finite O: 180
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 1: layer 1, seqlen_q 301, seqlen_k 301, causal True, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 none: 1024, split 0 sum!=sum (NaN): 180, split 1 no key block (early exit): 1024, split 1 sum!=sum (NaN): 180
+  splitkv softmax.h guard, pad rows  : split 0 none: 74, split 0 sum!=sum (NaN): 2, split 1 sum!=sum (NaN): 76
+  combine guard, valid rows: 1204 rows, fired 180 (lse_sum == 0: 180, lse_sum != lse_sum: 0); rows with non-finite O: 180
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 2: layer 2, seqlen_q 301, seqlen_k 301, causal True, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 none: 1024, split 0 sum!=sum (NaN): 180, split 1 no key block (early exit): 1024, split 1 sum!=sum (NaN): 180
+  splitkv softmax.h guard, pad rows  : split 0 none: 71, split 0 sum!=sum (NaN): 5, split 1 sum!=sum (NaN): 76
+  combine guard, valid rows: 1204 rows, fired 180 (lse_sum == 0: 180, lse_sum != lse_sum: 0); rows with non-finite O: 180
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 3: layer 3, seqlen_q 301, seqlen_k 301, causal True, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 none: 1024, split 0 sum!=sum (NaN): 180, split 1 no key block (early exit): 1024, split 1 sum!=sum (NaN): 180
+  splitkv softmax.h guard, pad rows  : split 0 none: 73, split 0 sum!=sum (NaN): 3, split 1 sum!=sum (NaN): 76
+  combine guard, valid rows: 1204 rows, fired 180 (lse_sum == 0: 180, lse_sum != lse_sum: 0); rows with non-finite O: 180
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 4: layer 0, seqlen_q 1, seqlen_k 302, causal False, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 none: 4, split 1 sum!=sum (NaN): 4
+  splitkv softmax.h guard, pad rows  : split 0 none: 219, split 0 sum!=sum (NaN): 33, split 1 sum!=sum (NaN): 252
+  combine guard, valid rows: 4 rows, fired 0 (lse_sum == 0: 0, lse_sum != lse_sum: 0); rows with non-finite O: 4
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 5: layer 1, seqlen_q 1, seqlen_k 302, causal False, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 sum!=sum (NaN): 4, split 1 sum!=sum (NaN): 4
+  splitkv softmax.h guard, pad rows  : split 0 none: 128, split 0 sum!=sum (NaN): 124, split 1 sum!=sum (NaN): 252
+  combine guard, valid rows: 4 rows, fired 4 (lse_sum == 0: 4, lse_sum != lse_sum: 0); rows with non-finite O: 4
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 6: layer 2, seqlen_q 1, seqlen_k 302, causal False, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 sum!=sum (NaN): 4, split 1 sum!=sum (NaN): 4
+  splitkv softmax.h guard, pad rows  : split 0 none: 46, split 0 sum!=sum (NaN): 206, split 1 sum!=sum (NaN): 252
+  combine guard, valid rows: 4 rows, fired 4 (lse_sum == 0: 4, lse_sum != lse_sum: 0); rows with non-finite O: 4
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 7: layer 3, seqlen_q 1, seqlen_k 302, causal False, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 sum!=sum (NaN): 4, split 1 sum!=sum (NaN): 4
+  splitkv softmax.h guard, pad rows  : split 0 sum!=sum (NaN): 252, split 1 sum!=sum (NaN): 252
+  combine guard, valid rows: 4 rows, fired 4 (lse_sum == 0: 4, lse_sum != lse_sum: 0); rows with non-finite O: 4
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 8: layer 0, seqlen_q 1, seqlen_k 303, causal False, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 none: 4, split 1 sum!=sum (NaN): 4
+  splitkv softmax.h guard, pad rows  : split 0 none: 22, split 0 sum!=sum (NaN): 230, split 1 sum!=sum (NaN): 252
+  combine guard, valid rows: 4 rows, fired 0 (lse_sum == 0: 0, lse_sum != lse_sum: 0); rows with non-finite O: 4
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 9: layer 1, seqlen_q 1, seqlen_k 303, causal False, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 sum!=sum (NaN): 4, split 1 sum!=sum (NaN): 4
+  splitkv softmax.h guard, pad rows  : split 0 sum!=sum (NaN): 252, split 1 sum!=sum (NaN): 252
+  combine guard, valid rows: 4 rows, fired 4 (lse_sum == 0: 4, lse_sum != lse_sum: 0); rows with non-finite O: 4
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 10: layer 2, seqlen_q 1, seqlen_k 303, causal False, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 sum!=sum (NaN): 4, split 1 sum!=sum (NaN): 4
+  splitkv softmax.h guard, pad rows  : split 0 sum!=sum (NaN): 252, split 1 sum!=sum (NaN): 252
+  combine guard, valid rows: 4 rows, fired 4 (lse_sum == 0: 4, lse_sum != lse_sum: 0); rows with non-finite O: 4
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== call 11: layer 3, seqlen_q 1, seqlen_k 303, causal False, num_splits 2
+  splitkv softmax.h guard, valid rows: split 0 sum!=sum (NaN): 4, split 1 sum!=sum (NaN): 4
+  splitkv softmax.h guard, pad rows  : split 0 sum!=sum (NaN): 252, split 1 sum!=sum (NaN): 252
+  combine guard, valid rows: 4 rows, fired 4 (lse_sum == 0: 4, lse_sum != lse_sum: 0); rows with non-finite O: 4
+  combine guard, pad rows  : 12 rows, fired 12 (lse_sum == 0: 12, lse_sum != lse_sum: 0); rows with non-finite O: 0
+
+=== totals over all calls
+  splitkv softmax.h guard, valid rows: no key block (early exit): 4096, none: 4456, sum!=sum (NaN): 1144
+  combine guard, valid rows: 4848 rows, fired 568 (lse_sum == 0: 568, lse_sum != lse_sum: 0), rows with non-finite O: 752
+  splitkv softmax.h guard, pad rows: none: 709, sum!=sum (NaN): 3931
+  combine guard, pad rows: 144 rows, fired 144 (lse_sum == 0: 144, lse_sum != lse_sum: 0), rows with non-finite O: 0

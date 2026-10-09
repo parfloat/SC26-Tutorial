@@ -1,0 +1,17 @@
+q   4 k   4 causal True   splits 1  dumps off  bitwise equal to aten flash: True
+q   4 k   4 causal True   splits 1  dumps on   bitwise equal to aten flash: True
+q   1 k   5 causal False  splits 1  dumps off  bitwise equal to aten flash: True
+q   1 k   5 causal False  splits 1  dumps on   bitwise equal to aten flash: True
+q   1 k   6 causal False  splits 1  dumps off  bitwise equal to aten flash: True
+q   1 k   6 causal False  splits 1  dumps on   bitwise equal to aten flash: True
+q  16 k  16 causal True   splits 1  dumps off  bitwise equal to aten flash: True
+q  16 k  16 causal True   splits 1  dumps on   bitwise equal to aten flash: True
+q 100 k 100 causal True   splits 1  dumps off  bitwise equal to aten flash: True
+q 100 k 100 causal True   splits 1  dumps on   bitwise equal to aten flash: True
+q 301 k 301 causal True   splits 2  dumps off  bitwise equal to aten flash: True
+q 301 k 301 causal True   splits 2  dumps on   bitwise equal to aten flash: True
+q   1 k 302 causal False  splits 2  dumps off  bitwise equal to aten flash: True
+q   1 k 302 causal False  splits 2  dumps on   bitwise equal to aten flash: True
+q   1 k 303 causal False  splits 2  dumps off  bitwise equal to aten flash: True
+q   1 k 303 causal False  splits 2  dumps on   bitwise equal to aten flash: True
+ALL EQUAL

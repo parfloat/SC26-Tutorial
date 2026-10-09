@@ -1,0 +1,84 @@
+TinyGPT '312' -> '312452'  (second run: '312452'); 12 flash calls, dumping calls 8..11
+Instrumented copy of PyTorch 2.6 flash_fwd_kernel (bitwise-equal outputs, see check_equivalence.py).
+Tile 128 x 128 (kBlockM x kBlockN), head dim 32; batch 0, m_block 0; all 4 heads summed.
+
+=== call 8: layer 0, seqlen_q 1, seqlen_k 6, causal False
+  Q  rows < seqlen_q  (loaded)              128 values: normal 128
+  Q  rows >= seqlen_q (never loaded)      16256 values: NaN 3240, subnormal 37, zero 464, normal 12515
+  K  rows < seqlen_k  (loaded)              768 values: normal 768
+  K  rows >= seqlen_k (never loaded)      15616 values: NaN 13, subnormal 16, zero 14784, normal 803
+  V  rows >= seqlen_k (cleared)           15616 values: zero 15616
+  S = QK^T  valid (r < sq, c < sk)           24 values: normal 24
+  S = QK^T  pad cols (r < sq, c >= sk)      488 values: NaN 13, zero 404, normal 71
+  S = QK^T  pad rows (r >= sq)            65024 values: NaN 17919, zero 38169, normal 8936
+  S masked  pad rows (r >= sq)            65024 values: NaN 780, -inf 61976, zero 72, normal 2196
+  P         valid rows                      512 values: subnormal 9, zero 493, normal 10
+  P         pad rows                      65024 values: NaN 780, zero 62226, normal 2018
+  O         valid rows                      128 values: normal 128
+  O         pad rows                      16256 values: NaN 4160, normal 12096
+  softmax.h guard (sum==0 || sum!=sum), rows < seqlen_q:  fired 0 of 4
+  softmax.h guard, rows >= seqlen_q:                     fired 130 of 508  (sum NaN: 130, sum 0: 0)  -> lse +inf, never stored
+  stale-row provenance: {('Q', 'no match'): 80, ('Q', 'zero row'): 12, ('Q', '= O tile of an earlier call'): 416, ('K', '= K tile of an earlier call'): 84, ('K', 'zero row'): 404}
+  stale Q lanes read as FP32 pairs, plausible-FP32 fraction: 0.46
+  second run: valid O rows identical: True; stale Q rows identical: False
+
+=== call 9: layer 1, seqlen_q 1, seqlen_k 6, causal False
+  Q  rows < seqlen_q  (loaded)              128 values: normal 128
+  Q  rows >= seqlen_q (never loaded)      16256 values: NaN 3234, subnormal 51, normal 12971
+  K  rows < seqlen_k  (loaded)              768 values: normal 768
+  K  rows >= seqlen_k (never loaded)      15616 values: NaN 13, subnormal 16, zero 14784, normal 803
+  V  rows >= seqlen_k (cleared)           15616 values: zero 15616
+  S = QK^T  valid (r < sq, c < sk)           24 values: normal 24
+  S = QK^T  pad cols (r < sq, c >= sk)      488 values: NaN 13, zero 404, normal 71
+  S = QK^T  pad rows (r >= sq)            65024 values: NaN 17906, zero 37968, normal 9150
+  S masked  pad rows (r >= sq)            65024 values: NaN 780, -inf 61976, normal 2268
+  P         valid rows                      512 values: subnormal 5, zero 496, normal 11
+  P         pad rows                      65024 values: NaN 780, subnormal 1, zero 62285, normal 1958
+  O         valid rows                      128 values: normal 128
+  O         pad rows                      16256 values: NaN 4160, normal 12096
+  softmax.h guard (sum==0 || sum!=sum), rows < seqlen_q:  fired 0 of 4
+  softmax.h guard, rows >= seqlen_q:                     fired 130 of 508  (sum NaN: 130, sum 0: 0)  -> lse +inf, never stored
+  stale-row provenance: {('Q', 'no match'): 92, ('Q', '= O tile of an earlier call'): 416, ('K', '= K tile of an earlier call'): 84, ('K', 'zero row'): 404}
+  stale Q lanes read as FP32 pairs, plausible-FP32 fraction: 0.57
+  second run: valid O rows identical: True; stale Q rows identical: False
+
+=== call 10: layer 2, seqlen_q 1, seqlen_k 6, causal False
+  Q  rows < seqlen_q  (loaded)              128 values: normal 128
+  Q  rows >= seqlen_q (never loaded)      16256 values: NaN 3234, +inf 1, subnormal 31, normal 12990
+  K  rows < seqlen_k  (loaded)              768 values: normal 768
+  K  rows >= seqlen_k (never loaded)      15616 values: NaN 13, subnormal 16, zero 14784, normal 803
+  V  rows >= seqlen_k (cleared)           15616 values: zero 15616
+  S = QK^T  valid (r < sq, c < sk)           24 values: normal 24
+  S = QK^T  pad cols (r < sq, c >= sk)      488 values: NaN 13, zero 404, normal 71
+  S = QK^T  pad rows (r >= sq)            65024 values: NaN 17911, +inf 3, -inf 3, zero 37884, normal 9223
+  S masked  pad rows (r >= sq)            65024 values: NaN 774, +inf 3, -inf 61979, normal 2268
+  P         valid rows                      512 values: subnormal 6, zero 492, normal 14
+  P         pad rows                      65024 values: NaN 777, zero 62288, normal 1959
+  O         valid rows                      128 values: normal 128
+  O         pad rows                      16256 values: NaN 4160, normal 12096
+  softmax.h guard (sum==0 || sum!=sum), rows < seqlen_q:  fired 0 of 4
+  softmax.h guard, rows >= seqlen_q:                     fired 130 of 508  (sum NaN: 130, sum 0: 0)  -> lse +inf, never stored
+  stale-row provenance: {('Q', 'no match'): 92, ('Q', '= O tile of an earlier call'): 416, ('K', '= K tile of an earlier call'): 84, ('K', 'zero row'): 404}
+  stale Q lanes read as FP32 pairs, plausible-FP32 fraction: 0.57
+  second run: valid O rows identical: True; stale Q rows identical: False
+
+=== call 11: layer 3, seqlen_q 1, seqlen_k 6, causal False
+  Q  rows < seqlen_q  (loaded)              128 values: normal 128
+  Q  rows >= seqlen_q (never loaded)      16256 values: NaN 3239, subnormal 73, normal 12944
+  K  rows < seqlen_k  (loaded)              768 values: normal 768
+  K  rows >= seqlen_k (never loaded)      15616 values: NaN 13, subnormal 16, zero 14784, normal 803
+  V  rows >= seqlen_k (cleared)           15616 values: zero 15616
+  S = QK^T  valid (r < sq, c < sk)           24 values: normal 24
+  S = QK^T  pad cols (r < sq, c >= sk)      488 values: NaN 13, zero 404, normal 71
+  S = QK^T  pad rows (r >= sq)            65024 values: NaN 18274, zero 37686, normal 9064
+  S masked  pad rows (r >= sq)            65024 values: NaN 798, -inf 61976, normal 2250
+  P         valid rows                      512 values: subnormal 7, zero 493, normal 12
+  P         pad rows                      65024 values: NaN 798, subnormal 1, zero 62270, normal 1955
+  O         valid rows                      128 values: normal 128
+  O         pad rows                      16256 values: NaN 4256, normal 12000
+  softmax.h guard (sum==0 || sum!=sum), rows < seqlen_q:  fired 0 of 4
+  softmax.h guard, rows >= seqlen_q:                     fired 133 of 508  (sum NaN: 133, sum 0: 0)  -> lse +inf, never stored
+  stale-row provenance: {('Q', 'no match'): 92, ('Q', '= O tile of an earlier call'): 416, ('K', '= K tile of an earlier call'): 84, ('K', 'zero row'): 404}
+  stale Q lanes read as FP32 pairs, plausible-FP32 fraction: 0.59
+  second run: valid O rows identical: True; stale Q rows identical: False
+

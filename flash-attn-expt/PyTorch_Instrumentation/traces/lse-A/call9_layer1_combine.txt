@@ -1,0 +1,533 @@
+call 9: layer 1, seqlen_q 1, seqlen_k 303; combine row = head * 1 + row
+Rows marked * are padding rows of the last 16-row combine block (not stored).
+ head  row  lse_split0  lse_split1   lse_max   lse_sum sum==0 sum!=sum fired   replaced   stored nonfin_O
+    0    0      14.448      13.914     14.45     1.586      0        0     0     14.909   14.909        0
+    1    0      27.799      29.372     29.37     1.207      0        0     0      29.56    29.56        0
+    2    0      14.567      11.442     14.57     1.044      0        0     0      14.61    14.61        0
+    3    0      12.091      9.0582     12.09     1.048      0        0     0     12.138   12.138        0
+*   4    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*   5    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*   6    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*   7    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*   8    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*   9    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*  10    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*  11    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*  12    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*  13    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*  14    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+*  15    0        -inf        -inf         0         0      1        0     1       -inf      inf        0
+
+splitkv softmax.h guard records: split head row valid row_max row_sum lse guard
+    0    0    0     1      78.29     1.8375     14.448  none
+    0    0    1     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0    2     0      47351          1     8370.5  none
+    0    0    3     0 6.2588e+05          1 1.1064e+05  none
+    0    0    4     0      25578          1     4521.5  none
+    0    0    5     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0    6     0      77911          1      13773  none
+    0    0    7     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0    8     0 1.8581e+05          1      32846  none
+    0    0    9     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   10     0 1.4232e+05          1      25159  none
+    0    0   11     0 1.4831e+05          1      26217  none
+    0    0   12     0 1.9141e+05          1      33836  none
+    0    0   13     0      46727          1     8260.3  none
+    0    0   14     0      60427          1      10682  none
+    0    0   15     0      18145          1     3207.7  none
+    0    0   16     0  3.947e+05          1      69774  none
+    0    0   17     0 2.1294e+05          1      37642  none
+    0    0   18     0      90569          1      16010  none
+    0    0   19     0      52017          1     9195.3  none
+    0    0   20     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   21     0 1.3179e+05          1      23297  none
+    0    0   22     0  2.421e+05          1      42797  none
+    0    0   23     0 4.2024e+05          1      74289  none
+    0    0   24     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   25     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   26     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   27     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   28     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   29     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   30     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   31     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   32     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   33     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   34     0       7804          1     1379.6  none
+    0    0   35     0     5438.8          1     961.46  none
+    0    0   36     0     5063.9          1     895.18  none
+    0    0   37     0     5479.2          1     968.59  none
+    0    0   38     0     4918.5          1     869.48  none
+    0    0   39     0     5754.9          1     1017.3  none
+    0    0   40     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   41     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   42     0     2867.5          1      506.9  none
+    0    0   43     0     7270.8          1     1285.3  none
+    0    0   44     0     5479.2          1     968.59  none
+    0    0   45     0     5063.9          1     895.18  none
+    0    0   46     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   47     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   48     0     3636.2          1      642.8  none
+    0    0   49     0     1848.2     1.4858     327.11  none
+    0    0   50     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   51     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   52     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   53     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   54     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   55     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   56     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   57     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   58     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   59     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   60     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   61     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   62     0        nan        nan       -inf  sum!=sum (NaN)
+    0    0   63     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1    0     1     157.17     1.0143     27.799  none
+    0    1    1     0 2.4182e+05          1      42748  none
+    0    1    2     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1    3     0 3.5375e+05          1      62535  none
+    0    1    4     0      29783          1     5264.9  none
+    0    1    5     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1    6     0 1.2327e+05          1      21792  none
+    0    1    7     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1    8     0 1.5609e+05          1      27594  none
+    0    1    9     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   10     0 1.8039e+05          1      31889  none
+    0    1   11     0 2.2744e+05          1      40206  none
+    0    1   12     0 2.4316e+05          1      42985  none
+    0    1   13     0 1.0551e+05          1      18652  none
+    0    1   14     0      55835          1     9870.4  none
+    0    1   15     0      16588          1     2932.4  none
+    0    1   16     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   17     0      94179          1      16649  none
+    0    1   18     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   19     0      71619          1      12661  none
+    0    1   20     0     2344.7     1.0018     414.49  none
+    0    1   21     0      75392          1      13327  none
+    0    1   22     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   23     0 1.2716e+05          1      22480  none
+    0    1   24     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   25     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   26     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   27     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   28     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   29     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   30     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   31     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   32     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   33     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   34     0     4518.1          1     798.69  none
+    0    1   35     0     934.95     1.0472     165.32  none
+    0    1   36     0     3688.8          1     652.09  none
+    0    1   37     0     1648.9          1     291.48  none
+    0    1   38     0     5842.5          1     1032.8  none
+    0    1   39     0     7453.9          1     1317.7  none
+    0    1   40     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   41     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   42     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   43     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   44     0     7315.6          1     1293.2  none
+    0    1   45     0     9395.3          1     1660.9  none
+    0    1   46     0     5594.6          1     988.99  none
+    0    1   47     0     7536.1          1     1332.2  none
+    0    1   48     0     2154.6          1     380.88  none
+    0    1   49     0       7441          1     1315.4  none
+    0    1   50     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   51     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   52     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   53     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   54     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   55     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   56     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   57     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   58     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   59     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   60     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   61     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   62     0        nan        nan       -inf  sum!=sum (NaN)
+    0    1   63     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2    0     1     78.838      1.878     14.567  none
+    0    2    1     0     703.78          1     124.41  none
+    0    2    2     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2    3     0 2.1449e+05          1      37916  none
+    0    2    4     0      15970          1       2823  none
+    0    2    5     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2    6     0 1.4173e+05          1      25055  none
+    0    2    7     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2    8     0 1.2232e+05          1      21623  none
+    0    2    9     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   10     0      95732          1      16923  none
+    0    2   11     0 1.1348e+05          1      20060  none
+    0    2   12     0  1.585e+05          1      28019  none
+    0    2   13     0      36463          1     6445.7  none
+    0    2   14     0      34478          1       6095  none
+    0    2   15     0      20639          1     3648.6  none
+    0    2   16     0     7030.8          1     1242.9  none
+    0    2   17     0      14067          1     2486.6  none
+    0    2   18     0      83830          1      14819  none
+    0    2   19     0      41840          1     7396.4  none
+    0    2   20     0      61320          1      10840  none
+    0    2   21     0 2.2246e+05          1      39327  none
+    0    2   22     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   23     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   24     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   25     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   26     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   27     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   28     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   29     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   30     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   31     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   32     0     5039.6          1     890.88  none
+    0    2   33     0     5097.8          1     901.17  none
+    0    2   34     0     5030.7          1     889.32  none
+    0    2   35     0     3021.9          1     534.19  none
+    0    2   36     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   37     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   38     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   39     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   40     0     2688.7     1.0695     475.36  none
+    0    2   41     0     7583.5          1     1340.6  none
+    0    2   42     0     1501.4          1     265.41  none
+    0    2   43     0     1602.8          1     283.34  none
+    0    2   44     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   45     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   46     0     1501.4          1     265.41  none
+    0    2   47     0     1602.8          1     283.34  none
+    0    2   48     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   49     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   50     0     1602.8          1     283.34  none
+    0    2   51     0     1501.4          1     265.41  none
+    0    2   52     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   53     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   54     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   55     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   56     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   57     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   58     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   59     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   60     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   61     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   62     0        nan        nan       -inf  sum!=sum (NaN)
+    0    2   63     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3    0     1      66.46     1.4079     12.091  none
+    0    3    1     0      21889          1     3869.4  none
+    0    3    2     0      45036          1     7961.3  none
+    0    3    3     0 3.2207e+05          1      56934  none
+    0    3    4     0      40001          1     7071.2  none
+    0    3    5     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3    6     0 1.6422e+05          1      29031  none
+    0    3    7     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3    8     0 1.3444e+05          1      23766  none
+    0    3    9     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   10     0 1.3742e+05          1      24293  none
+    0    3   11     0 1.2184e+05          1      21538  none
+    0    3   12     0 1.6206e+05          1      28649  none
+    0    3   13     0      86780          1      15341  none
+    0    3   14     0      40066          1     7082.7  none
+    0    3   15     0      20151          1     3562.3  none
+    0    3   16     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   17     0  2.685e+05          1      47465  none
+    0    3   18     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   19     0  1.223e+05          1      21620  none
+    0    3   20     0 2.5017e+05          1      44224  none
+    0    3   21     0 2.1426e+05          1      37876  none
+    0    3   22     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   23     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   24     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   25     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   26     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   27     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   28     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   29     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   30     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   31     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   32     0     2617.8          1     462.76  none
+    0    3   33     0     5316.3          1      939.8  none
+    0    3   34     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   35     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   36     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   37     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   38     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   39     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   40     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   41     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   42     0     2204.9          1     389.77  none
+    0    3   43     0     4097.5          1     724.35  none
+    0    3   44     0     5316.3          1      939.8  none
+    0    3   45     0     2617.8          1     462.76  none
+    0    3   46     0     2204.9          1     389.77  none
+    0    3   47     0     4097.5          1     724.35  none
+    0    3   48     0     3287.5     1.1237     581.27  none
+    0    3   49     0     5557.3          1     982.41  none
+    0    3   50     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   51     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   52     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   53     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   54     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   55     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   56     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   57     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   58     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   59     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   60     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   61     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   62     0        nan        nan       -inf  sum!=sum (NaN)
+    0    3   63     0        nan        nan       -inf  sum!=sum (NaN)
+    1    0    0     1     76.599     1.4518     13.914  none
+    1    0    1     0      45760          1     8089.4  none
+    1    0    2     0 3.0229e+05          1      53438  none
+    1    0    3     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0    4     0      20155          1       3563  none
+    1    0    5     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0    6     0      70181          1      12406  none
+    1    0    7     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0    8     0      96445          1      17049  none
+    1    0    9     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   10     0      71143          1      12576  none
+    1    0   11     0 1.4292e+05          1      25264  none
+    1    0   12     0      85541          1      15122  none
+    1    0   13     0      49085          1       8677  none
+    1    0   14     0      43437     1.0001     7678.7  none
+    1    0   15     0      19522          1       3451  none
+    1    0   16     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   17     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   18     0      11047          1     1952.9  none
+    1    0   19     0 1.1655e+05          1      20603  none
+    1    0   20     0      38200          1     6752.8  none
+    1    0   21     0 1.0546e+05          1      18644  none
+    1    0   22     0      14007          1     2476.1  none
+    1    0   23     0      11597     1.0037       2050  none
+    1    0   24     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   25     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   26     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   27     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   28     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   29     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   30     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   31     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   32     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   33     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   34     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   35     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   36     0     5744.2          1     1015.4  none
+    1    0   37     0       3481     1.9954     616.05  none
+    1    0   38     0       2923          1     516.71  none
+    1    0   39     0     4368.4          1     772.23  none
+    1    0   40     0     5628.4          1     994.97  none
+    1    0   41     0     4174.7          1     737.99  none
+    1    0   42     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   43     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   44     0       3481     1.9954     616.05  none
+    1    0   45     0     5744.2          1     1015.4  none
+    1    0   46     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   47     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   48     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   49     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   50     0     1164.7     1.6262     206.37  none
+    1    0   51     0       5308          1     938.33  none
+    1    0   52     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   53     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   54     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   55     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   56     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   57     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   58     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   59     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   60     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   61     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   62     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    0   63     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1    0     1     165.82     1.0614     29.372  none
+    1    1    1     0 2.2996e+05          1      40651  none
+    1    1    2     0      84347          1      14911  none
+    1    1    3     0 3.2995e+05          1      58327  none
+    1    1    4     0      27766          1     4908.4  none
+    1    1    5     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1    6     0 1.4564e+05          1      25746  none
+    1    1    7     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1    8     0      50791          1     8978.6  none
+    1    1    9     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   10     0 1.4997e+05          1      26511  none
+    1    1   11     0 1.4531e+05          1      25687  none
+    1    1   12     0 1.3419e+05          1      23721  none
+    1    1   13     0      57840          1      10225  none
+    1    1   14     0      19149          1     3385.1  none
+    1    1   15     0     7773.3          1     1374.1  none
+    1    1   16     0 1.8909e+05          1      33427  none
+    1    1   17     0      69498          1      12286  none
+    1    1   18     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   19     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   20     0 1.0654e+05          1      18834  none
+    1    1   21     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   22     0 1.2195e+05          1      21558  none
+    1    1   23     0 4.2655e+05          1      75404  none
+    1    1   24     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   25     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   26     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   27     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   28     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   29     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   30     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   31     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   32     0     3895.3          1     688.59  none
+    1    1   33     0       8354          1     1476.8  none
+    1    1   34     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   35     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   36     0     919.97          1     162.63  none
+    1    1   37     0     526.19     1.0034     93.021  none
+    1    1   38     0     3327.8          1     588.28  none
+    1    1   39     0     800.32     1.1003     141.57  none
+    1    1   40     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   41     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   42     0     4902.6          1     866.67  none
+    1    1   43     0     5797.3          1     1024.8  none
+    1    1   44     0       3412          1     603.17  none
+    1    1   45     0     391.23          1      69.16  none
+    1    1   46     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   47     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   48     0     4840.8          1     855.74  none
+    1    1   49     0     7285.1          1     1287.8  none
+    1    1   50     0     6058.4          1       1071  none
+    1    1   51     0       3606          1     637.46  none
+    1    1   52     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   53     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   54     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   55     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   56     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   57     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   58     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   59     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   60     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   61     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   62     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    1   63     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2    0     1     62.297     1.5362     11.442  none
+    1    2    1     0      38442          1     6795.6  none
+    1    2    2     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2    3     0 2.4554e+05          1      43405  none
+    1    2    4     0      12595          1     2226.5  none
+    1    2    5     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2    6     0      67074          1      11857  none
+    1    2    7     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2    8     0      81154          1      14346  none
+    1    2    9     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   10     0      70262          1      12421  none
+    1    2   11     0 1.1367e+05          1      20094  none
+    1    2   12     0      77871     1.0138      13766  none
+    1    2   13     0      21177          1     3743.6  none
+    1    2   14     0      24211          1     4279.9  none
+    1    2   15     0      16260          1     2874.4  none
+    1    2   16     0      29313          1     5181.8  none
+    1    2   17     0  1.452e+05          1      25668  none
+    1    2   18     0      52525          1     9285.2  none
+    1    2   19     0 1.4886e+05          1      26315  none
+    1    2   20     0      57138          1      10101  none
+    1    2   21     0      60646          1      10721  none
+    1    2   22     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   23     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   24     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   25     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   26     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   27     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   28     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   29     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   30     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   31     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   32     0     4842.4          1     856.02  none
+    1    2   33     0     3034.9          1      536.5  none
+    1    2   34     0     4523.2          1      799.6  none
+    1    2   35     0     4354.2     1.0337     769.75  none
+    1    2   36     0     6377.5          1     1127.4  none
+    1    2   37     0     1092.1     1.0886     193.14  none
+    1    2   38     0     895.23          1     158.26  none
+    1    2   39     0     4103.1          1     725.34  none
+    1    2   40     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   41     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   42     0     1641.2          1     290.13  none
+    1    2   43     0     4642.8          1     820.74  none
+    1    2   44     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   45     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   46     0     1641.2          1     290.13  none
+    1    2   47     0     4642.8          1     820.74  none
+    1    2   48     0 1.3501e+05          1      23866  none
+    1    2   49     0 1.0824e+05          1      19134  none
+    1    2   50     0     7366.3          1     1302.2  none
+    1    2   51     0     1521.4          1     268.95  none
+    1    2   52     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   53     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   54     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   55     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   56     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   57     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   58     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   59     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   60     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   61     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   62     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    2   63     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3    0     1     49.551     1.3483     9.0582  none
+    1    3    1     0      53623          1     9479.3  none
+    1    3    2     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3    3     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3    4     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3    5     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3    6     0      52795          1     9332.9  none
+    1    3    7     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3    8     0      44596          1     7883.6  none
+    1    3    9     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   10     0      80373          1      14208  none
+    1    3   11     0      67899          1      12003  none
+    1    3   12     0 2.4738e+05          1      43730  none
+    1    3   13     0      76719          1      13562  none
+    1    3   14     0      19879          1     3514.2  none
+    1    3   15     0      19752          1     3491.7  none
+    1    3   16     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   17     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   18     0      85296          1      15078  none
+    1    3   19     0  1.099e+05          1      19428  none
+    1    3   20     0 1.7494e+05          1      30926  none
+    1    3   21     0 2.3105e+05          1      40844  none
+    1    3   22     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   23     0      32224          1     5696.4  none
+    1    3   24     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   25     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   26     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   27     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   28     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   29     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   30     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   31     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   32     0     1338.9          1     236.68  none
+    1    3   33     0     4726.4          1     835.52  none
+    1    3   34     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   35     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   36     0     3511.9     1.0114     620.84  none
+    1    3   37     0     2016.3          1     356.44  none
+    1    3   38     0     5695.7     1.7326     1007.4  none
+    1    3   39     0       5206          1     920.29  none
+    1    3   40     0     4726.4          1     835.52  none
+    1    3   41     0     1338.9          1     236.68  none
+    1    3   42     0     4306.4          1     761.27  none
+    1    3   43     0     1421.9     1.2999     251.62  none
+    1    3   44     0     3093.8          1     546.91  none
+    1    3   45     0     3074.7          1     543.54  none
+    1    3   46     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   47     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   48     0       5127          1     906.34  none
+    1    3   49     0     5974.6          1     1056.2  none
+    1    3   50     0     6430.5          1     1136.8  none
+    1    3   51     0     4341.4          1     767.45  none
+    1    3   52     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   53     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   54     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   55     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   56     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   57     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   58     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   59     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   60     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   61     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   62     0       -inf        nan       -inf  sum!=sum (NaN)
+    1    3   63     0       -inf        nan       -inf  sum!=sum (NaN)
