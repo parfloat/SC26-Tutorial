@@ -1,0 +1,25 @@
+/home/ganesh/repos/newmed/venv/lib/python3.10/site-packages/torch/cuda/__init__.py:734: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+TinyGPT FP16, SGD lr 1.0 momentum 0.9, no loss scaling
+step    1  loss 2.5254
+   oracle: max|act|      4.766  max|grad|     0.1469  max|param|          1   largest: act blocks.1.ln2 (4.766)
+step    2  loss 2.4189
+   oracle: max|act|       4.66  max|grad|     0.1092  max|param|      1.005   largest: act blocks.2.ln2 (4.66)
+step    3  loss 3.1881
+   oracle: max|act|      9.852  max|grad|     0.6221  max|param|      1.011   largest: act head (9.852)
+step    4  loss 24.8335
+   oracle: max|act|      24.31  max|grad|      2.232  max|param|      1.015   largest: act head (24.31)
+step    5  loss 6.7435
+   oracle: max|act|      47.59  max|grad|     0.8208  max|param|      1.518   largest: act head (47.59)
+step    6  loss 79.3333
+   oracle: max|act|         87  max|grad|      6.273  max|param|      3.227   largest: act head (87)
+step    7  loss 169.8536
+   oracle: max|act|      815.5  max|grad|      25.84  max|param|      6.465   largest: act blocks.0.proj (815.5)
+step    8  loss 198.7644
+   oracle: max|act|       1315  max|grad|      29.42  max|param|      23.67   largest: act blocks.0.proj (1315)
+step    9  loss 649.3550
+   oracle: max|act|  2.957e+04  max|grad|      41.31  max|param|      46.28   largest: act blocks.0.proj (2.957e+04)
+step   10  loss nan
+   oracle: max|act|  6.544e+04  max|grad|        nan  max|param|      66.06   largest: act blocks.0.proj (6.544e+04)
+   oracle: FIRST NON-FINITE tensor (forward, then grads, then params): act blocks.0.proj: 7870 inf, 0 NaN
+STOP: non-finite loss at step 10

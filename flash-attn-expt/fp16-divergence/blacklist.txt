@@ -1,0 +1,18 @@
+ampere_fp16_s16816gemm_fp16_128x64_ldg8_f2f_stages_32x6_nt
+ampere_fp16_s16816gemm_fp16_64x128_ldg8_f2f_stages_64x4_nt
+ampere_fp16_s1688gemm_fp16_128x128_ldg8_f2f_stages_32x1_nn
+ampere_fp16_s1688gemm_fp16_128x128_ldg8_f2f_stages_32x1_tn
+void (anonymous namespace)::softmax_warp_backward<float, float, float, 4, true, false>(float*, float const*, float const*, int, int, int, bool const*)
+void (anonymous namespace)::softmax_warp_forward<float, float, float, 4, true, false>(float*, float const*, int, int, int, bool const*, int, bool)
+void cublasLt::splitKreduce_kernel<32, 16, int, float, __half, float, __half, true, false, false>(cublasLt::cublasSplitKParams<float>, float const*, __half const*, __half*, float const*, float const*, __half const*, float const*, __half*, void*, long, float*, int*)
+void cublasLt::splitKreduce_kernel<32, 16, int, __half, __half, float, __half, true, false, false>(cublasLt::cublasSplitKParams<float>, __half const*, __half const*, __half*, float const*, float const*, __half const*, __half const*, __half*, void*, long, float*, int*)
+void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x6_nn_align8>(cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x6_nn_align8::Params)
+void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x6_nt_align8>(cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x6_nt_align8::Params)
+void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x6_tn_align8>(cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x6_tn_align8::Params)
+void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x1_tn_align2>(cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_128x1_tn_align2::Params)
+void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_nn_align2>(cutlass_80_wmma_tensorop_f16_s161616gemm_f16_32x32_32x1_nn_align2::Params)
+void cutlass::Kernel2<cutlass_80_wmma_tensorop_s161616gemm_f16_16x16_64x1_nt_align2>(cutlass_80_wmma_tensorop_s161616gemm_f16_16x16_64x1_nt_align2::Params)
+void pytorch_flash::flash_bwd_convert_dq_kernel<pytorch_flash::Flash_bwd_kernel_traits<32, 128, 128, 8, 4, 4, 4, true, false, cutlass::half_t, pytorch_flash::Flash_kernel_traits<32, 128, 128, 8, cutlass::half_t> > >(pytorch_flash::Flash_bwd_params, int)
+void pytorch_flash::flash_bwd_dot_do_o_kernel<true, pytorch_flash::Flash_bwd_kernel_traits<32, 128, 128, 8, 4, 4, 4, true, false, cutlass::half_t, pytorch_flash::Flash_kernel_traits<32, 128, 128, 8, cutlass::half_t> > >(pytorch_flash::Flash_bwd_params)
+void pytorch_flash::flash_bwd_dq_dk_dv_loop_seqk_parallel_kernel<pytorch_flash::Flash_bwd_kernel_traits<32, 128, 128, 8, 4, 4, 4, true, false, cutlass::half_t, pytorch_flash::Flash_kernel_traits<32, 128, 128, 8, cutlass::half_t> >, false, true, false, false, false, true>(pytorch_flash::Flash_bwd_params)
+void pytorch_flash::flash_fwd_kernel<pytorch_flash::Flash_fwd_kernel_traits<32, 128, 128, 4, false, false, cutlass::half_t, pytorch_flash::Flash_kernel_traits<32, 128, 128, 4, cutlass::half_t> >, false, true, false, false, false, true, false>(pytorch_flash::Flash_fwd_params)

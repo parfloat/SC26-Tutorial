@@ -76,7 +76,7 @@ class Block(nn.Module):
             cache[self.idx] = (k, v)
         # q_len == k_len: causal (training / prefill); q_len == 1: all keys visible
         causal = q.shape[2] == k.shape[2] and q.shape[2] > 1
-        y = flash_attention(q.half(), k.half(), v.half(), causal, self.idx).float()
+        y = flash_attention(q.half(), k.half(), v.half(), causal, self.idx).to(x.dtype)
         x = x + self.proj(y.transpose(1, 2).reshape(B, T, C))
         return x + self.fc2(F.gelu(self.fc1(self.ln2(x))))
 
@@ -98,7 +98,7 @@ class TinyGPT(nn.Module):
         # one-hot @ weight rather than self.emb(idx): bit-identical in FP32 (no TF32),
         # but avoids two kernels that hang NVBit (nixnan) at load time -- the
         # embedding/index-select forward and the CUB radix sort in its backward
-        x = (idx[..., None] == torch.arange(VOCAB, device=idx.device)).float() @ self.emb.weight
+        x = (idx[..., None] == torch.arange(VOCAB, device=idx.device)).to(self.emb.weight.dtype) @ self.emb.weight
         if self.ext_embed is not None:             # external input (experiment_lse.py)
             x = x + self.ext_embed[pos0:pos0 + idx.shape[1]].to(x.device)
         for b in self.blocks:

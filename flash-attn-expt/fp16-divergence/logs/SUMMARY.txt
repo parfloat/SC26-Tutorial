@@ -1,0 +1,59 @@
+==================== logs/nixnan-climb.log
+
+--- step 4: loss 24.8335
+    LayerNorm              f32: highest binade 2^10 (|x| >= 1,024)  via FADD, FFMA   [173 bin reports]
+
+--- step 5: loss 6.7435
+    LayerNorm              f32: highest binade 2^13 (|x| >= 8,192)  via FADD, FFMA   [20099 bin reports]
+
+--- step 6: loss 79.3333
+    LayerNorm              f32: highest binade 2^17 (|x| >= 131,072)  via FADD, FFMA, FMUL   [28875 bin reports]
+
+--- step 7: loss 169.8536
+    LayerNorm              f32: highest binade 2^17 (|x| >= 131,072)  via FADD, FFMA, FMUL   [55422 bin reports]
+    add (FP16 residual)    f32: highest binade 2^9 (|x| >= 512)  via FFMA   [3040 bin reports]
+
+--- step 8: loss 198.7644
+    LayerNorm              f32: highest binade 2^17 (|x| >= 131,072)  via FADD, FFMA, FMUL, MUFU.RSQ   [61804 bin reports]
+    add (FP16 residual)    f32: highest binade 2^10 (|x| >= 1,024)  via FFMA   [1292 bin reports]
+
+--- step 9: loss 649.3550
+    LayerNorm              f32: highest binade 2^17 (|x| >= 131,072)  via FFMA, FMUL   [168254 bin reports]
+    add (FP16 residual)    f32: highest binade 2^15 (|x| >= 32,768)  via FFMA   [49144 bin reports]
+
+--- step 10: (killed before the loss was computed)
+    LayerNorm              f32: highest binade 2^15 (|x| >= 32,768)  via FADD   [3 bin reports]
+    add (FP16 residual)    f32: highest binade 2^15 (|x| >= 32,768)  via FFMA   [25 bin reports]
+    !! -infinity  FFMA R6, R7, c[0x0][0x164], R6                add (FP16 residual) (f32)
+    !! -infinity  FFMA R6, R7, c[0x0][0x164], R6                add (FP16 residual) (f32)
+    !! infinity   FFMA R9, R9, c[0x0][0x164], R8                add (FP16 residual) (f32)
+    !! infinity   FFMA R9, R9, c[0x0][0x164], R8                add (FP16 residual) (f32)
+    !! infinity   FFMA R10, R11, c[0x0][0x164], R10             add (FP16 residual) (f32)
+    !! infinity   FFMA R10, R11, c[0x0][0x164], R10             add (FP16 residual) (f32)
+    !! -infinity  FADD R18, R19, -R16                           LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FADD R18, R19, -R16                           LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FFMA R16, R18, R15, R16                       LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FFMA R16, R18, R15, R16                       LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FADD R0, R19, -R16                            LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FADD R0, R19, -R16                            LayerNorm (anonymous-namespace name) (f32)
+    !! NaN        FADD R0, R19, -R16                            LayerNorm (anonymous-namespace name) (f32)
+    !! WATCHER    first NaN report -> run killed                 ()
+==================== logs/nixnan-exceptions.log
+
+--- step 10: (killed before the loss was computed)
+    !! -infinity  FFMA R6, R7, c[0x0][0x164], R6                add (FP16 residual) (f32)
+    !! -infinity  FFMA R6, R7, c[0x0][0x164], R6                add (FP16 residual) (f32)
+    !! infinity   FFMA R9, R9, c[0x0][0x164], R8                add (FP16 residual) (f32)
+    !! infinity   FFMA R10, R11, c[0x0][0x164], R10             add (FP16 residual) (f32)
+    !! infinity   FFMA R10, R11, c[0x0][0x164], R10             add (FP16 residual) (f32)
+    !! infinity   FFMA R9, R9, c[0x0][0x164], R8                add (FP16 residual) (f32)
+    !! -infinity  FADD R18, R19, -R16                           LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FADD R18, R19, -R16                           LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FFMA R16, R18, R15, R16                       LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FFMA R16, R18, R15, R16                       LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FADD R0, R19, -R16                            LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FADD R19, -R16, R23                           LayerNorm (anonymous-namespace name) (f32)
+    !! -infinity  FADD R0, R19, -R16                            LayerNorm (anonymous-namespace name) (f32)
+    !! infinity   FADD R19, -R16, R23                           LayerNorm (anonymous-namespace name) (f32)
+    !! NaN        FFMA R17, R18, R0, R17                        LayerNorm (anonymous-namespace name) (f32)
+    !! WATCHER    first NaN report -> run killed                 ()

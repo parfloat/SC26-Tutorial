@@ -133,5 +133,6 @@ causes, each fixed in this directory:
 | `summarize.py` | per-kernel summaries of nixnan logs |
 | `run_all.sh` | every run above, end to end |
 | `flash-kernels.txt`, `wl-nf4.txt`, `wl-fp16.txt` | nixnan whitelists |
+| `fp16-divergence/` | TinyGPT trained in pure FP16 at lr 1.0 until it diverges; nixnan traces the climb to 65,504, the first inf (residual add) and the first NaN (LayerNorm), and the run is stopped there |
 | `latex/` | detailed report (`report.pdf`) and 12 slides (`slides.pdf`) on the whole study; `make_figures.py` draws the tile maps |
 | `PyTorch_Instrumentation/` | flash attention's padding lanes and NaN guards dumped by instrumenting PyTorch 2.6's flash source (no nixnan); report in `PyT.md` |
