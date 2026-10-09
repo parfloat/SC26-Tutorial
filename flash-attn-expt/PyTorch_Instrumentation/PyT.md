@@ -155,3 +155,34 @@ number of non-finite O values. It also lists the `softmax.h` records.
   combine guard's `lse_sum != lse_sum` disjunct is unreachable in practice,
   because NaN sums become −inf before the combine. It is exercised neither by
   clean nor by poisoned input.
+
+## 3. When can `lse_sum != lse_sum` fire? (`traces/trigger/`, `traces/lse-A-scale-0.1/`)
+
+* **Never, for any positive softmax scale and any FP16 input** (±inf and NaN
+  included). That covers TinyGPT's and BioMistral's 1/√d.
+  * `lse_sum` is NaN only if a split's LSE is +inf or NaN. That needs a row sum
+    of +inf, because `softmax.h` maps 0 and NaN to −inf.
+  * With a scale σ > 0, every exponent `x·σ₂ − m·σ₂` is ≤ 0. If `m·σ₂`
+    overflows, the compiled code gives `∞ − ∞ = NaN`, which the guard catches.
+  * The compiled code is unfused: an `FMUL` by the scale, then a separate
+    `FADD` of the scaled max (`traces/trigger/sass_scale_apply_exp2.txt`),
+    although the source comment expects an FFMA. At scale 1e37 PyTorch's kernel
+    returns the same values as ours, so it is unfused too.
+  * The proof is in `../latex/report.pdf`, §8.
+* **It fires with a negative scale.** The exponent becomes `(m − x)·|σ₂| ≥ 0`.
+  * A masked score (−inf) gives `2^{+inf} = +inf`, so the row sum is +inf.
+    That is neither 0 nor NaN, so `softmax.h` passes it through and lse = +inf.
+  * The combine then computes `inf − inf = NaN`.
+  * SDPA does not check the sign of `scale`.
+  * `trigger_nan_guard.py`: one decode-shaped call (301 keys, 2 splits). It
+    fires on 4 of 4 rows for scales −0.1, −1 and −10, and on 0 rows for
+    1/√32, 1e30 and 1e37. Every case matches PyTorch's own kernel, NaN-aware.
+* **Inside TinyGPT:** `dump_lse.py --input A --scale -0.1`, with clean input.
+  * The NaN disjunct fires **1,208 times**, all in layer 0, where the masks
+    supply the −inf scores.
+  * Layers 1–3 then fire through `lse_sum == 0` (3,636 times), because their
+    inputs are already NaN.
+  * With the default scale, the count is 0.
+
+A detailed LaTeX report and 12 beamer slides are in `../latex/`
+(`report.pdf`, `slides.pdf`).

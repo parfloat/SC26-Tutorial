@@ -28,8 +28,11 @@ p = argparse.ArgumentParser()
 p.add_argument("--input", choices=("A", "B"), required=True)
 p.add_argument("--ckpt", default=os.path.join(IF.HERE, "..", "tinygpt.pt"))
 p.add_argument("--keep", type=int, default=4, help="per-row listings for the last KEEP calls")
+p.add_argument("--scale", type=float, default=None,
+               help="softmax scale for every attention call (default: SDPA's 1/sqrt(32))")
 a = p.parse_args()
-outdir = os.path.join(IF.HERE, "traces", f"lse-{a.input}")
+outdir = os.path.join(IF.HERE, "traces", f"lse-{a.input}" + ("" if a.scale is None else f"-scale{a.scale:g}"))
+IF.SCALE = a.scale
 os.makedirs(outdir, exist_ok=True)
 
 rng = random.Random(7)                                     # as in ../experiment_lse.py
@@ -54,7 +57,8 @@ def out(s=""):
     rep.write(s + "\n")
 
 
-out(f"input {a.input}: ...{prompt[-6:]} -> ...{text[-6:]}   ({len(calls)} flash calls, 4 heads)")
+out(f"input {a.input}: ...{prompt[-6:]} -> ...{text[-6:]}   ({len(calls)} flash calls, 4 heads, softmax scale "
+    f"{'1/sqrt(32) (default)' if a.scale is None else a.scale})")
 out("Instrumented copy of PyTorch 2.6 flash (bitwise-equal outputs, see check_equivalence.py).\n")
 tot = Counter()
 arrays = {}

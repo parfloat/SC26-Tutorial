@@ -67,16 +67,20 @@ def build(verbose=False):
     return _ext
 
 
-def flash(q, k, v, causal, instr=True):
+SCALE = None        # softmax scale used by attention(); None = SDPA's default 1/sqrt(head_dim)
+
+
+def flash(q, k, v, causal, instr=True, scale=None):
     """q, k, v: FP16 (B, H, T, D) like F.scaled_dot_product_attention. Returns (out, lse, dumps)."""
     ext = build()
+    scale = 1.0 / math.sqrt(q.shape[-1]) if scale is None else scale
     o, lse, tile, split, comb, ns = ext.fwd(q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2),
-                                            causal, 1.0 / math.sqrt(q.shape[-1]), instr)
+                                            causal, scale, instr)
     return o.transpose(1, 2), lse, dict(tile=tile, split=split, comb=comb, num_splits=ns)
 
 
 def attention(q, k, v, causal, layer):
-    out, lse, d = flash(q, k, v, causal, instr=RECORD)
+    out, lse, d = flash(q, k, v, causal, instr=RECORD, scale=SCALE)
     if RECORD:
         CALLS.append(dict(layer=layer, q_len=q.shape[2], k_len=k.shape[2], causal=causal,
                           num_splits=d["num_splits"], lse=lse.float().cpu(),

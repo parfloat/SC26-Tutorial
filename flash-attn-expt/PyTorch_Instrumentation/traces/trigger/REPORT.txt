@@ -1,0 +1,78 @@
+=== default scale 1/sqrt(32)   (num_splits 2; output and LSE equal to PyTorch's kernel, NaN-aware: True)
+  split kernel (softmax.h), head: split -> row_max, row_sum, lse, guard
+    head 0: s0: 15.23, 33.1, 6.192, ok;  s1: 17.08, 5.523, 4.729, ok
+    head 1: s0: 9.558, 63.31, 5.838, ok;  s1: 8.216, 13.86, 4.082, ok
+    head 2: s0: 13.84, 33.45, 5.956, ok;  s1: 10.42, 10.6, 4.204, ok
+    head 3: s0: 14.41, 30.12, 5.953, ok;  s1: 9.969, 10.37, 4.101, ok
+  combine kernel, head: lse_split0 lse_split1 lse_max lse_sum | sum==0 sum!=sum fired | stored  non-finite O
+    head 0: 6.192 4.729 6.192 1.231 | 0 0 0 | 6.401 0
+    head 1: 5.838 4.082 5.838 1.173 | 0 0 0 | 5.997 0
+    head 2: 5.956 4.204 5.956 1.173 | 0 0 0 | 6.116 0
+    head 3: 5.953 4.101 5.953 1.157 | 0 0 0 | 6.099 0
+  -> lse_sum != lse_sum fired on 0 of 4 rows; lse_sum == 0 on 0
+
+=== scale 1e30   (num_splits 2; output and LSE equal to PyTorch's kernel, NaN-aware: True)
+  split kernel (softmax.h), head: split -> row_max, row_sum, lse, guard
+    head 0: s0: -37.14, 256, -3.714e+31, ok;  s1: 17.08, 1, 1.708e+31, ok
+    head 1: s0: 9.558, 1, 9.558e+30, ok;  s1: 8.216, 1, 8.216e+30, ok
+    head 2: s0: 13.84, 1, 1.384e+31, ok;  s1: 10.42, 1, 1.042e+31, ok
+    head 3: s0: 14.41, 1, 1.441e+31, ok;  s1: 9.969, 1, 9.969e+30, ok
+  combine kernel, head: lse_split0 lse_split1 lse_max lse_sum | sum==0 sum!=sum fired | stored  non-finite O
+    head 0: -3.714e+31 1.708e+31 1.708e+31 1 | 0 0 0 | 1.708e+31 0
+    head 1: 9.558e+30 8.216e+30 9.558e+30 1 | 0 0 0 | 9.558e+30 0
+    head 2: 1.384e+31 1.042e+31 1.384e+31 1 | 0 0 0 | 1.384e+31 0
+    head 3: 1.441e+31 9.969e+30 1.441e+31 1 | 0 0 0 | 1.441e+31 0
+  -> lse_sum != lse_sum fired on 0 of 4 rows; lse_sum == 0 on 0
+
+=== scale 1e37: max*s overflows to -inf   (num_splits 2; output and LSE equal to PyTorch's kernel, NaN-aware: True)
+  split kernel (softmax.h), head: split -> row_max, row_sum, lse, guard
+    head 0: s0: -37.14, nan, -inf, sum NaN;  s1: 17.08, 1, 1.708e+38, ok
+    head 1: s0: 9.558, 1, 9.558e+37, ok;  s1: 8.216, 1, 8.216e+37, ok
+    head 2: s0: 13.84, 1, 1.384e+38, ok;  s1: 10.42, 1, 1.042e+38, ok
+    head 3: s0: 14.41, 1, 1.441e+38, ok;  s1: 9.969, 1, 9.969e+37, ok
+  combine kernel, head: lse_split0 lse_split1 lse_max lse_sum | sum==0 sum!=sum fired | stored  non-finite O
+    head 0: -inf 1.708e+38 1.708e+38 1 | 0 0 0 | 1.708e+38 32
+    head 1: 9.558e+37 8.216e+37 9.558e+37 1 | 0 0 0 | 9.558e+37 0
+    head 2: 1.384e+38 1.042e+38 1.384e+38 1 | 0 0 0 | 1.384e+38 0
+    head 3: 1.441e+38 9.969e+37 1.441e+38 1 | 0 0 0 | 1.441e+38 0
+  -> lse_sum != lse_sum fired on 0 of 4 rows; lse_sum == 0 on 0
+
+=== scale -0.1   (num_splits 2; output and LSE equal to PyTorch's kernel, NaN-aware: True)
+  split kernel (softmax.h), head: split -> row_max, row_sum, lse, guard
+    head 0: s0: 15.23, 1435, 5.745, ok;  s1: 17.08, inf, inf, ok
+    head 1: s0: 9.558, 715.3, 5.617, ok;  s1: 8.216, inf, inf, ok
+    head 2: s0: 13.84, 1120, 5.637, ok;  s1: 10.42, inf, inf, ok
+    head 3: s0: 14.41, 1328, 5.751, ok;  s1: 9.969, inf, inf, ok
+  combine kernel, head: lse_split0 lse_split1 lse_max lse_sum | sum==0 sum!=sum fired | stored  non-finite O
+    head 0: 5.745 inf inf nan | 0 1 1 | inf 32
+    head 1: 5.617 inf inf nan | 0 1 1 | inf 32
+    head 2: 5.637 inf inf nan | 0 1 1 | inf 32
+    head 3: 5.751 inf inf nan | 0 1 1 | inf 32
+  -> lse_sum != lse_sum fired on 4 of 4 rows; lse_sum == 0 on 0
+
+=== scale -1   (num_splits 2; output and LSE equal to PyTorch's kernel, NaN-aware: True)
+  split kernel (softmax.h), head: split -> row_max, row_sum, lse, guard
+    head 0: s0: 15.23, 1.944e+16, 22.27, ok;  s1: 17.08, inf, inf, ok
+    head 1: s0: 9.558, 7.629e+09, 13.2, ok;  s1: 8.216, inf, inf, ok
+    head 2: s0: 13.84, 8.069e+11, 13.58, ok;  s1: 10.42, inf, inf, ok
+    head 3: s0: 14.41, 7.043e+13, 17.47, ok;  s1: 9.969, inf, inf, ok
+  combine kernel, head: lse_split0 lse_split1 lse_max lse_sum | sum==0 sum!=sum fired | stored  non-finite O
+    head 0: 22.27 inf inf nan | 0 1 1 | inf 32
+    head 1: 13.2 inf inf nan | 0 1 1 | inf 32
+    head 2: 13.58 inf inf nan | 0 1 1 | inf 32
+    head 3: 17.47 inf inf nan | 0 1 1 | inf 32
+  -> lse_sum != lse_sum fired on 4 of 4 rows; lse_sum == 0 on 0
+
+=== scale -10   (num_splits 2; output and LSE equal to PyTorch's kernel, NaN-aware: True)
+  split kernel (softmax.h), head: split -> row_max, row_sum, lse, guard
+    head 0: s0: 15.23, inf, inf, ok;  s1: 17.08, inf, inf, ok
+    head 1: s0: 9.558, inf, inf, ok;  s1: 8.216, inf, inf, ok
+    head 2: s0: 13.84, inf, inf, ok;  s1: 10.42, inf, inf, ok
+    head 3: s0: 14.41, inf, inf, ok;  s1: 9.969, inf, inf, ok
+  combine kernel, head: lse_split0 lse_split1 lse_max lse_sum | sum==0 sum!=sum fired | stored  non-finite O
+    head 0: inf inf inf nan | 0 1 1 | inf 32
+    head 1: inf inf inf nan | 0 1 1 | inf 32
+    head 2: inf inf inf nan | 0 1 1 | inf 32
+    head 3: inf inf inf nan | 0 1 1 | inf 32
+  -> lse_sum != lse_sum fired on 4 of 4 rows; lse_sum == 0 on 0
+

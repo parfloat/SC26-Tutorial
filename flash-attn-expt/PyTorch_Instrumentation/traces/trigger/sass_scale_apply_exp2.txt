@@ -1,0 +1,71 @@
+SASS (sm_86) of instr_flash's flash_fwd_splitkv_kernel, lines before the first MUFU.EX2 of the softmax:
+scores are multiplied by a kernel parameter (FMUL ... c[0x0][0x238]) and the scaled row max is subtracted by a
+separate FADD (FADD Rx, -R47, Rx) before the FSETP/-126 range check and MUFU.EX2: the source's
+exp2f(x * scale - max_scaled) is not contracted to an FFMA. Behaviour confirms it: at scale 1e37 the overflowed
+max*scale = -inf gives (-inf) - (-inf) = NaN (row_sum NaN), where an FFMA would give +inf (trigger/REPORT.txt);
+PyTorch's own kernel returns the same values there, so it is not contracted either.
+cuobjdump -sass build/instr_flash.so
+
+ FMUL R28, R28, c[0x0][0x238] ; 
+ FMNMX R3, R55, R6, !PT ; 
+ FMNMX R4, R31, R4, !PT ; 
+ FMNMX R6, R48, R3, !PT ; 
+ FMNMX R4, R37, R4, !PT ; 
+ FMNMX R3, R51.reuse, R6, !PT ; 
+ FMUL R51, R51, c[0x0][0x238] ; 
+ FMNMX R4, R39, R4, !PT ; 
+ FMNMX R3, R36, R3, !PT ; 
+ FMNMX R4, R41, R4, !PT ; 
+ FMNMX R6, R42, R3, !PT ; 
+ FMNMX R4, R43, R4, !PT ; 
+ FMNMX R3, R33, R6, !PT ; 
+ SHFL.BFLY PT, R5, R4, 0x2, 0x1f ; 
+ FMNMX R3, R44, R3, !PT ; 
+ FMNMX R6, R24, R3, !PT ; 
+ FMNMX R6, R25.reuse, R6, !PT ; 
+ FMUL R25, R25, c[0x0][0x238] ; 
+ FMNMX R3, R29.reuse, R6, !PT ; 
+ FMUL R29, R29, c[0x0][0x238] ; 
+ FMNMX R3, R32, R3, !PT ; 
+ FMNMX R3, R20, R3, !PT ; 
+ FMNMX R5, R4, R5, !PT ; 
+ FMNMX R6, R22, R3, !PT ; 
+ SHFL.BFLY PT, R148, R5, 0x1, 0x1f ; 
+ FMNMX R6, R23, R6, !PT ; 
+ FMNMX R6, R21, R6, !PT ; 
+ SHFL.BFLY PT, R3, R6, 0x2, 0x1f ; 
+ FMNMX R148, R5, R148, !PT ; 
+ FMUL R5, R170, c[0x0][0x238] ; 
+ FSETP.NEU.AND P0, PT, R148.reuse, -INF , PT ; 
+ FMUL R47, R148, c[0x0][0x238] ; 
+ FMNMX R3, R6, R3, !PT ; 
+ FMUL R6, R199, c[0x0][0x238] ; 
+ FSEL R47, R47, RZ, P0 ; 
+ SHFL.BFLY PT, R4, R3, 0x1, 0x1f ; 
+ FADD R160, -R47.reuse, R160 ; 
+ FADD R161, -R47.reuse, R138 ; 
+ FADD R158, -R47.reuse, R158 ; 
+ FADD R157, -R47.reuse, R164 ; 
+ FADD R154, -R47.reuse, R154 ; 
+ FSETP.GEU.AND P1, PT, R160, -126, PT ; 
+ FADD R98, -R47, R98 ; 
+ FSETP.GEU.AND P0, PT, R161, -126, PT ; 
+ FADD R99, -R47.reuse, R168 ; 
+ FSETP.GEU.AND P3, PT, R158, -126, PT ; 
+ FADD R92, -R47, R92 ; 
+ FSETP.GEU.AND P2, PT, R157, -126, PT ; 
+ FADD R93, -R47.reuse, R172 ; 
+ FSETP.GEU.AND P5, PT, R154, -126, PT ; 
+ FADD R86, -R47.reuse, R86 ; 
+ FADD R82, -R47.reuse, R82 ; 
+ FADD R64, -R47.reuse, R64 ; 
+ FADD R62, -R47.reuse, R62 ; 
+ @!P1 FMUL R160, R160, 0.5 ; 
+ FADD R56, -R47, R56 ; 
+ @!P0 FMUL R161, R161, 0.5 ; 
+ FADD R75, -R47, R6 ; 
+ FMNMX R149, R3, R4, !PT ; 
+ FMUL R3, R136, c[0x0][0x238] ; 
+ MUFU.EX2 R160, R160 ; 
+ FMUL R4, R167, c[0x0][0x238] ; 
+ FSETP.NEU.AND P4, PT, R149.reuse, -INF , PT ; 

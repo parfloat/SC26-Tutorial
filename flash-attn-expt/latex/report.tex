@@ -1,0 +1,692 @@
+\documentclass[10pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\NaN}{\textsc{NaN}}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\definecolor{codebg}{RGB}{247,247,247}
+\definecolor{nanred}{RGB}{214,39,40}
+\definecolor{validblue}{RGB}{31,119,180}
+\definecolor{padgray}{RGB}{150,150,150}
+\definecolor{zerogray}{RGB}{235,235,235}
+\definecolor{maskdark}{RGB}{60,60,60}
+\lstset{basicstyle=\ttfamily\footnotesize, backgroundcolor=\color{codebg}, frame=single, rulecolor=\color{black!20},
+        columns=fullflexible, keepspaces=true, breaklines=true, showstringspaces=false,
+        keywordstyle=\color{blue!60!black}, commentstyle=\color{green!40!black}, language=C++,
+        escapeinside={(*@}{@*)}}
+
+\title{Flash Attention, Padding Lanes, and the \code{lse_sum != lse_sum} Guard:\\
+A Controlled Study of the NaNs nixnan Reports in PyTorch's Flash-Attention Kernels}
+\author{SC26 nixnan tutorial --- \code{flash-attn-expt} (branch \code{Flash-Attn})}
+\date{October 2026}
+
+\sloppy
+\begin{document}
+\maketitle
+
+\begin{abstract}
+When nixnan monitored BioMistral-7B, it reported millions of \NaN{}, $\pm\infty$ and subnormal
+operands. Most of them were in \code{pytorch_flash::flash_fwd_kernel}, and almost none reached
+memory. Two explanations were on the table. One was flash attention's deliberate \NaN{} handling,
+in particular the split-KV combine guard
+\code{lse_logsum = (lse_sum == 0.f || lse_sum != lse_sum) ? INFINITY : ...}. The other was that
+nixnan misreads BioMistral's 4-bit (bitsandbytes NF4) weights.
+
+We built TinyGPT, a 4-layer decoder-only transformer over the digits 0--9. It is small enough that
+every tensor can be checked, and it runs the very same PyTorch~2.6 flash-attention binaries. We
+monitored it with nixnan, and we then instrumented PyTorch's own flash-attention source to dump,
+without nixnan, the values flash computes in every lane of its tiles. Our instrumented build is
+bitwise-equal to PyTorch's kernel.
+
+The answer is neither hypothesis. The \NaN{}s nixnan counts are real values in real registers, but
+in \emph{padding lanes}: tile rows and columns outside the sequence. Flash never loads or clears
+these lanes, so they hold the previous launch's output, which is itself \NaN{}-laden. Flash computes
+on them and then discards the results. The 4-bit kernels produce no \NaN{} at all.
+
+The combine guard's \code{lse_sum != lse_sum} disjunct never fires in any of these runs. We prove
+that for every positive softmax scale (TinyGPT's and BioMistral's $1/\sqrt{d}$ included) it
+\emph{cannot} fire, for any input, including $\pm\infty$ and \NaN{} inputs. That depends on a
+codegen detail we verified in the SASS. We then construct the one situation in which it does fire:
+a negative softmax scale. A one-argument change to TinyGPT makes the disjunct fire 1{,}208 times on
+clean input.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%=====================================================================================
+\section{Question and approach}
+
+\subsection{The observation}
+The BioMistral slides (\code{flash-attn.pptx}) show nixnan monitoring BioMistral-7B, loaded in
+4-bit NF4 through bitsandbytes and run through Hugging Face with PyTorch's scaled-dot-product
+attention (SDPA). nixnan reported millions of exceptional operands. They were dominated by
+\code{pytorch_flash::flash_fwd_kernel}, with instructions such as \code{HMMA.16816.F32}
+(operand~2), \code{FADD} with operands \code{[NaN, subnormal]}, and \code{FMUL}, while its memory
+counters showed almost no \NaN{} stored. The slides attributed the filtering to the split-KV
+combine guard in flash attention.
+
+\subsection{Hypotheses}
+\begin{description}[leftmargin=2.2em]
+\item[H1 (flash's guards).] Flash attention lets \NaN{}/$\infty$ arise on purpose and filters them,
+  for example at the combine guard \code{(lse_sum == 0.f || lse_sum != lse_sum)}.
+\item[H2 (4-bit).] Packed 4-bit weights are misread by nixnan as FP16/FP32 operands.
+\item[H3 (padding lanes).] Reading the source suggested a third candidate. Flash's tiles are fixed
+  at $128\times128$ (or $64\times256$ for split-KV), and rows and columns outside the sequence are
+  not always loaded or cleared. Arithmetic on those lanes can see arbitrary bit patterns that are
+  never written back.
+\end{description}
+
+\subsection{Approach}
+\begin{enumerate}
+\item Build a transformer whose every tensor we can check (TinyGPT, \S\ref{sec:tinygpt}), running
+  the same flash binaries as BioMistral (same venv: torch 2.6.0+cu124, bitsandbytes 0.48.1).
+\item Monitor it with nixnan: training with \code{SAMPLING=32}, and inference with full monitoring
+  (\S\ref{sec:nixnan}).
+\item Switch each suspect on and off: NF4 linears, FP16 linears, prompt length, and an external
+  input that poisons one embedding (\S\ref{sec:nixnan}).
+\item Instrument PyTorch's flash-attention \emph{source}, verify the build is bitwise-equal to
+  PyTorch's kernel, and dump every lane of the tiles and every guard decision
+  (\S\ref{sec:instr}--\S\ref{sec:guards}).
+\item Characterize exactly when \code{lse_sum != lse_sum} can fire, prove it unreachable for
+  positive scales, and construct a case where it fires (\S\ref{sec:fire}).
+\end{enumerate}
+
+%=====================================================================================
+\section{Background: PyTorch~2.6's flash-attention forward pass}
+\label{sec:background}
+
+PyTorch vendors Tri Dao's FlashAttention-2 under
+\path{aten/src/ATen/native/transformers/cuda/flash_attn} (namespace \code{pytorch_flash}). SDPA with
+the flash backend calls \code{mha_fwd} in \code{flash_api.cpp}, which fills a
+\code{Flash_fwd_params} struct and launches one of two kernel families.
+
+\subsection{Non-split kernel \texorpdfstring{\texttt{flash\_fwd\_kernel}}{flash_fwd_kernel}}
+For head dimension 32 and FP16 the kernel traits are \code{Flash_fwd_kernel_traits<32,128,128,4>}:
+a tile of $k_M\times k_N = 128\times128$ (query rows $\times$ key columns), 4 warps (128 threads).
+The grid is $(\lceil s_q/128\rceil, b, h)$. One CTA handles a 128-row block of queries for one
+(batch, head) and walks the key blocks from last to first. For each key block it:
+\begin{enumerate}
+\item loads Q (once), K and V into shared memory with \code{cp.async};
+\item computes $S = QK^\top$ with tensor-core MMAs (\code{HMMA.16816.F32}, FP16 inputs, FP32
+  accumulate) into the register fragment \code{acc_s};
+\item applies the mask (\code{mask.h}), setting columns $\ge s_k$ and causally masked entries to
+  $-\infty$;
+\item updates the online softmax (\code{softmax.h}): running row max $m$, running row sum $\ell$,
+  $P = 2^{S\sigma_2 - m\sigma_2}$ with $\sigma_2 = \sigma\log_2 e$, and rescales the output
+  accumulator;
+\item computes $O \mathrel{+}= P V$ with tensor-core MMAs.
+\end{enumerate}
+At the end, \code{normalize_softmax_lse} divides $O$ by $\ell$ and forms the log-sum-exp (LSE):
+\begin{lstlisting}[caption={softmax.h:174--177 (the per-row guard).}]
+float sum = row_sum(mi);
+float inv_sum = (sum == 0.f || sum != sum) ? 1.f : 1.f / sum;
+lse(mi) = (sum == 0.f || sum != sum) ? (Split ? -INFINITY : INFINITY) : row_max(mi) * softmax_scale + __logf(sum);
+\end{lstlisting}
+The epilogue stages $O$ (converted to FP16) in shared memory \emph{at the address of the Q tile}
+(\code{sO = make_tensor(sQ.data(), SmemLayoutO)}), and copies it to global memory only for rows
+$< s_q$.
+
+\paragraph{What is not loaded.} Two comments in \code{flash_fwd_kernel.h} matter here:
+\begin{lstlisting}
+// We don't need to clear the sQ smem tiles since we'll only write out the valid outputs
+instr_flash::copy<Is_even_MN, Is_even_K>(gmem_tiled_copy_QKV, tQgQ, tQsQ, tQcQ, tQpQ, binfo.actual_seqlen_q - m_block * kBlockM);
+...
+// We don't need to clear the sK smem tiles since we'll mask out the scores anyway.
+\end{lstlisting}
+V, by contrast, is loaded with \code{Clear_OOB_MN=true} (its out-of-range rows are zeroed), because a
+zero $P$ entry times a garbage $V$ entry could otherwise be $0\cdot\NaN = \NaN$.
+
+\subsection{Split-KV kernel and combine kernel}
+For long keys and few query blocks, \code{set_params_splitkv} picks $n_{\mathrm{splits}}>1$ with
+an occupancy heuristic (\code{num_splits_heuristic}, using $2\times$ the SM count; the RTX~3090 has
+82 SMs). For head dimension $\le 64$ the split kernel uses a $64\times256$ tile, so splitting needs
+$s_k > 256$. Each split $s$ runs \code{flash_fwd_splitkv_kernel} over its share of key blocks,
+writing an un-normalized partial output \code{Oaccum} and an LSE \code{lse_s} (the guard above
+with \code{Split=true}, so a zero or \NaN{} sum gives $-\infty$). A split with no key block at all
+(possible under causal masking) exits early and writes $-\infty$.
+\code{flash_fwd_splitkv_combine_kernel} (16-row blocks for head dimension 32) then merges the
+splits:
+\begin{lstlisting}[caption={flash\_fwd\_kernel.h:1150--1157 (PyTorch 2.6; upstream line 1204): the combine guard.}]
+lse_max = lse_max == -INFINITY ? 0.0f : lse_max;  // In case all local LSEs are -inf
+float lse_sum = expf(lse_accum(0) - lse_max);
+for (int l = 1; l < kNLsePerThread; ++l) { lse_sum += expf(lse_accum(l) - lse_max); }
+lse_sum = Allreduce<kRowsPerLoadTranspose>::run(lse_sum, sum_op);
+// For the case where all local lse == -INFINITY, we want to set lse_logsum to INFINITY. Otherwise
+// lse_logsum is log(0.0) = -INFINITY and we get NaN when we do lse_accum(l) - lse_logsum.
+ElementAccum lse_logsum = (lse_sum == 0.f || lse_sum != lse_sum) ? INFINITY : logf(lse_sum) + lse_max;
+\end{lstlisting}
+The scales $e^{\mathrm{lse}_s - \mathrm{lse\_logsum}}$ go to shared memory, and the output is
+$O = \sum_s e^{\mathrm{lse}_s - \mathrm{lse\_logsum}}\, O^{\mathrm{accum}}_s$. The source comment
+explains the \code{lse_sum == 0} disjunct (all splits $-\infty$). It gives no case for
+\code{lse_sum != lse_sum}; \S\ref{sec:fire} shows why.
+
+%=====================================================================================
+\section{TinyGPT: the test bed}
+\label{sec:tinygpt}
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}ll@{}}\toprule
+tokens & 0--9 (digits), BOS = 10, EOS = 11 (masked during completion)\\
+training set & \code{training-set.txt}: 100 random digit words, length 1--20 (seed 2026); none starts with 312\\
+architecture & 4 pre-LN blocks, $d=128$, 4 heads of dimension 32, RoPE, MLP $4\times$, no biases; 791{,}808 parameters\\
+embedding & computed as \code{one_hot(idx) @ W} (bit-identical to a lookup; see \S\ref{sec:nixnan-setup})\\
+precision & FP32 parameters and linears with TF32 off (SIMT FFMA, no tensor cores);\\
+          & attention in FP16 through \code{F.scaled_dot_product_attention} with the flash backend forced\\
+training & 1{,}500 full-batch AdamW steps (lr $3\cdot10^{-3}$, cosine); loss 0.3939 vs.\ exact optimum 0.3938;\\
+         & next-token accuracy 0.8353 (optimal: the first digit of a word is unpredictable)\\
+evaluation & greedy completion of \code{312} to 6 digits with a KV cache: \code{312452} (NF4 linears: \code{312428})\\
+\bottomrule\end{tabular}
+\caption{TinyGPT. Flash exists only for FP16/BF16 on tensor cores, so attention is the one place
+that uses HMMA.}
+\end{table}
+
+The completion of \code{312} makes three forward passes (a prefill of 4 tokens, BOS+312, then two
+decode steps), each with 4 attention calls: 12 flash calls in all. In every one, $s_q\in\{1,4\}$ and
+$s_k\in\{4,5,6\}$ fall inside a single $128\times128$ tile, so more than 99\% of the tile lies
+outside the sequence.
+
+For the combine guard we need $s_k>256$. \code{experiment_lse.py} prepends a fixed 297-digit
+context to \code{312}: BOS + 300 digits = 301 keys, so 2 splits for every call (prefill and decode
+alike). The \emph{external input} is a vector added to the token embedding of the last prompt
+position, the kind a vision encoder or soft prompt supplies. Input~A is all zeros. Input~B has
+$+\infty$ in coordinate 0, standing in for an upstream FP16 overflow.
+
+%=====================================================================================
+\section{nixnan monitoring}
+\label{sec:nixnan}
+
+\subsection{Making nixnan run on PyTorch}
+\label{sec:nixnan-setup}
+The first direct runs never got past start-up (20+ minutes, 27~GB RSS). There were three causes:
+\begin{itemize}
+\item \textbf{Instrumentation cost.} NVBit spends about 30\,s per new cuBLAS/CUTLASS kernel. All
+  runs therefore use \code{FUNCTION_WHITELIST}, which matches the \emph{full demangled} kernel name.
+  The full-tile kernel ($T=128$) is a different template instance (\code{Is_even_MN=true}) and must
+  be listed separately. \code{run_all.sh} first runs each target with a dummy whitelist to log the
+  exact names.
+\item \textbf{Hangs.} \code{F.embedding} hangs NVBit at load time even when it is not instrumented,
+  and so does the CUB radix sort in the backward pass of \code{weight[idx]}. The one-hot matmul
+  embedding avoids both.
+\item \textbf{\code{LD_PRELOAD} over \code{timeout}.} If \code{LD_PRELOAD} also covers the
+  \code{timeout} wrapper, both processes write the same \code{LOGFILE}. The fix is
+  \code{timeout N env LD_PRELOAD=... python}.
+\end{itemize}
+
+\subsection{Results}
+\begin{table}[h]\centering\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lll@{}}\toprule
+run & \code{SAMPLING} & result\\\midrule
+training (1{,}500 steps, 57 min) & 32 & \code{flash_fwd_kernel}: 1{,}493 sites (2{,}194 \NaN{} reports); \code{flash_bwd}: 458 sites, no \NaN{}\\
+completion \code{312}$\to$6 & 0 & \code{flash_fwd_kernel}: 1{,}367 \NaN, 57 $+\infty$, 1{,}864 $-\infty$, 461 subnormal reports\\
+NF4 linears & 0 & bitsandbytes kernels: 0 \NaN/Inf, 19 subnormal sites; flash \NaN{} unchanged in kind\\
+FP16 linears & 0 & cuBLAS/CUTLASS: 41 subnormal reports at 8 sites, 0 \NaN/Inf\\
+combine A / B & 0 & see Table~\ref{tab:nixnan-ab}\\
+prompt-length sweep & 0 & $T\le16$: 300--930 \NaN{} sites; $T=32,64,96,120,127,128$: 0\\
+\bottomrule\end{tabular}}
+\caption{nixnan runs (logs in \code{flash-attn-expt/logs/flash/}). The training report totals:
+FP32 \NaN{} 1{,}490 sites (78{,}993{,}020 repeats), FP32 $-\infty$ 1{,}909 sites
+(495{,}634{,}629 repeats), FP16 \NaN{} 704 sites (14{,}565{,}356 repeats).}
+\end{table}
+
+\begin{enumerate}[label=\textbf{N\arabic*.}]
+\item \textbf{Clean data reproduces BioMistral's pattern.} During the completion every real tensor is
+  finite (host check), yet nixnan reports 1{,}183 FP32 + 184 FP16 \NaN{} sites in
+  \code{flash_fwd_kernel}, in the same instructions as the slide.
+\item \textbf{The counts look like uninitialized memory.} With one tile, prompt length decides:
+  $T\le16$ gives 300--930 sites, $T\ge32$ gives none, and the middle is irregular ($T=28$ has
+  \NaN{}, $T=17$--24 has none). Repeating $T=16$ gives 681, 930 and 937 sites.
+\item \textbf{4-bit is not the source.} With NF4 linears and all of bitsandbytes' kernels
+  instrumented (\code{kQuantizeBlockwise}, \code{kDequantizeBlockwise},
+  \code{kgemm_4bit_inference_naive}), there is no \NaN{} or Inf, only 19 subnormal sites. nixnan
+  checks FP instructions, while the packed nibbles travel through integer and shared-memory ops.
+\item \textbf{The guard fires through \code{lse_sum == 0} only} (Table~\ref{tab:nixnan-ab}).
+\item \textbf{The combine kernel needs more than one key block}, i.e.\ $s_k>256$ for head
+  dimension $\le64$ and $s_k>128$ for Mistral's 128. The slide's kernel is the non-split one.
+\item \textbf{A \NaN{} breaks causality through tiling.} In B only position 300 is poisoned, yet
+  rows 256--299 become \NaN{} in layer 0 (45/301 rows). They share the second split with the
+  poisoned key, whose $V$ enters $P\cdot V$ as $0\cdot\NaN$.
+\item \textbf{nixnan's memory check is blind here.} With \code{INSTR_MEM=1}, every global store in
+  the flash kernels (14 \code{STG.E.128}, 13 \code{STG.E}, 5 \code{STG.E.64}) is skipped as
+  ``unknown type''. B writes \NaN{} attention outputs and still reports
+  \code{FP16/FP32 Memory NaN: 0}.
+\end{enumerate}
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}lllll@{}}\toprule
+input & guard fired (oracle) & \NaN{} LSE & combine LSE path (nixnan) & combine O path (nixnan)\\\midrule
+A (zeros) & 0 & 0 & only $\pm\infty$ & none\\
+B ($+\infty$) & 568 (head,row) entries & 0 & only $\pm\infty$ & 20 \code{FFMA} sites\\\bottomrule
+\end{tabular}
+\caption{nixnan's view of the combine kernel. B's completion is \code{312000} (\NaN{} logits),
+A's \code{312489}.}
+\label{tab:nixnan-ab}
+\end{table}
+
+nixnan reports \emph{that} \NaN{}s occur and \emph{where} (kernel, instruction, operand), but not in
+which lane, so it cannot tell a padding-lane \NaN{} from a real one. That calls for a lane-exact
+view.
+
+%=====================================================================================
+\section{PyTorch source instrumentation}
+\label{sec:instr}
+
+\subsection{Build}
+\code{PyTorch_Instrumentation/src/} is PyTorch v2.6.0's
+\path{aten/src/ATen/native/transformers/cuda/flash_attn}, with three mechanical changes:
+\begin{itemize}
+\item the namespace is renamed \code{pytorch_flash}$\to$\code{instr_flash}, so the extension cannot
+  bind to libtorch's symbols;
+\item includes are made local;
+\item \code{flash_api.cpp} is cut after \code{mha_fwd}, and its dispatch is restricted to
+  FP16/head-dim~32.
+\end{itemize}
+Only \code{flash_fwd_hdim32_fp16_sm80.cu} and \code{flash_fwd_split_hdim32_fp16_sm80.cu} are
+compiled, against the CUTLASS commit PyTorch pins (\code{bbe579a9}). The host side is PyTorch's own
+\code{mha_fwd}, so the split heuristic, tile sizes and template choices are SDPA's. The hooks are
+the hunks marked \code{INSTRUMENTATION} in \code{instrumentation.patch}; \code{make_src.sh}
+regenerates \code{src/} from a fresh PyTorch checkout, and we checked it reproduces \code{src/}
+byte for byte. A pybind entry (\code{fwd(q,k,v,causal,scale,instr)}) returns the output, the LSE,
+three dump tensors, and the number of splits. \code{instr_flash.install()} swaps it in for
+TinyGPT's \code{flash_attention}.
+
+\subsection{Hooks}
+\code{Flash_fwd_params} gains three nullable buffers (\code{dbg_tile}, \code{dbg_split},
+\code{dbg_comb}), allocated zeroed by \code{mha_fwd} when dumping is on. The layout is in
+\code{src/instr_dump.h}.
+\begin{description}[leftmargin=1.5em]
+\item[\code{flash_fwd_kernel}] For batch 0 and m-block 0 we dump the first key block processed
+  ($n = n_{\max}-1$, which for these sequences is the only one), whole tiles, per head:
+  \begin{itemize}
+  \item the shared-memory tiles \code{sQ}, \code{sK}, \code{sV}, read element by element through
+    their own swizzled layouts and stored as raw FP16 bit patterns, so \NaN{} payloads survive;
+  \item \code{acc_s} before and after \code{apply_mask}, and \code{rP} after the softmax, written to
+    their $(row, col)$ through \code{thr_mma.partition_C} of an identity tensor, the same idiom the
+    epilogue uses;
+  \item \code{acc_o} after normalization;
+  \item per row: $m$, $\ell$, LSE, and which disjunct of the \code{softmax.h} guard fired.
+  \end{itemize}
+\item[\code{flash_fwd_splitkv_kernel}] One record per (split, head, row) with $m$, $\ell$, LSE, the
+  guard outcome (none, $\ell=0$, $\ell\ne\ell$), and a separate code for the early-exit
+  ``no key block'' path.
+\item[\code{flash_fwd_splitkv_combine_kernel}] One record per combine row, including the padding
+  rows of the last 16-row block. It holds both split LSEs, \code{lse_max} (after clamping),
+  \code{lse_sum}, both disjuncts, the value the guard replaced ($\log \mathrm{lse\_sum} +
+  \mathrm{lse\_max}$), the stored value, and (via \code{atomicAdd}) the number of non-finite values
+  in the combined output row.
+\end{description}
+\begin{lstlisting}[caption={The two dump helpers (src/flash\_fwd\_kernel.h).}]
+template <typename TensorS>
+__device__ __forceinline__ void instr_dump_smem(float *dst, TensorS const &s, int rows, int cols) {
+    for (int i = threadIdx.x; i < rows * cols; i += blockDim.x) { dst[i] = static_cast<float>(s(i / cols, i % cols).raw()); }
+}
+template <typename TensorF, typename TensorC>
+__device__ __forceinline__ void instr_dump_frag(float *dst, TensorF const &f, TensorC const &c, int ld) {
+    for (int i = 0; i < size(f); ++i) { dst[get<0>(c(i)) * ld + get<1>(c(i))] = static_cast<float>(f(i)); }
+}
+\end{lstlisting}
+
+\subsection{Equivalence with PyTorch's kernel}
+\code{check_equivalence.py} compares output and LSE with
+\code{aten::_scaled_dot_product_flash_attention} on 8 shapes: $(s_q,s_k)$ = (4,4,causal),
+(1,5), (1,6), (16,16,c), (100,100,c), (301,301,c), (1,302), (1,303), covering both the
+non-split and the 2-split paths. Each shape runs with dumps off and on. \textbf{All 16 comparisons
+are bitwise equal.} One detail matters: the build must \emph{not} use \code{--use_fast_math}. With
+it, the combine LSE differs by 1~ulp (\code{logf}/\code{expf}), so PyTorch does not build these
+files with fast math. \code{trigger_nan_guard.py} (\S\ref{sec:fire}) also compares, \NaN{}-aware,
+in exactly the edge cases studied below, and again everything matches. Whatever our kernels do,
+PyTorch's do the same.
+
+%=====================================================================================
+\section{The padding lanes, dumped}
+\label{sec:padding}
+
+\code{dump_completion.py} runs the completion of \code{312} twice and dumps the last 4 flash calls
+of the first run: the 4 layers of the last forward pass, each a decode step with $s_q=1$, $s_k=6$.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}lrrrr@{}}\toprule
+region (4 heads summed) & values & \NaN & $\pm\infty$ & subnormal\\\midrule
+Q row 0 (loaded) & 128 & 0 & 0 & 0\\
+\textbf{Q rows 1--127 (never loaded)} & 16{,}256 & \textbf{3{,}239} & 0 & 73\\
+K rows 0--5 (loaded) & 768 & 0 & 0 & 0\\
+K rows 6--127 (never loaded) & 15{,}616 & 13 & 0 & 16\\
+V rows 6--127 (cleared) & 15{,}616 & 0 (all 0) & 0 & 0\\
+$S=QK^\top$, valid (row 0, cols 0--5) & 24 & 0 & 0 & 0\\
+$S$, valid row, padding cols & 488 & 13 & 0 & 0\\
+\textbf{$S$, padding rows} & 65{,}024 & \textbf{18{,}274} & 0 & 0\\
+$S$ after mask, padding rows & 65{,}024 & 798 & 61{,}976 ($-\infty$) & 0\\
+\textbf{$P$, padding rows} & 65{,}024 & \textbf{798} & 0 & 1\\
+\textbf{$O$, padding rows} & 16{,}256 & \textbf{4{,}256} & 0 & 0\\
+$O$, row 0 (the output) & 128 & 0 & 0 & 0\\
+\midrule
+\code{softmax.h} guard, real rows & \multicolumn{4}{l}{fired 0 of 4}\\
+\code{softmax.h} guard, padding rows & \multicolumn{4}{l}{fired 133 of 508, all via $\ell\ne\ell$; LSE $\to+\infty$, never stored}\\
+\bottomrule\end{tabular}
+\caption{Call 11 (layer 3, last decode step), \code{traces/completion/REPORT.txt}. Calls 8--10 are
+nearly identical (3{,}234--3{,}240 \NaN{} in stale Q, 130 guard firings each).}
+\label{tab:padding}
+\end{table}
+
+\begin{figure}[h]\centering
+\newcommand{\tilefig}[3]{\begin{subfigure}[b]{#2}\centering\includegraphics[width=\linewidth,interpolate=false]{figs/tile_#1.png}\caption{#3}\end{subfigure}}
+\tilefig{Q}{0.11\linewidth}{sQ}\hfill
+\tilefig{K}{0.11\linewidth}{sK}\hfill
+\tilefig{S_RAW}{0.22\linewidth}{$S=QK^\top$}\hfill
+\tilefig{S_MASK}{0.22\linewidth}{$S$ masked}\hfill
+\tilefig{P}{0.22\linewidth}{$P$}
+\caption{Call 11, head 0, every element of the tile (rows = queries, top to bottom; columns = head
+dimension or keys). \textcolor{validblue}{\rule{1.5ex}{1.5ex}} finite, inside the sequence (row 0,
+and keys 0--5); \textcolor{padgray}{\rule{1.5ex}{1.5ex}} finite, padding lane;
+\textcolor{zerogray}{\rule{1.5ex}{1.5ex}} zero; \textcolor{nanred}{\rule{1.5ex}{1.5ex}} \NaN;
+\textcolor{maskdark}{\rule{1.5ex}{1.5ex}} $-\infty$ (mask). The useful work is the single blue
+row segment at the top left. \NaN{} rows of $S$ come from stale Q rows, \NaN{} columns from stale K
+rows. The mask removes the columns, the rows survive into $P$.}
+\label{fig:tiles}
+\end{figure}
+
+\subsection{Observations}
+\begin{enumerate}[label=\textbf{P\arabic*.}]
+\item \textbf{Every value inside the sequence is finite; every \NaN{} is in a padding lane.} Q rows
+  $\ge s_q$ and K rows $\ge s_k$ are never loaded. The tensor-core MMA, the softmax and the $PV$
+  product nonetheless run on them.
+\item \textbf{The \code{softmax.h} guard's \code{sum != sum} disjunct fires, on padding rows only.}
+  133 of the 508 padding rows of call 11 have $\ell=\NaN$. Their LSE becomes $+\infty$ and their
+  $O$ rows stay \NaN{} (\code{inv_sum} is 1 for them). Neither is stored, because of the
+  $row<s_q$ predicates.
+\item \textbf{The stale values are the previous flash call's output.} 416 of the 508 stale Q rows
+  of calls 9, 10 and 11 are bit-identical to rows of the O tile of the call just before (31 of
+  them at the same head and row; the rest moved because the CTA ran on another SM). The epilogue
+  staged that $O$ (in FP16) in the same shared memory as \code{sQ}. Call~$n$'s 130 \NaN{} $O$
+  padding rows become call~$n{+}1$'s 130 (129, 133) stale Q rows with \NaN{}. \NaN{} propagates
+  from launch to launch entirely inside shared memory. It never reaches global memory, and nixnan's
+  memory counter could not see it anyway (N7).
+\item \textbf{Stale K rows} are zeros (404 of 488) or K rows of earlier calls (84). The 92 stale Q
+  rows without a match among the dumped flash tiles presumably come from other kernels that ran on
+  the same SM.
+\item \textbf{Non-deterministic garbage, deterministic result.} A second, identical run gives a
+  different stale Q tile and a bitwise-identical real output. This is why nixnan's counts vary
+  between repeats (N2), and why they depend irregularly on $T$: the leftover contents depend on
+  which CTA last used which shared memory.
+\end{enumerate}
+
+%=====================================================================================
+\section{The guards, dumped: inputs A and B}
+\label{sec:guards}
+
+\code{dump_lse.py} reproduces \code{experiment_lse.py} (301 keys, 2 splits per call, 12 calls) with
+the instrumented kernels.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}lrr@{}}\toprule
+over all 12 calls, 4 heads & A (clean) & B ($+\infty$)\\\midrule
+split kernel \code{softmax.h}, real rows: $\ell\ne\ell$ $\to$ LSE $-\infty$ & 0 & \textbf{1{,}144}\\
+split kernel \code{softmax.h}, padding rows: $\ell\ne\ell$ & 1{,}588 & 3{,}931\\
+split kernel, no key block (causal): $-\infty$ written directly & 4{,}096 & 4{,}096\\
+combine guard, real rows: fired & 0 & \textbf{568}\\
+\quad via \code{lse_sum == 0} & 0 & 568\\
+\quad via \code{lse_sum != lse_sum} & \textbf{0} & \textbf{0}\\
+combine guard, padding rows of the last 16-row block: fired via \code{lse_sum == 0} & 144 & 144\\
+combined output rows with non-finite values & 0 & \textbf{752}\\
+completion & \code{...312489} & \code{...312000}\\
+\bottomrule\end{tabular}
+\caption{Guard decisions (\code{traces/lse-A/}, \code{traces/lse-B/}). The 568 matches the earlier
+aten-LSE oracle exactly.}
+\label{tab:guards}
+\end{table}
+
+\begin{enumerate}[label=\textbf{G\arabic*.}]
+\item \textbf{\code{lse_sum != lse_sum} never fires; \code{lse_sum == 0} fires 568 times in B.}
+  The \NaN{} is removed one level earlier. The split kernel's \code{softmax.h} guard maps a \NaN{}
+  row sum to $\mathrm{lse}_s=-\infty$ (1{,}144 times on real rows in B), so the combine kernel only
+  ever sees finite or $-\infty$ LSEs. When every split is $-\infty$, \code{lse_sum} is exactly 0
+  and the guard stores $+\infty$.
+\item \textbf{The guard cleans the LSE, not the output.} 752 output rows are \NaN{} against 568
+  guard firings. In call~0 (layer 0, prefill) the guard fires on only 4 rows (row 300 of each
+  head), but 180 rows are \NaN{}: rows 256--300 of each head share the second split with the
+  poisoned key (N6). In layer~0's decode steps split~0 is clean, so $\mathrm{lse\_sum}\ge1$ and the
+  guard does not fire at all. The output is \NaN{} anyway, via $0\cdot\NaN$ in
+  $O \mathrel{+}= e^{\mathrm{lse}_s-\mathrm{lse\_logsum}} O^{\mathrm{accum}}_s$.
+\item \textbf{On clean input the \code{softmax.h} \NaN{} guard fires 1{,}588 times}, all on
+  padding rows of the split kernel's 64-row tiles: the padding-lane effect of \S\ref{sec:padding}
+  again.
+\item \textbf{The combine's own padding rows} (1{,}204 real rows fill 76 blocks of 16 = 1{,}216
+  rows) read $-\infty$ for every split, so the guard fires on them via \code{lse_sum == 0} in A as
+  well as in B. nixnan's ``+inf operand in \code{FADD R9, -R8, R9}'' in run~A is exactly this.
+\end{enumerate}
+
+%=====================================================================================
+\section{When can \texorpdfstring{\texttt{lse\_sum != lse\_sum}}{lse_sum != lse_sum} fire?}
+\label{sec:fire}
+
+\subsection{Analysis}
+Write $\sigma$ for the softmax scale (\code{params.scale_softmax}),
+$\sigma_2=\mathrm{fl}(\sigma\log_2e)$ (\code{scale_softmax_log2}), $x$ for a raw FP32 score,
+$m$ for a row maximum, and $\ell$ for a row sum. The combine computes
+$\mathrm{lse\_sum}=\sum_s \exp(\mathrm{lse}_s-L)$ with $L=\max_s\mathrm{lse}_s$ ($-\infty\mapsto0$).
+\code{fmaxf} ignores a \NaN{} operand, and $\exp$ of a non-\NaN{} argument is non-\NaN{}, so:
+
+\begin{lemma}\label{lem:combine}
+\code{lse_sum} is \NaN{} iff some $\mathrm{lse}_s$ is \NaN{}, or some $\mathrm{lse}_s=+\infty$ (then
+$L=+\infty$ and $\infty-\infty$). If every $\mathrm{lse}_s\in\mathbb{R}\cup\{-\infty\}$, then
+$\mathrm{lse\_sum}\in\{0\}\cup[1,n_{\mathrm{splits}}]$.
+\end{lemma}
+
+The split kernel writes $\mathrm{lse}_s=-\infty$ on early exit, and otherwise
+$\mathrm{lse}_s = (\ell=0 \lor \ell\ne\ell)\;?\;-\infty : m\sigma+\log\ell$. So:
+
+\begin{lemma}\label{lem:split}
+$\mathrm{lse}_s\in\{\NaN,+\infty\}$ requires $\ell=+\infty$, or $m\sigma=+\infty$ with $\ell$
+finite and positive.
+\end{lemma}
+
+The softmax computes each term as \code{exp2f(x * scale - max_scaled)} with
+\code{max_scaled = (m == -inf) ? 0 : m * scale}. The source comment says this ``allows the compiler
+to use the ffma instruction''. \textbf{In the compiled code it does not.} The SASS of the split
+kernel (\code{traces/trigger/sass_scale_apply_exp2.txt}) multiplies each score by the scale
+parameter with \code{FMUL} and subtracts the scaled max with a separate \code{FADD}
+(\code{FADD Rx, -R47, Rx}) before the \code{FSETP -126} range check and \code{MUFU.EX2}. The term
+is therefore $2^{\,\mathrm{fl}(\mathrm{fl}(x\sigma_2)-\mathrm{fl}(m\sigma_2))}$, with two
+roundings. PyTorch's kernel is unfused too, as the edge case below shows.
+
+\begin{proposition}[Unreachable for $\sigma>0$]\label{prop}
+With unfused codegen and any $\sigma>0$, for any FP16 Q, K, V (including $\pm\infty$ and \NaN{}),
+$\mathrm{lse}_s\in\mathbb{R}\cup\{-\infty\}$ for every split, and so
+\code{lse_sum != lse_sum} is false.
+\end{proposition}
+\begin{proof}[Proof sketch]
+Fix a row. If $m=-\infty$ (every score $-\infty$, e.g.\ masked), then \code{max_scaled}$=0$, every
+term is $2^{-\infty}=0$, $\ell=0$, and the guard gives $-\infty$. If $m$ is \NaN{} (every score
+\NaN{}), then $\ell$ is \NaN{} and the guard gives $-\infty$. Otherwise $m>-\infty$.
+
+\emph{Case $\mathrm{fl}(m\sigma_2)$ finite.} Rounding is monotone and $x\le m$, so
+$\mathrm{fl}(x\sigma_2)\le\mathrm{fl}(m\sigma_2)$. Each term is then in $[0,1]$ (or \NaN{} for a
+\NaN{} score, which makes $\ell$ \NaN{} and triggers the guard). The maximal element contributes
+exactly $2^0=1$. Across key blocks the rescale factor $2^{(m_{\mathrm{prev}}-m)\sigma_2}\le1$. So
+$\ell\in[1,s_k]$. Since $\sigma<\sigma_2$, $|m\sigma|\le|m\sigma_2|$ is finite, and $\mathrm{lse}_s$
+is finite.
+
+\emph{Case $\mathrm{fl}(m\sigma_2)=\pm\infty$} (overflow, or $m=+\infty$). The maximal element
+gives $\mathrm{fl}(m\sigma_2)-\mathrm{fl}(m\sigma_2)=\infty-\infty=\NaN$, so $\ell$ is \NaN{} and
+$\mathrm{lse}_s=-\infty$.
+
+In every case $\mathrm{lse}_s\in\mathbb{R}\cup\{-\infty\}$, and Lemma~\ref{lem:combine} completes
+the proof.
+\end{proof}
+
+\paragraph{Consequences.}
+\begin{itemize}
+\item TinyGPT ($\sigma=1/\sqrt{32}$) and BioMistral ($\sigma=1/\sqrt{128}$) can never take the
+  \NaN{} disjunct, whatever their inputs. Input B's $+\infty$, and any \NaN{}, is absorbed by
+  \code{softmax.h} first. This is the formal version of G1.
+\item With \emph{fused} codegen (an \code{FFMA}, as the comment intends) the overflow case changes.
+  If $m<0$ and $\mathrm{fl}(m\sigma_2)=-\infty$, then $\mathrm{FFMA}(x,\sigma_2,+\infty)=+\infty$
+  (the exact product is finite), so $\ell=+\infty$ and $\mathrm{lse}_s=+\infty$: the disjunct
+  becomes reachable. That needs $|m|\sigma_2>\mathrm{FLT\_MAX}$. With FP16 inputs
+  $|m|\le d\cdot65504^2\approx1.4\cdot10^{11}$ ($d=32$), so it would take $\sigma>1.7\cdot10^{27}$.
+  With BF16 inputs, $\sigma>1/\log_2e\approx0.69$ would do. With the default $1/\sqrt d$,
+  $\sigma_2<1$ for $d\ge3$, and even a fused build is safe. PyTorch~2.6's binary is unfused
+  (below), so this remains hypothetical.
+\item \textbf{A negative scale breaks the premise} $\mathrm{fl}(x\sigma_2)\le\mathrm{fl}(m\sigma_2)$:
+  the argument becomes $(m-x)|\sigma_2|\ge0$. Any score spread above $128/|\sigma_2|$ overflows
+  \code{exp2f} to $+\infty$. Any masked score ($x=-\infty$) gives
+  $-\infty\cdot\sigma_2-\mathrm{fl}(m\sigma_2)=+\infty$ exactly. Then $\ell=+\infty$, which is
+  neither 0 nor \NaN{}, so \code{softmax.h} lets it through: $\mathrm{lse}_s=m\sigma+\log\infty=
+  +\infty$, and the combine computes $\infty-\infty$. Neither SDPA nor \code{mha_fwd} validates
+  the sign of \code{scale}.
+\end{itemize}
+
+\subsection{Experiments: the disjunct fires}
+\code{trigger_nan_guard.py} runs one decode-shaped call ($s_q=1$, $s_k=301$, 2 splits, 4 heads,
+random FP16 Q/K/V; in the large-$\sigma$ cases, head 0's split-0 keys are set to $-q$ so its scores
+are all $\approx-37$). Each case also goes through PyTorch's own kernel with the same
+\code{scale=}, and every case matches it \NaN{}-aware.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}lllll@{}}\toprule
+$\sigma$ & split 0 (head 0): $m$, $\ell$, $\mathrm{lse}$ & split 1 (head 0) & combine \code{lse_sum} & disjunct\\\midrule
+$1/\sqrt{32}$ & 15.23, 33.1, 6.19 & 17.08, 5.52, 4.73 & 1.23 & none, 0/4\\
+$10^{30}$ & $-37.1$, 256, $-3.7\cdot10^{31}$ & 17.08, 1, $1.7\cdot10^{31}$ & 1 & none, 0/4\\
+$10^{37}$ & $-37.1$, \textbf{\NaN}, $-\infty$ & 17.08, 1, $1.7\cdot10^{38}$ & 1 & none, 0/4 (but 32 \NaN{} in $O$)\\
+$-0.1$ & 15.23, 1435, 5.75 & 17.08, \textbf{$+\infty$}, \textbf{$+\infty$} & \textbf{\NaN} & \textbf{\code{lse_sum != lse_sum}, 4/4}\\
+$-1$ & 15.23, $1.9\cdot10^{16}$, 22.3 & 17.08, $+\infty$, $+\infty$ & \NaN & \code{lse_sum != lse_sum}, 4/4\\
+$-10$ & 15.23, $+\infty$, $+\infty$ & 17.08, $+\infty$, $+\infty$ & \NaN & \code{lse_sum != lse_sum}, 4/4\\
+\bottomrule\end{tabular}
+\caption{\code{traces/trigger/REPORT.txt}. At $\sigma=10^{37}$, $m\sigma_2$ overflows to $-\infty$
+and the unfused code yields $\ell=\NaN$, which \code{softmax.h} catches. A fused \code{FFMA} would
+have given $\ell=+\infty$ and a stored LSE of $+\infty$; PyTorch's kernel returns the same
+$1.708\cdot10^{38}$ as ours, so it is unfused too. At $\sigma=-0.1$, split~1's tile has 211
+masked columns (keys 301--511 of its 256-wide block); each gives $2^{+\infty}$, so split~1's
+$\ell=+\infty$.}
+\label{tab:trigger}
+\end{table}
+
+\paragraph{Inside TinyGPT.} One argument suffices: \code{dump_lse.py --input A --scale -0.1} (every
+attention call with $\sigma=-0.1$, clean input A).
+
+\begin{table}[h]\centering\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrr@{}}\toprule
+calls & combine fired & via \code{lse_sum == 0} & via \code{lse_sum != lse_sum} & rows with non-finite $O$\\\midrule
+0: layer 0 prefill (301 rows/head) & 1{,}200 & 0 & \textbf{1{,}200} & 1{,}204\\
+1--3: layers 1--3 prefill & 3{,}612 & 3{,}612 & 0 & 3{,}612\\
+4, 8: layer 0 decode & 8 & 0 & \textbf{8} & 8\\
+5--7, 9--11: layers 1--3 decode & 24 & 24 & 0 & 24\\\midrule
+total (default scale: 0 / 0 / 0) & 4{,}844 & 3{,}636 & \textbf{1{,}208} & 4{,}848\\\bottomrule
+\end{tabular}}
+\caption{TinyGPT, input A, $\sigma=-0.1$ (\code{traces/lse-A-scale-0.1/}). The completion becomes
+\code{...312000}.}
+\end{table}
+
+The pattern follows the analysis exactly:
+\begin{itemize}
+\item \textbf{Layer 0, clean inputs.} The causal and padding masks provide $-\infty$ scores, which
+  turn into $\ell=+\infty$ and $\mathrm{lse}_s=+\infty$, so \code{lse_sum} is \NaN{}. Of each
+  head's 301 rows, only row 255 escapes (4 rows in all). It sees all of split~0's keys unmasked,
+  and split~1 has no key block for it.
+\item \textbf{Layers 1--3.} Their inputs are already \NaN{} from layer 0, so \code{softmax.h} maps
+  every split to $-\infty$ and the guard fires through \code{lse_sum == 0}, as in input B.
+\end{itemize}
+So the disjunct is reachable in TinyGPT, through a softmax-scale change, not through any input.
+
+%=====================================================================================
+\section{Discussion}
+
+\paragraph{What the BioMistral counts mean.} nixnan checks every lane's operands, and in short
+sequences almost every lane of a flash tile is padding. Its \NaN{} counts in
+\code{flash_fwd_kernel} measure padding-lane arithmetic on stale shared memory, whose contents are
+the previous launch's (often \NaN{}) output. They do not measure numerical trouble in the model.
+The counts are non-deterministic, depend irregularly on the sequence length, and none of the values
+are stored. 4-bit quantization plays no part (N3). The split-KV combine guard is not where they
+are filtered (G1); \code{softmax.h} and the $row<s_q$ store predicates are.
+
+\paragraph{Guards and propagation.} Both guards protect the \emph{LSE}. Neither protects the output:
+$0\cdot\NaN$ carries a poisoned key into every row that shares its split (N6, G2), across the
+causal mask. A real \NaN{} in K or V therefore corrupts more rows than causality allows, and which
+rows depends on the tile size.
+
+\paragraph{For nixnan.}
+\begin{itemize}
+\item A lane-aware filter would remove the noise: a \NaN{} in an MMA operand that comes from rows
+  beyond the sequence bound is expected.
+\item \code{INSTR_MEM} needs to classify packed FP16 stores (\code{STG.E.128} and friends);
+  otherwise ``no \NaN{} in memory'' is not evidence.
+\item In this tutorial the evidence needed source instrumentation, which only works when the
+  source is available. The two methods complement each other.
+\end{itemize}
+
+\paragraph{Threats to validity.}
+\begin{itemize}
+\item Our kernels are rebuilt from PyTorch's source for sm\_86 only. They are bitwise-equal to
+  PyTorch's binary on every case we tried, including the overflow and negative-scale edge cases,
+  but they are not the same file.
+\item Head dimension 32 (TinyGPT) is not Mistral's 128: tile shapes differ ($64\times64$ causal and
+  $128\times32$ non-causal on sm\_86), but the code paths, the unloaded Q/K rows, and the guards
+  are the same.
+\item Stale shared-memory contents depend on scheduling, so exact counts vary run to run;
+  conclusions P1--P5 held in every run.
+\item We did not re-run BioMistral itself.
+\end{itemize}
+
+%=====================================================================================
+\section{Reproduction}
+All files are in \code{flash-attn-expt/} on branch \code{Flash-Attn}. Use the venv
+\code{~/repos/newmed/venv}, and set \code{CUDA_HOME=/usr/local/cuda-12.4} for the extension build.
+\begin{lstlisting}[language=bash]
+python train.py; python generate.py --prompt 312 --length 6        # TinyGPT (tinygpt.pt is committed)
+./run_all.sh                                                        # every nixnan run (Sec. 4)
+cd PyTorch_Instrumentation
+python check_equivalence.py        # builds the extension (~5 min), bitwise check -> traces/equivalence.txt
+python dump_completion.py          # padding lanes -> traces/completion/
+python dump_lse.py --input A       # guards -> traces/lse-A/   (B: traces/lse-B/)
+python trigger_nan_guard.py        # lse_sum != lse_sum fires -> traces/trigger/
+python dump_lse.py --input A --scale -0.1   # ... inside TinyGPT -> traces/lse-A-scale-0.1/
+cd ../latex && python make_figures.py && pdflatex report && pdflatex slides
+\end{lstlisting}
+
+\appendix
+\section{Dump record layouts (\texorpdfstring{\texttt{src/instr\_dump.h}}{src/instr_dump.h})}
+\begin{description}[leftmargin=1.5em]
+\item[Tile dump, per head] Q, K, V ($128\times32$, raw FP16 bits); $S$ raw, $S$ masked, $P$
+  ($128\times128$); $O$ ($128\times32$); per row: $m$, $\ell$, LSE, guard (1: $\ell=0$, 2: $\ell$
+  \NaN{}).
+\item[Split record (12 floats)] written, split, head, row, valid ($row<s_q$), $m$, $\ell$, LSE,
+  guard (0 none, 1 $\ell=0$, 2 $\ell\ne\ell$, 3 no key block).
+\item[Combine record (16 floats)] written, row, valid, LSE of split 0 and 1, \code{lse_max},
+  \code{lse_sum}, \code{sum==0}, \code{sum!=sum}, fired, $\log\mathrm{lse\_sum}+\mathrm{lse\_max}$,
+  stored \code{lse_logsum}, non-finite $O$ count.
+\end{description}
+
+\section{Per-call padding-lane summary (calls 8--11)}
+\begin{center}\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrrr@{}}\toprule
+call (layer) & stale-Q \NaN & $S$ pad-row \NaN & $P$ pad-row \NaN & $O$ pad-row \NaN & guard on pad rows & stale Q $=$ prev.\ $O$\\\midrule
+8 (0) & 3{,}240 & 17{,}919 & 780 & 4{,}160 & 130 & 416/508\\
+9 (1) & 3{,}234 & 17{,}906 & 780 & 4{,}160 & 130 & 416/508\\
+10 (2) & 3{,}234 & 17{,}911 & 777 & 4{,}160 & 130 & 416/508\\
+11 (3) & 3{,}239 & 18{,}274 & 798 & 4{,}256 & 133 & 416/508\\\bottomrule
+\end{tabular}}
+\end{center}
+(For call 8 the predecessor is call 7, which is not in the dump file. The provenance search over
+all earlier calls gives the same 416.)
+
+\end{document}
