@@ -1,0 +1,321 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usetheme{Madrid}
+\usecolortheme{seahorse}
+\setbeamertemplate{navigation symbols}{}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
+
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\NaN}{NaN}
+\definecolor{nanred}{RGB}{214,39,40}
+\definecolor{infor}{RGB}{255,127,14}
+\definecolor{validblue}{RGB}{31,119,180}
+\lstset{basicstyle=\ttfamily\scriptsize, columns=fullflexible, keepspaces=true, breaklines=true,
+        backgroundcolor=\color{black!4}, frame=single, rulecolor=\color{black!15}, language=Python,
+        showstringspaces=false}
+
+\title[FP16 divergence under nixnan]{Catching an FP16 Training Divergence with nixnan}
+\subtitle{From the first large value to the first NaN in TinyGPT}
+\author[SC26 nixnan tutorial]{SC26 nixnan tutorial}
+\institute[]{\texttt{flash-attn-expt/fp16-divergence}, branch \texttt{Flash-Attn}}
+\date{October 2026}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{The task}
+\begin{itemize}
+\item Train TinyGPT \textbf{entirely in FP16}: parameters, activations, gradients
+  \begin{itemize}
+  \item no FP32 master weights, no loss scaling (\code{GradScaler}), no clipping
+  \end{itemize}
+\item Use a learning rate \textbf{high enough to diverge}
+\item With \textbf{nixnan} (binary instrumentation, no source changes), catch the sequence of values
+  that leads to $\infty$ and \NaN
+\item \textbf{Stop as soon as the \NaN{} is seen}
+\end{itemize}
+\vspace{3mm}
+\begin{block}{FP16 in one line}
+max finite $= 65{,}504$ \quad (top binade $2^{15}$) \qquad min normal $=2^{-14}$ \qquad
+$|v|\geq 65{,}520 \;\Rightarrow\; \pm\infty$
+\end{block}
+\vspace{2mm}
+Answer: \textbf{yes}. nixnan shows the climb three steps early, the first $\infty$ and the first \NaN, with the SASS instruction for each.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}[fragile]{Setup}
+\begin{columns}[T]
+\begin{column}{0.44\textwidth}
+\textbf{TinyGPT}
+\begin{itemize}\small
+\item 4 pre-LN blocks, $d=128$, 4 heads, MLP 512, RoPE, no biases
+\item 791{,}808 parameters, 12-token vocabulary (digits)
+\item 100 sequences $\times$ 21 positions, one batch
+\item attention: SDPA, flash backend
+\item two \code{.float()} casts now follow the weight dtype (FP32 model unchanged: \code{312} $\to$ \code{312452})
+\end{itemize}
+\end{column}
+\begin{column}{0.54\textwidth}
+\textbf{\code{train_fp16.py}}
+\begin{lstlisting}
+model = TinyGPT().cuda().half()   # no master weights
+opt = torch.optim.SGD(model.parameters(),
+                      lr=1.0, momentum=0.9)
+for step in range(1, 501):
+    logits = model(x)
+    loss = F.cross_entropy(logits...float(), y)
+    opt.zero_grad(); loss.backward()
+    print(f"step {step:4d}  loss {loss.item():.4f}")
+    if not finite(loss): break      # STOP
+    opt.step()
+\end{lstlisting}
+\small SGD: update $=\eta\cdot$gradient, so weights grow freely. Deterministic: identical losses on every run.
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Ground truth: the oracle (\code{--oracle}, not under nixnan)}
+\begin{columns}[c]
+\begin{column}{0.47\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{rrrl}
+\toprule
+step & loss & max $|$act$|$ & largest \\
+\midrule
+1 & 2.53 & 4.8 & \code{blocks.1.ln2} \\
+4 & 24.8 & 24 & \code{head} \\
+6 & 79.3 & 87 & \code{head} \\
+7 & 169.9 & 815 & \code{blocks.0.proj} \\
+8 & 198.8 & 1{,}315 & \code{blocks.0.proj} \\
+9 & 649.4 & 29{,}570 & \code{blocks.0.proj} \\
+10 & \textcolor{nanred}{\NaN} & 65{,}440 + \textcolor{infor}{7{,}870 $\infty$} & \code{blocks.0.proj} \\
+\bottomrule
+\end{tabular}
+\vspace{2mm}
+
+First non-finite tensor at step 10:\\ \textbf{output of \code{blocks.0.proj}}: 7{,}870 $\infty$, 0 \NaN
+\end{column}
+\begin{column}{0.51\textwidth}
+\begin{tikzpicture}
+\begin{semilogyaxis}[width=\linewidth, height=5.6cm, xlabel={step}, xmin=0.5, xmax=10.5, ymin=1, ymax=1e7,
+  xtick={1,...,10}, legend pos=north west, legend style={font=\tiny}, grid=major, grid style={black!10},
+  tick label style={font=\scriptsize}, label style={font=\scriptsize}]
+\addplot[validblue, thick, mark=*] coordinates {(1,4.766)(2,4.66)(3,9.852)(4,24.31)(5,47.59)(6,87)(7,815.5)(8,1315)(9,29570)(10,65440)};
+\addlegendentry{max $|$activation$|$}
+\addplot[black!60, thick, mark=square*] coordinates {(1,2.5254)(2,2.4189)(3,3.1881)(4,24.8335)(5,6.7435)(6,79.3333)(7,169.8536)(8,198.7644)(9,649.355)};
+\addlegendentry{loss}
+\addplot[nanred, dashed, thick, domain=0.5:10.5] {65504};
+\addlegendentry{FP16 max}
+\end{semilogyaxis}
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}[fragile]{The nixnan setup: three runs and a watcher}
+\begin{lstlisting}[language=bash]
+# pass 0: log all 50 kernel names (dummy whitelist: nothing instrumented) -> generate the lists
+# pass 1: exceptions everywhere except 18 tile-based kernels
+watch_nan.py logs/nixnan-exceptions.log -- env LD_PRELOAD=nixnan.so FUNCTION_BLACKLIST=blacklist.txt python train_fp16.py --lr 1
+# pass 2: binade histogram + instruction, on the residual add and LayerNorm only
+watch_nan.py logs/nixnan-climb.log -- env LD_PRELOAD=nixnan.so FUNCTION_WHITELIST=hist-whitelist.txt \
+      BIN_SPEC_FILE=spec-climb.json HISTOGRAM=1 python train_fp16.py --lr 1
+\end{lstlisting}
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\textbf{\code{spec-climb.json}}
+\begin{lstlisting}[language={}]
+{ "count": 1, "doublings": 20,
+  "f16 (record_inst)": [[9,9],...,[15,15]],
+  "f32 (record_inst)": [[9,9],...,[15,15],[16,17]] }
+\end{lstlisting}
+\small one bin per binade $2^9$--$2^{15}$; report the first hit and the instruction
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{\code{watch_nan.py}}
+\begin{itemize}\small
+\item timestamps every line of output
+\item first line matching \verb|#nixnan: error \[[^\]]*NaN|\\ $\to$ \code{WATCHER} line, \code{SIGKILL} the process group
+\item subnormal and $\pm\infty$ reports don't stop it
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Result: the timeline nixnan reports (\code{logs/SUMMARY.txt})}
+\footnotesize
+\begin{tabular}{rr>{\raggedright\arraybackslash}p{4.3cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{4.2cm}}
+\toprule
+step & loss & residual add (\code{CUDAFunctor_add<Half>}) & LayerNorm & exceptions \\
+\midrule
+1--6 & 2.5--79 & below $2^9$ & up to $2^{17}$ (FP32 $\sum(x-\mu)^2$) & none \\
+7 & 169.9 & \textbf{$2^{9}$ ($\geq 512$)}, \code{FFMA} & $2^{17}$ & none \\
+8 & 198.8 & \textbf{$2^{10}$ ($\geq 1{,}024$)} & $2^{17}$ & none \\
+9 & 649.4 & \textbf{$2^{15}$ ($\geq 32{,}768$)}, 49k reports & $2^{17}$ & none \\
+10 & --- & $2^{15}$, then \textcolor{infor}{$\pm\infty$} in \code{FFMA} & \textcolor{infor}{$-\infty$}, then \textcolor{nanred}{\textbf{\NaN}} & \textbf{run killed} \\
+\bottomrule
+\end{tabular}
+\vspace{4mm}
+\normalsize
+\begin{itemize}
+\item \textbf{Early warning}: the residual stream climbs binade by binade, 3 steps before overflow
+\item Oracle maxima 815 / 1{,}315 / 29{,}570 fall in exactly these binades
+\item FP16 bins never fire: PyTorch computes in \textbf{FP32} after loading FP16
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}[fragile]{Step 10, report by report}
+\begin{lstlisting}[language={}]
+[54.0s] error [infinity]  operand 1 of FFMA R9, R9, c[0x0][0x164], R8   ; add kernel
+[54.0s] error [infinity]  operand 0 of FFMA R9, R9, c[0x0][0x164], R8   ; (3 FFMAs, +inf and -inf)
+[54.0s] error [-infinity] operand 1 of FADD R18, R19, -R16              ; LayerNorm
+[54.0s] error [-infinity] operand 0 of FFMA R16, R18, R15, R16
+[54.0s] error [-infinity] operand 1 of FADD R0, R19, -R16
+[54.0s] error [-infinity] operand 2 of FADD R0, R19, -R16
+[54.0s] error [NaN]       operand 0 of FADD R0, R19, -R16
+[54.0s] WATCHER: first nixnan NaN report -- killing the run
+\end{lstlisting}
+\begin{itemize}\small
+\item Operand 0 $=$ destination, 1, 2, \ldots{} $=$ sources
+\item Add: $d=\alpha\cdot b + a$ with $\alpha=$ \code{c[0x0][0x164]}; $b$ = \code{proj} output $=\infty$. \textbf{The add reads the $\infty$; it doesn't create it}
+\item LayerNorm: running mean $\mu\to-\infty$, then $x-\mu = (-\infty)-(-\infty) = \textbf{\NaN}$
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{How an overflow becomes a NaN}
+\centering
+\begin{tikzpicture}[node distance=5mm, every node/.style={font=\scriptsize, align=center},
+  box/.style={draw, rounded corners, minimum height=13mm, text width=25mm, fill=black!3},
+  arr/.style={-{Stealth[length=2.5mm]}, thick}]
+\node[box, draw=black!50] (g) {\code{blocks.0.proj}\\ FP16 GEMM, FP32 acc.\\ (blacklisted)};
+\node[box, right=of g, draw=infor, fill=infor!8] (r) {round to FP16\\ $|v|>65{,}504\to\pm\infty$\\ 7{,}870 elements};
+\node[box, right=of r, draw=infor, fill=infor!8] (a) {residual add\\ \code{FFMA} op 1 $=\pm\infty$};
+\node[box, right=of a, draw=infor, fill=infor!8] (m) {LayerNorm \code{ln2}\\ row mean $\mu=-\infty$};
+\node[box, below=10mm of m, draw=nanred, fill=nanred!8] (n) {$x-\mu$\\ $(-\infty)-(-\infty)$\\ $=$ \textbf{\NaN}};
+\node[box, left=of n, draw=nanred, fill=nanred!8] (k) {\code{watch_nan.py}\\ SIGKILL};
+\node[box, left=of k, draw=black!50, text width=36mm] (o) {otherwise: \NaN{} in every layer,\\ loss $=$ \NaN{} at step 10};
+\draw[arr] (g) -- (r); \draw[arr] (r) -- (a); \draw[arr] (a) -- (m); \draw[arr] (m) -- (n);
+\draw[arr] (n) -- (k); \draw[arr, dashed] (k) -- (o);
+\end{tikzpicture}
+\vspace{4mm}
+\begin{itemize}\small
+\item nixnan sees the GEMM's overflow \textbf{one kernel later}, as an $\infty$ source operand
+\item The oracle names the producer: \code{blocks.0.proj} (first non-finite tensor, forward order)
+\item Exceptions pass (32 kernels, 213 s) agrees; first \NaN{} printed by the \code{FFMA} consuming $x-\mu$ (warp order)
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}[fragile]{Obstacle 1: false NaNs in a healthy step 1}
+Instrument everything $\Rightarrow$ the watcher fires at \textbf{step 1}, while every tensor is finite and $\leq 5$.
+\vspace{1mm}
+\begin{lstlisting}[language={}]
+error [NaN,subnormal] operand 1 of HMMA.16816.F32 R20, R48.reuse, R46, R20 ; void cutlass::Kernel2  (f16)
+\end{lstlisting}
+GEMMs blacklisted $\Rightarrow$ next stop, \code{softmax_warp_forward} in \code{cross_entropy}:
+\begin{lstlisting}[language={}]
+error [-infinity] operand 0 of FFMA R8, R7, 1.4426950216293334961, -R8 ; void   (log2 e)
+error [NaN]       operand 0 of FADD R7, -R12, R7 ; void
+\end{lstlisting}
+\begin{itemize}\small
+\item \textbf{Padding lanes}: tile lanes outside the tensor compute on stale bits (GEMM) or on $-\infty$ padding (softmax: $-\infty-(-\infty)$), and are never stored
+\item Same effect as flash attention (\code{PyTorch_Instrumentation/PyT.md})
+\item Fix: blacklist 18 tile kernels (cuBLAS, CUTLASS, splitK, flash, warp softmax).\\
+  A GEMM overflow is still caught, by the next kernel
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}[fragile]{Obstacles 2--4: what the run says about nixnan}
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\textbf{2. \code{MAX_ERRORS} can't stop at a NaN}
+\begin{itemize}\scriptsize
+\item counts every report, subnormals included
+\item FP16 GEMMs report subnormals at step 1; GELU at step 8
+\item $\to$ \code{watch_nan.py}; suggestion: \code{MAX_NANS} / category mask
+\end{itemize}
+\vspace{2mm}
+\textbf{4. Truncated kernel names}
+\begin{itemize}\scriptsize
+\item \code{cut_kernel_name}: \code{find_first_of("<(")}
+\item LayerNorm prints as \code{void at::native::}, softmax as \code{void }
+\item identifiable only because pass 2 instruments 2 kernels
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{3. \code{HISTOGRAM=1} on all kernels segfaults}
+\begin{lstlisting}[language=C++]
+// src/recording.cu:88  recorder::mk_entry
+inst_info[current_entry].instr = instr;
+...
+return current_entry++;   // no bound check
+// src/nixnan.cu:71
+#define TABLE_SIZE (1l << 17)
+\end{lstlisting}
+\begin{itemize}\scriptsize
+\item gdb: \code{SIGSEGV} in \code{mk_entry}, \code{FFMA} of \code{cutlass::Kernel2}
+\item large GEMMs overflow the $2^{17}$-entry table
+\item $\to$ histogram whitelist of 2 kernels; nixnan left unmodified
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Reproducibility and caveats}
+\begin{itemize}
+\item \code{./run_nixnan.sh}: $\approx$5 min on an RTX 3090; full rerun gave
+  \begin{itemize}
+  \item the same losses, the same histogram timeline, the same step-10 \code{FFMA}/\code{FADD} sequence
+  \item only difference: \emph{which} LayerNorm instruction prints the first \NaN{}\\
+    (\code{FADD R0,R19,-R16} or the \code{FFMA R17,R18,R0,R17} that consumes it), warp order
+  \end{itemize}
+\item LayerNorm's FP32 bins reach $2^{17}$ from step 6 on: variance sums, harmless.\\
+  \textbf{The residual add is the signal to watch}
+\item nixnan cannot see \emph{inside} the blacklisted GEMM; the oracle names it
+\item Environment: PyTorch 2.6.0+cu124, CUDA 12.4, sm\_86, NVBit 1.8, nixnan unmodified
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Takeaways}
+\begin{itemize}
+\item Without touching the program, nixnan gave:
+  \begin{itemize}
+  \item the \textbf{climb}: residual stream $\geq 512$, $\geq 1{,}024$, $\geq 32{,}768$ in steps 7, 8, 9
+  \item the \textbf{first $\infty$}: the residual add's \code{FFMA}, operand 1 (an overflowed GEMM output)
+  \item the \textbf{first \NaN}: LayerNorm's $x-\mu = (-\infty)-(-\infty)$, then the run was killed
+  \end{itemize}
+\item Aiming it took a model of the program: which kernels are tile-based, which carry the
+  residual stream, and that FP16 is computed as FP32
+\item Tool improvements suggested by this run: padding-lane awareness, \code{MAX_NANS},
+  a bounded instruction table, full kernel names
+\item Standard fixes break one link each: lower lr / AdamW, clipping, master weights +
+  \code{GradScaler}, or BF16
+\end{itemize}
+\vspace{2mm}
+\scriptsize Report: \code{fp16-divergence/latex/report.pdf}\quad Code and logs: \code{flash-attn-expt/fp16-divergence/}
+\end{frame}
+
+\end{document}
