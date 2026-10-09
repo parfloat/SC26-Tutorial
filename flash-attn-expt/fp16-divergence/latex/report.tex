@@ -13,6 +13,8 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.16}
 \usepackage{enumitem}
+\usepackage{float}
+\usepackage[section]{placeins}
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
 
@@ -31,6 +33,18 @@
 From the First Large Value to the First \NaN{} in TinyGPT}
 \author{SC26 nixnan tutorial --- \code{flash-attn-expt/fp16-divergence} (branch \code{Flash-Attn})}
 \date{October 2026}
+
+
+\newcommand{\archfont}{\scriptsize}
+\newcommand{\archsmall}{\tiny}
+\input{gptarch}
+\newcommand{\sw}[1]{\tikz[baseline=-0.6ex]\node[draw, rounded corners=1pt, minimum width=3mm, minimum height=2.4mm, inner sep=0pt, #1]{};}
+\newcommand{\archlegend}{\sw{st-warm}\,$\geq 2^9$\enspace \sw{st-hot}\,$\geq 2^{15}$\enspace
+  \sw{st-inf}\,$\pm\infty$\enspace \sw{st-nan}\,\NaN\enspace \sw{st-blind}\,not instrumented\enspace
+  \sw{st-off}\,never ran}
+% \panel{diagram options}{caption}
+\newcommand{\panel}[2]{\par\medskip\centering\resizebox{0.78\textwidth}{!}{\gptarch[#1]{}}\par
+  \smallskip{\small #2}\par}
 
 \sloppy
 \begin{document}
@@ -139,6 +153,23 @@ x \leftarrow x + W_{\text{fc2}}\,\mathrm{GELU}(W_{\text{fc1}}\,\mathrm{LN}_2(x))
 \]
 Attention is PyTorch's SDPA with the flash backend forced. The training set is 100 digit strings, and
 the whole set is one batch: 100 sequences of 21 positions.
+
+Figure~\ref{fig:arch} shows the network and the CUDA kernels behind each box. The residual stream
+(thick line) is an FP16 tensor of shape $100\times21\times128$; every block reads it through a
+LayerNorm and adds its sublayer outputs back with an FP16 elementwise add.
+
+\begin{figure}[h]
+\centering
+\resizebox{0.85\textwidth}{!}{\gptarch{}}
+\caption{TinyGPT. Block~0 is drawn in full; blocks 1--3 are identical. Thick lines: the residual
+stream. Kernels: every GEMM box is a cuBLAS or CUTLASS tensor-core GEMM (\code{HMMA.16816.F32});
+LN is \code{vectorized_layer_norm_kernel<c10::Half, float>}; $+$ is
+\code{vectorized_elementwise_kernel<4, CUDAFunctor_add<c10::Half>>}; attention is
+\code{pytorch_flash::flash_fwd_kernel}; GELU is an elementwise kernel; cross-entropy is
+\code{softmax_warp_forward} (log-softmax) plus \code{nll_loss_forward}. The same add and LN kernels
+serve all four blocks, so nixnan, which reports per kernel, cannot tell the blocks apart.}
+\label{fig:arch}
+\end{figure}
 
 Two hard-coded \code{.float()} casts in \code{tinygpt.py} were changed to follow the weight dtype, so
 the model can run in FP16:
@@ -449,6 +480,115 @@ and the step-10 \code{FFMA}/\code{FADD} sequence were identical. The only differ
 first-\NaN{} instruction described above.
 
 %=====================================================================================
+\section{The failure, block by block}
+\label{sec:blocks}
+
+Figures~\ref{fig:seq1}--\ref{fig:seq2b} replay the run on the block diagram, one panel per stage.
+Colours: \archlegend. Each panel combines what nixnan reported with what the oracle says about the
+same step. nixnan's histogram and exception reports name a kernel and an instruction, but the add and
+LN kernels are shared by all blocks; the placement in block~0 comes from the oracle (largest and
+first non-finite tensor: \code{blocks.0.proj}) and, in step~10, from the order of the kernel launches.
+
+\begin{figure}[p]
+\panel{}{(a) \textbf{Steps 1--6} (loss $2.5\to79.3$). Unstable but finite. The largest activations are
+the logits (at most 87). nixnan: no $\pm\infty$ or \NaN{}; every operand of the residual add is below
+$2^9$; LayerNorm's FP32 bins rise to $2^{17}$, from its variance sums, which are never stored.}
+\panel{n-proj/.style={st-warm}, n-add1/.style={st-warm, label={[tag, anchor=north east, yshift=-2.5mm, xshift=1.5mm]south west:{nixnan $\geq 2^{9}$}}}}{(b)
+\textbf{Step 7} (loss 169.9). The residual add's \code{FFMA Rd, Ra, c[0x0][0x164], Rc} hits the
+$2^9$ bin (3{,}040 reports). Oracle: the largest activation moves to \code{blocks.0.proj}'s output, 815.}
+\caption{The climb, steps 1--7.}
+\label{fig:seq1}
+\end{figure}
+
+\begin{figure}[p]
+\panel{n-proj/.style={st-warm}, n-add1/.style={st-warm, label={[tag, anchor=north east, yshift=-2.5mm, xshift=1.5mm]south west:{nixnan $\geq 2^{10}$}}}}{(c)
+\textbf{Step 8} (loss 198.8). The add's $2^{10}$ bin fires (1{,}292 reports). Oracle: 1{,}315. The
+weights keep growing (max $|w|$ 6.5 $\to$ 23.7).}
+\panel{n-proj/.style={st-hot}, n-add1/.style={st-hot, label={[tag, anchor=north east, yshift=-2.5mm, xshift=1.5mm]south west:{nixnan $\geq 2^{15}$}}}}{(d)
+\textbf{Step 9} (loss 649.4). The add's $2^{15}$ bin fires (49{,}144 reports): the top FP16 binade. Oracle:
+29{,}570. There is still no exception report; only the histogram shows the danger.}
+\caption{The climb, steps 8--9.}
+\label{fig:seq1b}
+\end{figure}
+
+\begin{figure}[p]
+\panel{n-proj/.style={st-inf, dashed, label={[tag]north:{FP32 acc.\ $> 65{,}504 \to \pm\infty$}}}, e-proj/.style={e-inf}}{(e)
+\textbf{Step 10, \textcircled{\footnotesize 1}.} The proj GEMM accumulates in FP32; 7{,}870 outputs exceed
+65{,}504 and become $\pm\infty$ when stored as FP16. nixnan is silent: GEMMs are blacklisted.}
+\panel{n-proj/.style={st-inf, dashed}, e-proj/.style={e-inf}, n-add1/.style={st-inf, label={[tag, anchor=north east, yshift=-2.5mm, xshift=1.5mm]south west:{\code{FFMA} op 1 $=\pm\infty$}}}, e-a1/.style={e-inf}, e-skip2/.style={e-inf}}{(f)
+\textbf{Step 10, \textcircled{\footnotesize 2}.} The residual add reads the $\infty$: \code{[infinity]} in
+operand 1 ($b$, the proj output) and operand 0 (the sum) of \code{FFMA R9, R9, c[0x0][0x164], R8},
+six reports in three \code{FFMA}s. The residual stream now carries $\pm\infty$ into \code{ln2} and
+towards the second add.}
+\caption{Step 10: the overflow and the first $\infty$ nixnan sees.}
+\label{fig:seq2}
+\end{figure}
+
+\begin{figure}[p]
+\panel{n-proj/.style={st-inf, dashed}, e-proj/.style={e-inf}, n-add1/.style={st-inf}, e-a1/.style={e-inf}, n-ln2/.style={st-nan, label={[tag, anchor=south east]north west:{$(-\infty)-(-\infty)$}}}, n-fc1/.style={st-off}, n-gelu/.style={st-off}, n-fc2/.style={st-off}, n-add2/.style={st-off}, n-blk13/.style={st-off}, n-lnf/.style={st-off}, n-head/.style={st-off}, n-ce/.style={st-off}, n-loss/.style={st-off}, e-mlp/.style={e-off}, e-out/.style={e-off}, e-skip2/.style={e-off}}{(g)
+\textbf{Step 10, \textcircled{\footnotesize 3}.} In \code{ln2}, the mean update
+(\code{FADD R18, R19, -R16}; \code{FFMA R16, R18, R15, R16}) makes $\mu=-\infty$; then
+\code{FADD R0, R19, -R16} computes $x-\mu=(-\infty)-(-\infty)=$ \NaN{} (operand 0). The watcher kills
+the run at 54.0~s; nothing after \code{ln2} runs.}
+\panel{n-proj/.style={st-inf}, e-proj/.style={e-inf}, n-add1/.style={st-inf}, e-a1/.style={e-inf}, n-ln2/.style={st-nan}, n-fc1/.style={st-nan}, n-gelu/.style={st-nan}, n-fc2/.style={st-nan}, n-add2/.style={st-nan}, n-blk13/.style={st-nan}, n-lnf/.style={st-nan}, n-head/.style={st-nan}, n-ce/.style={st-nan}, n-loss/.style={st-nan}, e-mlp/.style={e-nan}, e-out/.style={e-nan}, e-skip2/.style={e-inf}}{(h)
+\textbf{Without the watcher} (oracle run). The \NaN{} rows go through the MLP, the second add gives
+$\infty+\NaN$, attention spreads \NaN{} rows to later positions, and the loss and all gradients are
+\NaN{} at step~10.}
+\caption{Step 10: the first \NaN{}, and what happens without the watcher.}
+\label{fig:seq2b}
+\end{figure}
+
+%=====================================================================================
+\section{nixnan's outputs, on the blocks}
+\label{sec:map}
+
+Figures~\ref{fig:map-exc} and~\ref{fig:map-hist} place every kind of nixnan output of the
+experiment on the box that produced it. Numbers refer to the lists below each figure.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.85\textwidth}{!}{\gptarch[n-emb/.style={st-blind}, n-qkv/.style={st-blind}, n-fc1/.style={st-blind}, n-fc2/.style={st-blind}, n-head/.style={st-blind}, n-flash/.style={st-blind}, n-ce/.style={st-blind}, n-proj/.style={st-blind, st-inf, dashed}, n-add1/.style={st-inf}, n-ln2/.style={st-nan}]{%
+  \badge{qkv}{1}\badge{proj}{1}\badge{fc1}{1}\badge{fc2}{1}\badge{head}{1}\badge{emb}{1}
+  \badge{flash}{2}\badge{ce}{3}\badge{gelu}{4}\badge{add1}{5}\badge{ln2}{6}}}
+\caption{Exception reports (instrumenting everything for 1--3, pass~1 for 4--6).}
+\label{fig:map-exc}
+\end{figure}
+\begin{enumerate}[nosep]
+\item \textbf{GEMMs} (any): step~1, \code{[NaN,subnormal] operand 1 of HMMA.16816.F32 R20, R48.reuse, R46, R20}.
+  Padding lanes; blacklisted.
+\item \textbf{flash attention}: padding-lane \NaN{}s (\code{../PyTorch_Instrumentation/PyT.md}); blacklisted.
+\item \textbf{cross-entropy} (\code{softmax_warp_forward}): step~1,
+  \code{[-infinity] FFMA R8, R7, 1.4427, -R8} and \code{[NaN] FADD R7, -R12, R7}: $-\infty$ padding;
+  blacklisted.
+\item \textbf{GELU} (backward): steps 8--9, 18 \code{[subnormal]} in \code{FMUL ..., 0.3989}
+  ($1/\sqrt{2\pi}$). Harmless.
+\item \textbf{residual add}: step~10, \code{[infinity]} and \code{[-infinity]} in operands 1 and 0 of
+  \code{FFMA R6, R7, ...}, \code{FFMA R9, R9, ...}, \code{FFMA R10, R11, c[0x0][0x164], R10}: the
+  proj GEMM's overflow.
+\item \textbf{LayerNorm \code{ln2}}: step~10, \code{[-infinity]} in \code{FADD R18, R19, -R16} and
+  \code{FFMA R16, R18, R15, R16}, then \code{[NaN]} in operand 0 of \code{FADD R0, R19, -R16}
+  (in the rerun: operand 2 of \code{FFMA R17, R18, R0, R17}) $\Rightarrow$ watcher kill.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\resizebox{0.85\textwidth}{!}{\gptarch[n-emb/.style={st-blind}, n-qkv/.style={st-blind}, n-flash/.style={st-blind}, n-proj/.style={st-blind}, n-fc1/.style={st-blind}, n-gelu/.style={st-blind}, n-fc2/.style={st-blind}, n-head/.style={st-blind}, n-ce/.style={st-blind}, n-add1/.style={st-watch}, n-add2/.style={st-watch}, n-ln1/.style={st-watch}, n-ln2/.style={st-watch}, n-lnf/.style={st-watch}]{%
+  \badge{add1}{1}\badge{add2}{1}\badge{ln1}{2}\badge{ln2}{2}\badge{lnf}{2}\badge[south east]{add1}{3}\badge[south east]{ln2}{4}}}
+\caption{Histogram pass (pass~2). Blue: the two whitelisted kernels, every instance in all four
+blocks; gray: not instrumented.}
+\label{fig:map-hist}
+\end{figure}
+\begin{enumerate}[nosep]
+\item \textbf{residual add}, FP32 operands, always \code{FFMA Rd, Ra, c[0x0][0x164], Rc}: $2^9$ in
+  step~7 (3{,}040 reports), $2^{10}$ in step~8 (1{,}292), $2^{15}$ in step~9 (49{,}144). The early warning.
+\item \textbf{LayerNorm}, FP32: $2^{10}$ (step~4), $2^{13}$ (5), $2^{17}$ (6--9) in \code{FADD},
+  \code{FFMA}, \code{FMUL}, \code{MUFU.RSQ}: variance sums and their reciprocal square root. Harmless.
+\item step~10: $\pm\infty$ in the add.
+\item step~10: $-\infty$, then the first \NaN{}, in \code{ln2} $\Rightarrow$ watcher kill.
+\end{enumerate}
+The FP16 bins never fire: both kernels convert to FP32 before computing.
+
+%=====================================================================================
 \section{Obstacles, and what they say about nixnan}
 \label{sec:obstacles}
 
@@ -574,7 +714,7 @@ All under \code{flash-attn-expt/fp16-divergence/}:
 \code{logs/false-positive-}\newline\code{*-step1.log} & Section~\ref{sec:fp} \\
 \code{logs/histogram-crash.log} & Section~\ref{sec:crash} \\
 \code{logs/kernels-names.log} & pass 0 \\
-\code{latex/} & this report and the slides \\
+\code{latex/} & this report, the slides, and \code{gptarch.tex} (the shared TikZ block diagram) \\
 \bottomrule
 \end{tabular}
 \end{center}

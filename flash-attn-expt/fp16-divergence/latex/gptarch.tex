@@ -1,0 +1,77 @@
+% TinyGPT block diagram, shared by report.tex and slides.tex.
+%
+%   \gptarch[<tikz options>]{<extra tikz code drawn on top>}
+%
+% Every node has a style n-<name> (empty by default) and a few edges have a style e-<name>,
+% so one picture can recolour them, e.g.  \gptarch[n-proj/.style={st-inf}]{}.
+% Node names: tok emb ln1 qkv flash proj add1 ln2 fc1 gelu fc2 add2 blk13 lnf head ce loss
+% Edge names: e-attn (flash->proj) e-proj (proj->add1) e-a1 (add1->ln2) e-skip2 (add1->add2)
+%             e-mlp (ln2->...->add2) e-out (add2->...->loss)
+% The documents define \archfont and \archsmall before \input-ing this file.
+\tikzset{
+  blk/.style={draw=black!60, rounded corners=2pt, fill=white, minimum height=8.5mm, text width=15mm,
+              align=center, font=\archfont, inner sep=1pt},
+  addn/.style={draw=black!60, circle, fill=white, minimum size=7mm, inner sep=0pt, font=\archfont\bfseries},
+  res/.style={-{Stealth[length=2mm]}, very thick, black!70},
+  sub/.style={-{Stealth[length=1.6mm]}, thick, black!55},
+  % states
+  st-warm/.style={fill=yellow!40, draw=yellow!50!black},
+  st-hot/.style={fill=infor!30, draw=infor!80!black, thick},
+  st-inf/.style={fill=infor!75, draw=infor!50!black, very thick},
+  st-nan/.style={fill=nanred!80, draw=nanred!50!black, very thick, text=white},
+  st-off/.style={draw=black!20, text=black!30, fill=black!2},
+  st-blind/.style={dashed, draw=black!50, fill=black!10},
+  st-watch/.style={draw=validblue, very thick, fill=validblue!8},
+  e-inf/.style={draw=infor, line width=1.6pt},
+  e-nan/.style={draw=nanred, line width=1.6pt},
+  e-off/.style={draw=black!20},
+  tag/.style={font=\archsmall, inner sep=1pt, fill=white, fill opacity=0.9, text opacity=1, align=center},
+  badge/.style={circle, fill=nanred, text=white, font=\archsmall\bfseries, inner sep=0.5pt,
+                minimum size=3.6mm},
+  n-tok/.style={}, n-emb/.style={}, n-ln1/.style={}, n-qkv/.style={}, n-flash/.style={}, n-proj/.style={},
+  n-add1/.style={}, n-ln2/.style={}, n-fc1/.style={}, n-gelu/.style={}, n-fc2/.style={}, n-add2/.style={},
+  n-blk13/.style={}, n-lnf/.style={}, n-head/.style={}, n-ce/.style={}, n-loss/.style={},
+  e-attn/.style={}, e-proj/.style={}, e-a1/.style={}, e-skip2/.style={}, e-mlp/.style={}, e-out/.style={},
+}
+\newcommand{\badge}[3][north east]{\node[badge] at (#2.#1) {#3};}
+\newcommand{\gptarch}[2][]{%
+\begin{tikzpicture}[#1]
+  % block 0 frame
+  \draw[rounded corners=4pt, dashed, black!35, fill=validblue!3] (1.08,0.6) rectangle (10.12,-2.98);
+  \node[font=\archsmall, text=black!55, anchor=south west, inner sep=1pt] at (1.1,-2.96) {block 0};
+  % row A: embedding and attention sublayer
+  \node[font=\archsmall, n-tok] (tok) at (0,1.3) {tokens};
+  \node[blk, n-emb]   (emb)   at (0,0)     {embed\\[-1pt]{\archsmall one-hot GEMM}};
+  \node[blk, n-ln1]   (ln1)   at (1.95,0)  {LN$_1$\\[-1pt]{\archsmall LayerNorm}};
+  \node[blk, n-qkv]   (qkv)   at (3.9,0)   {qkv, RoPE\\[-1pt]{\archsmall GEMM}};
+  \node[blk, n-flash] (flash) at (5.85,0)  {attention\\[-1pt]{\archsmall flash}};
+  \node[blk, n-proj]  (proj)  at (7.8,0)   {proj\\[-1pt]{\archsmall GEMM}};
+  \node[addn, n-add1] (add1)  at (9.6,0)   {+};
+  % row B: MLP sublayer, right to left
+  \node[blk, n-ln2]   (ln2)   at (9.6,-2.3)  {LN$_2$\\[-1pt]{\archsmall LayerNorm}};
+  \node[blk, n-fc1]   (fc1)   at (7.8,-2.3)  {fc1\\[-1pt]{\archsmall GEMM}};
+  \node[blk, n-gelu]  (gelu)  at (5.85,-2.3) {GELU\\[-1pt]{\archsmall elementwise}};
+  \node[blk, n-fc2]   (fc2)   at (3.9,-2.3)  {fc2\\[-1pt]{\archsmall GEMM}};
+  \node[addn, n-add2] (add2)  at (1.95,-2.3) {+};
+  % row C: the rest of the network
+  \node[blk, n-blk13, text width=17mm] (blk13) at (0,-4.5)    {blocks 1--3\\[-1pt]{\archsmall same as block 0}};
+  \node[blk, n-lnf]   (lnf)   at (1.95,-4.5) {LN$_f$\\[-1pt]{\archsmall LayerNorm}};
+  \node[blk, n-head]  (head)  at (3.9,-4.5)  {head\\[-1pt]{\archsmall GEMM}};
+  \node[blk, n-ce]    (ce)    at (5.85,-4.5) {cross-entropy\\[-1pt]{\archsmall softmax, NLL}};
+  \node[blk, n-loss, text width=9mm] (loss) at (7.55,-4.5) {loss};
+  % edges
+  \draw[sub] (tok) -- (emb);
+  \draw[res] (emb.east) -- (0.9,0) |- (9.6,0.8) -- (add1.north);
+  \draw[sub] (0.9,0) -- (ln1.west);
+  \draw[sub] (ln1) -- (qkv);  \draw[sub] (qkv) -- (flash);
+  \draw[sub, e-attn] (flash) -- (proj);
+  \draw[sub, e-proj] (proj) -- (add1);
+  \draw[sub, e-a1] (add1.south) -- (ln2.north);
+  \draw[res, e-skip2] (add1.east) -- (10.4,0) |- (1.95,-3.2) -- (add2.south);
+  \draw[sub, e-mlp] (ln2) -- (fc1);  \draw[sub, e-mlp] (fc1) -- (gelu);
+  \draw[sub, e-mlp] (gelu) -- (fc2); \draw[sub, e-mlp] (fc2) -- (add2);
+  \draw[res, e-out] (add2.west) -| (blk13.north);
+  \draw[sub, e-out] (blk13) -- (lnf); \draw[sub, e-out] (lnf) -- (head);
+  \draw[sub, e-out] (head) -- (ce);   \draw[sub, e-out] (ce) -- (loss);
+  #2
+\end{tikzpicture}}

@@ -29,6 +29,22 @@
 \institute[]{\texttt{flash-attn-expt/fp16-divergence}, branch \texttt{Flash-Attn}}
 \date{October 2026}
 
+
+\newcommand{\archfont}{\scriptsize}
+\newcommand{\archsmall}{\tiny}
+\input{gptarch}
+\newcommand{\sw}[1]{\tikz[baseline=-0.6ex]\node[draw, rounded corners=1pt, minimum width=3mm, minimum height=2.4mm, inner sep=0pt, #1]{};}
+\newcommand{\steplegend}{\par\vspace{2mm}\tiny
+\sw{st-warm}\,$\geq 2^9$\quad \sw{st-hot}\,$\geq 2^{15}$\quad \sw{st-inf}\,$\pm\infty$\quad \sw{st-nan}\,NaN\\[1mm]
+\sw{st-blind}\,not instrumented\quad \sw{st-off}\,never ran}
+% \stepframe{title}{diagram options}{extra diagram code}{right-hand text}
+\newcommand{\stepframe}[4]{%
+\begin{frame}{#1}
+\begin{columns}[c]
+\begin{column}{0.70\textwidth}\centering\resizebox{\linewidth}{!}{\gptarch[#2]{#3}}\end{column}
+\begin{column}{0.29\textwidth}\scriptsize #4\steplegend\end{column}
+\end{columns}
+\end{frame}}
 \begin{document}
 
 \begin{frame}
@@ -84,6 +100,27 @@ for step in range(1, 501):
     opt.step()
 \end{lstlisting}
 \small SGD: update $=\eta\cdot$gradient, so weights grow freely. Deterministic: identical losses on every run.
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{TinyGPT, block by block}
+\begin{columns}[c]
+\begin{column}{0.70\textwidth}\centering\resizebox{\linewidth}{!}{\gptarch{}}\end{column}
+\begin{column}{0.29\textwidth}\scriptsize
+\begin{itemize}
+\item pre-LN block: $x \mathrel{+}= \mathrm{proj}(\mathrm{Attn}(\mathrm{LN}_1 x))$, then $x \mathrel{+}= \mathrm{fc2}(\mathrm{GELU}(\mathrm{fc1}(\mathrm{LN}_2 x)))$
+\item thick line: the \textbf{residual stream}, FP16
+\item every box is one or a few CUDA kernels:
+  \begin{itemize}\scriptsize
+  \item GEMM: cuBLAS, CUTLASS
+  \item LN: \code{layer_norm_kernel}
+  \item $+$: \code{CUDAFunctor_add}
+  \item attention: \code{flash_fwd_kernel}
+  \end{itemize}
+\item the same add and LN kernels serve all 4 blocks
+\end{itemize}
 \end{column}
 \end{columns}
 \end{frame}
@@ -183,6 +220,59 @@ step & loss & residual add (\code{CUDAFunctor_add<Half>}) & LayerNorm & exceptio
 \end{frame}
 
 %-----------------------------------------------------------------------------
+\stepframe{Steps 1--6: unstable, but finite}{}{}{loss $2.5 \to 3.2 \to 24.8 \to 6.7 \to 79.3$\\[1mm]
+oracle: max $|$act$|$ $\leq 87$ (the logits, \code{head})\\[1mm]
+\textbf{nixnan}
+\begin{itemize}\scriptsize
+\item no $\pm\infty$, no NaN
+\item residual add: every operand $< 2^9$
+\item LayerNorm FP32 bins climb to $2^{17}$: variance sums, FP32 only, harmless
+\end{itemize}}
+
+%-----------------------------------------------------------------------------
+\stepframe{Step 7 (loss 169.9): the residual stream crosses 512}{n-proj/.style={st-warm}, n-add1/.style={st-warm, label={[tag, anchor=north east, yshift=-2.5mm, xshift=1.5mm]south west:{nixnan $\geq 2^{9}$}}}}{}{\textbf{nixnan} (histogram): the residual add's \code{FFMA ...c[0x0][0x164]...} hits the $2^9$ bin, 3{,}040 reports\\[1mm]
+\textbf{oracle}: largest activation is \code{blocks.0.proj}'s output, 815\\[1mm]
+\textcolor{black!60}{nixnan's bins don't say which of the 8 add calls; the oracle places it at block 0's first add}}
+
+%-----------------------------------------------------------------------------
+\stepframe{Step 8 (loss 198.8): $\geq 1{,}024$}{n-proj/.style={st-warm}, n-add1/.style={st-warm, label={[tag, anchor=north east, yshift=-2.5mm, xshift=1.5mm]south west:{nixnan $\geq 2^{10}$}}}}{}{\textbf{nixnan}: the add's $2^{10}$ bin fires (1{,}292 reports)\\[1mm]
+\textbf{oracle}: \code{blocks.0.proj} output 1{,}315\\[1mm]
+weights keep growing: max $|w|$ 6.5 $\to$ 23.7}
+
+%-----------------------------------------------------------------------------
+\stepframe{Step 9 (loss 649.4): $\geq 32{,}768$, one binade from overflow}{n-proj/.style={st-hot}, n-add1/.style={st-hot, label={[tag, anchor=north east, yshift=-2.5mm, xshift=1.5mm]south west:{nixnan $\geq 2^{15}$}}}}{}{\textbf{nixnan}: the add's $2^{15}$ bin fires, 49{,}144 reports\\[1mm]
+\textbf{oracle}: \code{blocks.0.proj} output 29{,}570\\[1mm]
+FP16 max is 65{,}504: the next doubling overflows.\\[1mm]
+\textbf{Still no exception report}: only the histogram sees this coming}
+
+%-----------------------------------------------------------------------------
+\stepframe{Step 10, \textcircled{\scriptsize 1}: the proj GEMM overflows}{n-proj/.style={st-inf, dashed, label={[tag]north:{FP32 acc.\ $> 65{,}504 \to \pm\infty$}}}, e-proj/.style={e-inf}}{}{\code{blocks.0.proj}: FP16 GEMM, FP32 accumulate\\[1mm]
+7{,}870 outputs exceed 65{,}504 and round to $\pm\infty$ on the FP16 store (the largest finite one: 65{,}440)\\[1mm]
+\textbf{nixnan: silent here}. GEMMs are blacklisted (padding-lane false positives), so it sees the $\infty$ one kernel later}
+
+%-----------------------------------------------------------------------------
+\stepframe{Step 10, \textcircled{\scriptsize 2}: the residual add reads $\pm\infty$}{n-proj/.style={st-inf, dashed}, e-proj/.style={e-inf}, n-add1/.style={st-inf, label={[tag, anchor=north east, yshift=-2.5mm, xshift=1.5mm]south west:{\code{FFMA} op 1 $=\pm\infty$}}}, e-a1/.style={e-inf}, e-skip2/.style={e-inf}}{}{\textbf{nixnan}:\\
+\code{[infinity] operand 1 of}\\ \code{FFMA R9, R9, c[0x0][0x164], R8}\\
+\code{[infinity] operand 0 ...}\\[1mm]
+$d = \alpha\, b + a$: op 1 $= b$ = proj output, op 0 = the sum. Six reports, three \code{FFMA}s, $+\infty$ and $-\infty$\\[1mm]
+the add \emph{reads} the $\infty$; it doesn't create it}
+
+%-----------------------------------------------------------------------------
+\stepframe{Step 10, \textcircled{\scriptsize 3}: LayerNorm makes the first NaN, and the run is killed}{n-proj/.style={st-inf, dashed}, e-proj/.style={e-inf}, n-add1/.style={st-inf}, e-a1/.style={e-inf}, n-ln2/.style={st-nan, label={[tag, anchor=south east]north west:{$(-\infty)-(-\infty)$}}}, n-fc1/.style={st-off}, n-gelu/.style={st-off}, n-fc2/.style={st-off}, n-add2/.style={st-off}, n-blk13/.style={st-off}, n-lnf/.style={st-off}, n-head/.style={st-off}, n-ce/.style={st-off}, n-loss/.style={st-off}, e-mlp/.style={e-off}, e-out/.style={e-off}, e-skip2/.style={e-off}}{}{\textbf{nixnan}, in \code{ln2}:\\
+\code{[-infinity] FADD R18, R19, -R16}\\
+\code{[-infinity] FFMA R16, R18, R15, R16}\\
+\quad$\to$ row mean $\mu = -\infty$\\
+\code{[NaN] operand 0 of}\\ \code{FADD R0, R19, -R16}\\
+\quad$x-\mu = (-\infty)-(-\infty)$\\[1mm]
+\textbf{\code{WATCHER}: SIGKILL}, 54.0 s into the run. Nothing after \code{ln2} runs}
+
+%-----------------------------------------------------------------------------
+\stepframe{Without the watcher: NaN everywhere}{n-proj/.style={st-inf}, e-proj/.style={e-inf}, n-add1/.style={st-inf}, e-a1/.style={e-inf}, n-ln2/.style={st-nan}, n-fc1/.style={st-nan}, n-gelu/.style={st-nan}, n-fc2/.style={st-nan}, n-add2/.style={st-nan}, n-blk13/.style={st-nan}, n-lnf/.style={st-nan}, n-head/.style={st-nan}, n-ce/.style={st-nan}, n-loss/.style={st-nan}, e-mlp/.style={e-nan}, e-out/.style={e-nan}, e-skip2/.style={e-inf}}{}{(oracle run, no nixnan)\\[1mm]
+the NaN rows of \code{ln2} go through the MLP; $\infty + \mathrm{NaN}$ in the second add; attention mixes the NaN rows into later positions\\[1mm]
+\textbf{loss $=$ NaN} at step 10, gradients NaN\\[1mm]
+\code{train_fp16.py} stops at the non-finite loss}
+
+%-----------------------------------------------------------------------------
 \begin{frame}[fragile]{Step 10, report by report}
 \begin{lstlisting}[language={}]
 [54.0s] error [infinity]  operand 1 of FFMA R9, R9, c[0x0][0x164], R8   ; add kernel
@@ -198,30 +288,6 @@ step & loss & residual add (\code{CUDAFunctor_add<Half>}) & LayerNorm & exceptio
 \item Operand 0 $=$ destination, 1, 2, \ldots{} $=$ sources
 \item Add: $d=\alpha\cdot b + a$ with $\alpha=$ \code{c[0x0][0x164]}; $b$ = \code{proj} output $=\infty$. \textbf{The add reads the $\infty$; it doesn't create it}
 \item LayerNorm: running mean $\mu\to-\infty$, then $x-\mu = (-\infty)-(-\infty) = \textbf{\NaN}$
-\end{itemize}
-\end{frame}
-
-%-----------------------------------------------------------------------------
-\begin{frame}{How an overflow becomes a NaN}
-\centering
-\begin{tikzpicture}[node distance=5mm, every node/.style={font=\scriptsize, align=center},
-  box/.style={draw, rounded corners, minimum height=13mm, text width=25mm, fill=black!3},
-  arr/.style={-{Stealth[length=2.5mm]}, thick}]
-\node[box, draw=black!50] (g) {\code{blocks.0.proj}\\ FP16 GEMM, FP32 acc.\\ (blacklisted)};
-\node[box, right=of g, draw=infor, fill=infor!8] (r) {round to FP16\\ $|v|>65{,}504\to\pm\infty$\\ 7{,}870 elements};
-\node[box, right=of r, draw=infor, fill=infor!8] (a) {residual add\\ \code{FFMA} op 1 $=\pm\infty$};
-\node[box, right=of a, draw=infor, fill=infor!8] (m) {LayerNorm \code{ln2}\\ row mean $\mu=-\infty$};
-\node[box, below=10mm of m, draw=nanred, fill=nanred!8] (n) {$x-\mu$\\ $(-\infty)-(-\infty)$\\ $=$ \textbf{\NaN}};
-\node[box, left=of n, draw=nanred, fill=nanred!8] (k) {\code{watch_nan.py}\\ SIGKILL};
-\node[box, left=of k, draw=black!50, text width=36mm] (o) {otherwise: \NaN{} in every layer,\\ loss $=$ \NaN{} at step 10};
-\draw[arr] (g) -- (r); \draw[arr] (r) -- (a); \draw[arr] (a) -- (m); \draw[arr] (m) -- (n);
-\draw[arr] (n) -- (k); \draw[arr, dashed] (k) -- (o);
-\end{tikzpicture}
-\vspace{4mm}
-\begin{itemize}\small
-\item nixnan sees the GEMM's overflow \textbf{one kernel later}, as an $\infty$ source operand
-\item The oracle names the producer: \code{blocks.0.proj} (first non-finite tensor, forward order)
-\item Exceptions pass (32 kernels, 213 s) agrees; first \NaN{} printed by the \code{FFMA} consuming $x-\mu$ (warp order)
 \end{itemize}
 \end{frame}
 
@@ -316,6 +382,45 @@ return current_entry++;   // no bound check
 \end{itemize}
 \vspace{2mm}
 \scriptsize Report: \code{fp16-divergence/latex/report.pdf}\quad Code and logs: \code{flash-attn-expt/fp16-divergence/}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Closing (1/2): nixnan's exception reports, on the blocks}
+\begin{columns}[c]
+\begin{column}{0.60\textwidth}\centering\resizebox{\linewidth}{!}{\gptarch[n-emb/.style={st-blind}, n-qkv/.style={st-blind}, n-proj/.style={st-blind}, n-fc1/.style={st-blind}, n-fc2/.style={st-blind}, n-head/.style={st-blind}, n-flash/.style={st-blind}, n-ce/.style={st-blind}, n-proj/.style={st-blind, st-inf, dashed}, n-add1/.style={st-inf}, n-ln2/.style={st-nan}]{%
+  \badge{qkv}{1}\badge{proj}{1}\badge{fc1}{1}\badge{fc2}{1}\badge{head}{1}\badge{emb}{1}
+  \badge{flash}{2}\badge{ce}{3}\badge{gelu}{4}\badge{add1}{5}\badge{ln2}{6}}}
+\end{column}
+\begin{column}{0.39\textwidth}\scriptsize
+\begin{enumerate}\setlength{\itemsep}{1pt}
+\item GEMMs, step 1: \code{[NaN]} in \code{HMMA} op 1, padding lanes $\to$ blacklisted
+\item flash: padding-lane NaNs $\to$ blacklisted
+\item warp softmax, step 1: $-\infty-(-\infty)$ on padding $\to$ blacklisted
+\item GELU backward, steps 8--9: 18 subnormals, harmless
+\item step 10: \code{[infinity]} op 1, op 0 of\\ \code{FFMA R9,R9,c[0x0][0x164],R8}
+\item step 10: \code{[-infinity]} in the mean update, then\\ \code{[NaN]} op 0 of \code{FADD R0,R19,-R16}\\ $\to$ \textbf{\code{WATCHER} kill}
+\end{enumerate}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Closing (2/2): nixnan's histogram, on the blocks}
+\begin{columns}[c]
+\begin{column}{0.60\textwidth}\centering\resizebox{\linewidth}{!}{\gptarch[n-emb/.style={st-blind}, n-qkv/.style={st-blind}, n-flash/.style={st-blind}, n-proj/.style={st-blind}, n-fc1/.style={st-blind}, n-gelu/.style={st-blind}, n-fc2/.style={st-blind}, n-head/.style={st-blind}, n-ce/.style={st-blind}, n-add1/.style={st-watch}, n-add2/.style={st-watch}, n-ln1/.style={st-watch}, n-ln2/.style={st-watch}, n-lnf/.style={st-watch}]{%
+  \badge{add1}{1}\badge{add2}{1}\badge{ln1}{2}\badge{ln2}{2}\badge{lnf}{2}\badge[south east]{add1}{3}\badge[south east]{ln2}{4}}}
+\end{column}
+\begin{column}{0.39\textwidth}\scriptsize
+Blue: the 2 whitelisted kernels (all instances). Gray: not instrumented.
+\begin{enumerate}\setlength{\itemsep}{1pt}
+\item add, FP32, \code{FFMA ...c[0x0][0x164]...}:\\ $2^{9}$ (step 7), $2^{10}$ (8), $2^{15}$ (9)\\ \textbf{the early warning}
+\item LayerNorm, FP32: $2^{10}$ (4), $2^{13}$ (5), $2^{17}$ (6--9): variance sums, harmless
+\item step 10: $\pm\infty$ in the add
+\item step 10: $-\infty$, then NaN, in \code{ln2} $\to$ kill
+\end{enumerate}
+FP16 bins never fire: both kernels compute in FP32.
+\end{column}
+\end{columns}
 \end{frame}
 
 \end{document}
