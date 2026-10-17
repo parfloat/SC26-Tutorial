@@ -32,6 +32,22 @@
 }
 \newcommand{\legendbox}[1]{\tikz[baseline=-0.6ex]\node[draw=black!40, fill=#1, minimum width=2.6mm, minimum height=2.6mm, inner sep=0pt]{};}
 
+% --- picture-tutorial helpers -------------------------------------------------
+% \vbar{x}{height in cm}{fill}{label above}{label below}
+\newcommand{\vbar}[5]{%
+  \fill[#3] (#1,0) rectangle ++(0.7,#2); \draw[black!55] (#1,0) rectangle ++(0.7,#2);
+  \node[font=\scriptsize, above] at (#1+0.35,#2) {#4};
+  \node[font=\scriptsize, below] at (#1+0.35,0) {#5};}
+\tikzset{
+  pad/.style={draw=black!50, fill=yellow!18, rounded corners=2pt, align=left, font=\scriptsize, inner sep=3pt},
+  card/.style={draw=black!50, fill=white, rounded corners=2pt, align=center, font=\scriptsize, inner sep=3pt},
+  keyb/.style={draw, fill=okgreen!20, rounded corners=2pt, minimum width=15mm, minimum height=6mm, font=\scriptsize, align=center},
+  valb/.style={draw, fill=infor!20, rounded corners=2pt, minimum width=13mm, minimum height=6mm, font=\scriptsize, align=center},
+  qb/.style={draw, fill=validblue!20, rounded corners=2pt, minimum width=20mm, minimum height=10mm, font=\scriptsize, align=center},
+  note/.style={font=\scriptsize, text=black!65, align=center},
+}
+\newcommand{\baseline}[2]{\draw[black!60] (#1,0) -- (#2,0);}
+
 \title[Flash attention, tile by tile]{Flash Attention, Tile by Tile}
 \subtitle{From a plain attention block to PyTorch's flash kernels: padding lanes, stale shared memory,\\ and when \texttt{lse\_sum != lse\_sum} fires}
 \author[SC26 nixnan tutorial]{SC26 nixnan tutorial}
@@ -47,8 +63,8 @@
 %-----------------------------------------------------------------------------
 \begin{frame}{Roadmap}
 \begin{enumerate}
-\item \textbf{A plain attention block}: $O = \mathrm{softmax}(\sigma QK^\top + \text{mask})\,V$, and why it is memory-bound
-\item \textbf{Massaging it into flash attention}: online softmax, tiles, one fused kernel; the split-KV variant and its combine kernel
+\item \textbf{Attention from scratch, in pictures}: one query, four keys, four steps; the row total and its logarithm, the \textbf{lse}
+\item \textbf{Massaging it into flash attention}: the online softmax drawn block by block, tiles, one fused kernel; split-KV and how the combine kernel merges halves of a row
 \item \textbf{Padding lanes}: a decode step that fills one row of a $128\times128$ tile; the unloaded rows hold the \emph{previous launch's} \NaN-laden output
 \item \textbf{How flash computes on them, and why discarding is safe}
 \item \textbf{The combine guard \code{lse_sum != lse_sum}}: scenarios where it does \emph{not} fire, and a proof that it cannot for any positive scale
@@ -60,8 +76,182 @@
 
 %=============================================================================
 \section{Plain attention}
+%-----------------------------------------------------------------------------
+\begin{frame}{Attention, the idea: one query looks at all the keys}
+\centering
+\begin{tikzpicture}
+\node[qb] (q) at (0,0) {\small query $q$\\``what am I\\looking for?''};
+\foreach \j/\v [count=\i] in {1/10,2/20,3/30,4/40} {
+  \node[keyb] (k\j) at (5.2,2.4-\i*1.0+0.1) {key $k_\j$};
+  \node[valb, right=1mm of k\j] (v\j) {value $v_\j=\v$};
+  \draw[arr] (q.east) -- (k\j.west);
+  \draw[arr, black!35] (v\j.east) -- (11.2,0);
+}
+\node[draw, fill=validblue!35, rounded corners=2pt, align=center, font=\scriptsize, minimum height=10mm, anchor=west] (o) at (11.2,0) {\small output\\a blend of\\the values};
+\node[note] at (2.5,1.55) {how well does\\each key match?};
+\node[note] at (9.7,1.95) {blend by match};
+\end{tikzpicture}
+\vspace{3mm}
+\begin{itemize}\small
+\item Every token in the sequence makes three vectors: a \textbf{query} (what it looks for), a \textbf{key} (what it offers), a \textbf{value} (what it hands over)
+\item The output for a query is an average of the values, \textbf{weighted by how well each key matches the query}
+\item Our running example: \textbf{one query, four keys}. In TinyGPT the values are vectors of 32 numbers; here each value is a single number (10, 20, 30, 40) so the arithmetic fits on a slide
+\end{itemize}
+\end{frame}
 
-\begin{frame}{Attention in one line}
+%-----------------------------------------------------------------------------
+\begin{frame}{Step 1: give every key a score}
+\begin{columns}[c]
+\begin{column}{0.5\textwidth}
+\centering
+\begin{tikzpicture}
+\baseline{-0.2}{4.6}
+\vbar{0.0}{0.8}{validblue!45}{1}{$k_1$}
+\vbar{1.1}{2.4}{validblue!45}{3}{$k_2$}
+\vbar{2.2}{1.6}{validblue!45}{2}{$k_3$}
+\vbar{3.3}{0.0}{validblue!45}{0}{$k_4$}
+\node[note] at (2.2,3.4) {score $s_j = \sigma\,(q\cdot k_j)$};
+\end{tikzpicture}
+\end{column}
+\begin{column}{0.48\textwidth}
+\small
+\begin{itemize}
+\item The score is a dot product of the query with the key, times a fixed scale $\sigma=1/\sqrt d$ (0.177 in TinyGPT)
+\item \textbf{Higher score = better match.} Here key 2 matches best
+\item Scores are plain numbers: they can be negative and of any size
+\item From now on, ``score'' always includes the scale $\sigma$
+\end{itemize}
+\vspace{2mm}
+Our row: $s = [\,1,\ 3,\ 2,\ 0\,]$
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Step 2: turn every score into a positive amount, $e^{s}$}
+\centering
+\begin{tikzpicture}
+\begin{scope}
+\baseline{-0.2}{4.6}
+\vbar{0.0}{0.5}{validblue!45}{1}{$k_1$}
+\vbar{1.1}{1.5}{validblue!45}{3}{$k_2$}
+\vbar{2.2}{1.0}{validblue!45}{2}{$k_3$}
+\vbar{3.3}{0.0}{validblue!45}{0}{$k_4$}
+\node[note] at (2.2,3.3) {scores $s$};
+\end{scope}
+\draw[-{Stealth[length=3mm]}, line width=2pt, black!50] (5.0,1.2) -- node[above, font=\small]{$e^{s}$} (6.4,1.2);
+\begin{scope}[xshift=7cm]
+\baseline{-0.2}{4.6}
+\vbar{0.0}{0.33}{infor!50}{2.72}{$k_1$}
+\vbar{1.1}{2.41}{infor!50}{20.09}{$k_2$}
+\vbar{2.2}{0.89}{infor!50}{7.39}{$k_3$}
+\vbar{3.3}{0.12}{infor!50}{1.00}{$k_4$}
+\node[note] at (2.2,3.3) {amounts $e^{s}$};
+\end{scope}
+\end{tikzpicture}
+\vspace{2mm}
+\begin{itemize}\small
+\item $e^{s}$ is always positive, even for negative scores, so it can serve as a weight
+\item It \textbf{exaggerates differences}: a score 1 higher gives $e\approx2.7$ times the amount. Key 2 now dominates
+\item A score of $-\infty$ gives $e^{-\infty}=0$: that key gets no weight at all. This is how \textbf{masking} works
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Step 3: divide by the row total, so the weights add up to 1}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+% top bar: amounts laid end to end (scale 0.38 cm per unit)
+\def\a{0}\def\b{1.033}\def\c{8.666}\def\d{11.474}\def\e{11.854}
+\fill[infor!25] (\a,1.6) rectangle (\b,2.3); \fill[infor!70] (\b,1.6) rectangle (\c,2.3);
+\fill[infor!45] (\c,1.6) rectangle (\d,2.3); \fill[infor!15] (\d,1.6) rectangle (\e,2.3);
+\foreach \x in {\a,\b,\c,\d,\e} \draw[black!55] (\x,1.6) -- (\x,2.3);
+\draw[black!55] (\a,1.6) rectangle (\e,2.3);
+\node at (0.52,1.95) {2.72}; \node at (4.85,1.95) {20.09 \;($k_2$)}; \node at (10.07,1.95) {7.39}; \node[above] at (11.66,2.3) {1.00};
+\draw[decorate, decoration={brace, amplitude=4pt}] (\a,2.7) -- (\e,2.7) node[midway, above=4pt] {\small the \textbf{row total} $T = 2.72+20.09+7.39+1.00 = 31.19$};
+\draw[-{Stealth[length=2.5mm]}, line width=1.5pt, black!50] (5.9,1.45) -- node[right, font=\small]{$\div\,T$} (5.9,0.85);
+% bottom bar: weights
+\fill[validblue!25] (\a,0) rectangle (\b,0.7); \fill[validblue!70] (\b,0) rectangle (\c,0.7);
+\fill[validblue!45] (\c,0) rectangle (\d,0.7); \fill[validblue!15] (\d,0) rectangle (\e,0.7);
+\foreach \x in {\a,\b,\c,\d,\e} \draw[black!55] (\x,0) -- (\x,0.7);
+\draw[black!55] (\a,0) rectangle (\e,0.7);
+\node at (0.52,0.35) {0.087}; \node[text=white] at (4.85,0.35) {\textbf{0.644}}; \node at (10.07,0.35) {0.237}; \node[below] at (11.66,0) {0.032};
+\draw[decorate, decoration={brace, amplitude=4pt, mirror}] (\a,-0.4) -- (\e,-0.4) node[midway, below=4pt] {\small the \textbf{weights} $p_j = e^{s_j}/T$: they add up to exactly 1};
+\end{tikzpicture}
+\vspace{3mm}
+\begin{itemize}\small
+\item Same picture, same proportions: dividing by $T$ only changes the units. Key 2 gets 64\% of the attention
+\item This is the \textbf{softmax}. The row total $T$ is the only number that needs the \emph{whole} row: you cannot finish any weight until you have seen every key
+\item Hold on to $T$: it is the ``row summary'' that the rest of this tutorial is about
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Step 4: blend the values with the weights}
+\centering
+\begin{tikzpicture}[font=\scriptsize, x=0.25cm]
+\draw[black!60, -{Stealth}] (0,0) -- (52,0);
+\foreach \t in {0,10,20,30,40,50} { \draw[black!60] (\t,0.1) -- (\t,-0.1) node[below] {\t}; }
+\foreach \x/\r/\p/\k in {10/0.18/0.087/1, 20/0.48/0.644/2, 30/0.29/0.237/3, 40/0.11/0.032/4} {
+  \fill[infor!60] (\x,0.9) circle[x radius=\r cm, y radius=\r cm]; \draw[black!55] (\x,0.9) circle[x radius=\r cm, y radius=\r cm];
+  \node[above] at (\x,1.45) {weight \p};
+  \node at (\x,-0.75) {$v_\k$};
+}
+\draw[nanred, line width=1.5pt] (22.14,-0.35) -- (22.14,2.3);
+\node[nanred, font=\small\bfseries, above] at (22.14,2.3) {output $= 22.14$};
+\end{tikzpicture}
+\vspace{3mm}
+\[
+\text{output} = 0.087\cdot10 + 0.644\cdot20 + 0.237\cdot30 + 0.032\cdot40 = 22.14
+\]
+\begin{itemize}\small
+\item Circle size = weight. The output sits near the heavily weighted value 20, pulled a little toward 30
+\item With vector values the same blend happens for each of the 32 coordinates separately
+\item \textbf{Steps 1--4 are all of attention.} Everything flash does is a faster way to get exactly this 22.14
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Many queries: every query is its own row, with its own total}
+\begin{columns}[c]
+\begin{column}{0.55\textwidth}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+\foreach \j in {1,...,4} { \node at (\j*1.1-0.55,4.75) {$k_\j$}; }
+\foreach \i in {1,...,4} {
+  \node at (-0.45,4.4-\i*1.1+0.55-0.1) {$q_\i$};
+  \foreach \j in {1,...,4} {
+    \pgfmathsetmacro{\yy}{4.4-\i*1.1}
+    \ifnum\j>\i \fill[maskdark!70] (\j*1.1-1.1,\yy) rectangle ++(1.1,1.1);
+    \else \fill[infor!20] (\j*1.1-1.1,\yy) rectangle ++(1.1,1.1); \fi
+    \draw[black!40] (\j*1.1-1.1,\yy) rectangle ++(1.1,1.1);
+  }
+}
+% our row is q4
+\foreach \v [count=\j] in {2.72,20.09,7.39,1.00} { \node at (\j*1.1-0.55,0.55-0.1) {\v}; }
+\draw[nanred, very thick] (0,0) rectangle (4.4,1.1);
+\foreach \i/\t in {1/$T_1$,2/$T_2$,3/$T_3$,4/{$T_4=31.19$}} { \node[anchor=west] at (4.6,4.4-\i*1.1+0.45) {\t}; }
+\node[anchor=west, font=\scriptsize\bfseries] at (4.6,4.75) {row total};
+\node[text=white, font=\tiny, align=center] at (2.75,3.85) {masked\\$e^{-\infty}=0$};
+\end{tikzpicture}
+\end{column}
+\begin{column}{0.43\textwidth}
+\small
+\begin{itemize}
+\item With $N$ queries the scores form an $N\times N_k$ grid: \textbf{one row per query}
+\item Each row does steps 1--4 \textbf{on its own}, with \textbf{its own total} $T_i$. Rows never share anything
+\item \textbf{Causal mask}: a token may not look at later tokens, so those cells are $-\infty$ and get weight 0
+\item Our example is the last row, $q_4$
+\end{itemize}
+\begin{block}{Why summarize a row?}\small
+The softmax divides by a total, and every row has its own. Flash keeps exactly this $T_i$: one number per row.
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{The same four steps, in symbols}
 \begin{columns}[T]
 \begin{column}{0.52\textwidth}
 For one head, with $N$ queries, $N_k$ keys and head dimension $d$:
@@ -124,29 +314,143 @@ Q, K, V in FP16 (\code{q.half()} etc.)\\
 \end{itemize}
 \end{frame}
 
-%-----------------------------------------------------------------------------
-\begin{frame}{Softmax in practice: max subtraction and the log-sum-exp}
-\begin{columns}[T]
-\begin{column}{0.53\textwidth}
+%=============================================================================
+\section{The row total, in pictures}
+
+\begin{frame}{Problem 1: $e^{s}$ overflows, so subtract the biggest score first}
+\centering
+\begin{tikzpicture}
+\begin{scope}
+\baseline{-0.2}{4.6}
+\foreach \x/\s in {0.0/91,1.1/93,2.2/92,3.3/90} {
+  \fill[nanred!25] (\x,0) -- (\x,2.6) -- (\x+0.175,2.75) -- (\x+0.35,2.6) -- (\x+0.525,2.75) -- (\x+0.7,2.6) -- (\x+0.7,0) -- cycle;
+  \draw[black!55] (\x,2.6) -- (\x,0) -- (\x+0.7,0) -- (\x+0.7,2.6);
+  \node[font=\scriptsize] at (\x+0.35,3.0) {$\infty$};
+  \node[font=\scriptsize, below] at (\x+0.35,0) {$s=\s$};
+}
+\node[note] at (2.2,3.65) {$e^{91}, e^{93}, \ldots$ exceed the FP32 maximum $3.4\cdot10^{38}$};
+\node[note, text=nanred] at (2.2,-1.0) {total $=\infty$, weight $=\infty/\infty=$ \NaN};
+\end{scope}
+\draw[-{Stealth[length=3mm]}, line width=2pt, black!50] (5.1,1.3) -- node[above, font=\scriptsize, align=center]{subtract\\the max, 93} (7.0,1.3);
+\begin{scope}[xshift=7.6cm]
+\baseline{-0.2}{4.6}
+\vbar{0.0}{0.27}{infor!50}{0.135}{$-2$}
+\vbar{1.1}{2.0}{infor!50}{1.000}{$0$}
+\vbar{2.2}{0.74}{infor!50}{0.368}{$-1$}
+\vbar{3.3}{0.10}{infor!50}{0.050}{$-3$}
+\node[note] at (2.2,3.65) {$e^{s-93}$: every bar at most 1};
+\node[note] at (2.2,-1.0) {total $1.553$, weights $0.087,\ 0.644,\ 0.237,\ 0.032$};
+\end{scope}
+\end{tikzpicture}
+\vspace{2mm}
 \begin{itemize}\small
-\item $e^{S}$ overflows FP32 for $S>88.7$, so every implementation subtracts the row max $m_i=\max_j S_{ij}$:
+\item Adding the same number to every score of a row \textbf{changes no weight}: $e^{s-93}/\sum e^{s-93}$ is the same fraction as $e^{s}/\sum e^{s}$ (the $e^{-93}$ cancels)
+\item This row is our $[1,3,2,0]$ plus 90, and gives the same weights. After subtracting the max, the biggest bar is exactly $e^0=1$: \textbf{nothing can overflow}
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{So a row's total is kept in two pieces: the max $m$ and the shifted sum $\ell$}
+\begin{columns}[c]
+\begin{column}{0.55\textwidth}
+\centering
+\begin{tikzpicture}
+\baseline{-0.2}{4.6}
+\vbar{0.0}{0.27}{infor!50}{0.135}{$k_1$}
+\vbar{1.1}{2.0}{infor!50}{1.000}{$k_2$}
+\vbar{2.2}{0.74}{infor!50}{0.368}{$k_3$}
+\vbar{3.3}{0.10}{infor!50}{0.050}{$k_4$}
+% stacked sum
+\begin{scope}[xshift=5.0cm]
+\fill[infor!25] (0,0) rectangle (0.7,0.27); \fill[infor!70] (0,0.27) rectangle (0.7,2.27);
+\fill[infor!45] (0,2.27) rectangle (0.7,3.01); \fill[infor!15] (0,3.01) rectangle (0.7,3.11);
+\draw[black!55] (0,0) rectangle (0.7,3.11);
+\node[font=\scriptsize, above, align=center] at (0.35,3.11) {$\ell=1.553$};
+\node[font=\scriptsize, below] at (0.35,0) {stacked};
+\end{scope}
+\draw[decorate, decoration={brace, amplitude=3pt}] (-0.1,2.45) -- (4.1,2.45) node[midway, above=3pt, note] {$e^{s_j-m}$ with $m=3$};
+\end{tikzpicture}
+\end{column}
+\begin{column}{0.43\textwidth}
+\small
+For our row $[1,3,2,0]$:
+\begin{itemize}
+\item $m$ = the biggest score $=3$
+\item $\ell$ = the sum of the shifted bars $=1.553$
+\item The true total is recovered by undoing the shift:
+\[ T = e^{m}\cdot \ell = 20.09\cdot1.553 = 31.19 \]
+\end{itemize}
+\vspace{1mm}
+\begin{block}{Why two pieces}\small
+For the row $[91,93,92,90]$, $T=e^{93}\cdot1.553$ does not fit in FP32, but $m=93$ and $\ell=1.553$ do. $\ell$ is always between 1 (the max bar) and the number of keys.
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{The log-sum-exp is the row total, written as a logarithm}
+\centering
+\begin{tikzpicture}[font=\scriptsize, x=2.6cm]
+\draw[black!60, -{Stealth}] (-0.3,0) -- (4.3,0) node[right] {score axis};
+\foreach \t in {0,1,2,3,4} { \draw[black!60] (\t,0.1) -- (\t,-0.1) node[below] {\t}; }
+\foreach \s/\k in {1/1,3/2,2/3,0/4} { \fill[validblue] (\s,0) circle (2.5pt); \node[above, validblue] at (\s,0.15) {$s_\k$}; }
+\draw[nanred, line width=1.5pt] (3.44,-0.45) -- (3.44,2.25);
+\node[nanred, above, font=\small\bfseries] at (3.44,2.25) {$\mathrm{lse}=3.440$};
+\draw[decorate, decoration={brace, amplitude=3pt}] (3.0,0.6) -- (3.44,0.6) node[midway, above=3pt] {$\log\ell=0.440$};
+\foreach \s/\d/\p/\y in {0/3.44/0.032/1.95, 1/2.44/0.087/1.55, 2/1.44/0.237/1.15} {
+  \draw[{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}, black!55] (\s,\y) -- (3.44,\y);
+  \node[fill=white, inner sep=1pt] at ({(\s+3.44)/2},\y) {gap \d: weight $e^{-\d}=\p$};
+}
+\end{tikzpicture}
+\vspace{2mm}
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\small
 \[
-P_{ij} = \frac{e^{S_{ij}-m_i}}{\ell_i},\qquad \ell_i = \sum_j e^{S_{ij}-m_i}
+\mathrm{lse} = \log T = \log\bigl(e^{m}\,\ell\bigr) = m + \log\ell = 3 + 0.440
 \]
-\item Every exponent is $\le 0$; the maximal term is exactly $e^0=1$, so $\ell_i\in[1,N_k]$
-\item The \textbf{log-sum-exp} summarizes a row:
-\[
-\mathrm{lse}_i = \log\sum_j e^{S_{ij}} = m_i + \log \ell_i
-\]
-\item With it, $P_{ij}=e^{S_{ij}-\mathrm{lse}_i}$. Flash stores it for the backward pass and to merge partial results
+\begin{itemize}
+\item One number, the same size as the scores: it never overflows
+\item It always sits just above the max: $m\le\mathrm{lse}\le m+\log(\#\text{keys})$
 \end{itemize}
 \end{column}
-\begin{column}{0.45\textwidth}
-\begin{block}{Two edge cases a kernel must handle}\small
-\textbf{fully masked row}: every $S_{ij}=-\infty$, $m_i=-\infty$, $e^{-\infty-(-\infty)}=$ \NaN{}. Kernels special-case $m=-\infty$.\\[2mm]
-\textbf{\NaN{} anywhere in the row}: $\ell_i=$ \NaN{}.\\[2mm]
-Flash's \code{softmax.h} guards both: if $\ell=0$ or $\ell\neq\ell$, it sets the LSE to $\pm\infty$ instead of $m+\log\ell$.
-\end{block}
+\begin{column}{0.48\textwidth}
+\small
+\begin{itemize}
+\item \textbf{Every weight follows from it}: weight $= e^{\,s_j-\mathrm{lse}}$, i.e.\ $e^{-\text{gap}}$ (picture). Key 2's gap is 0.440: $e^{-0.44}=0.644$
+\item So (row of scores, lse) $\Rightarrow$ the whole row of weights, without adding anything up again
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Why flash keeps the lse: it throws the weights away}
+\begin{columns}[c]
+\begin{column}{0.55\textwidth}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+\node[font=\small\bfseries] at (1.5,4.3) {plain attention};
+\fill[nanred!20] (0,0) rectangle (3,3); \draw (0,0) rectangle (3,3);
+\foreach \i in {0.375,0.75,...,2.7} { \draw[nanred!35] (\i,0) -- (\i,3); \draw[nanred!35] (0,\i) -- (3,\i); }
+\node[align=center] at (1.5,1.5) {all weights $P$\\$N\times N_k$};
+\node[align=center] at (1.5,-0.5) {$N=4096$: 16.8M numbers\\per head, in GPU memory};
+\begin{scope}[xshift=4.6cm]
+\node[font=\small\bfseries] at (0.9,4.3) {flash};
+\fill[validblue!25] (0,0) rectangle (0.8,3); \draw (0,0) rectangle (0.8,3); \node[align=center] at (0.4,1.5) {$O$\\$N\!\times\!d$};
+\fill[infor!45] (1.2,0) rectangle (1.45,3); \draw (1.2,0) rectangle (1.45,3); \node[rotate=90] at (1.325,1.5) {lse};
+\node[align=center] at (0.9,-0.5) {output + \textbf{one lse per row}\\4096 extra numbers};
+\end{scope}
+\end{tikzpicture}
+\end{column}
+\begin{column}{0.43\textwidth}
+\small
+Flash computes the weights a tile at a time and \textbf{never stores them}. The lse lets it get them back cheaply when they are needed:
+\begin{enumerate}
+\item \textbf{Training, backward pass}: gradients need the weights. Flash recomputes the scores tile by tile and gets each weight as $e^{\,s-\mathrm{lse}}$, without re-summing the row
+\item \textbf{Merging partial rows} (split-KV, later): two workers that each saw half a row combine their halves using their two lse values
+\end{enumerate}
 \end{column}
 \end{columns}
 \end{frame}
@@ -180,7 +484,173 @@ HBM traffic $\Theta((N+N_k)\,d)$: read $Q$, $K$, $V$ once per tile row, write $O
 \end{frame}
 
 %-----------------------------------------------------------------------------
-\begin{frame}{Online softmax: merging key blocks one at a time}
+\begin{frame}{Problem 2: the row arrives in pieces}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+\foreach \s/\v [count=\j] in {1/10,3/20,2/30,0/40} {
+  \node[keyb, minimum width=17mm] (k\j) at (\j*2.0,0) {$k_\j$: score \s};
+  \node[valb, minimum width=17mm, below=1mm of k\j] {$v_\j=\v$};
+}
+\draw[rounded corners, thick, okgreen!50!black, dashed] (1.0,0.55) rectangle (5.0,-1.35);
+\draw[rounded corners, thick, okgreen!50!black, dashed] (5.0,0.55) rectangle (9.0,-1.35);
+\node[above] at (3.0,0.55) {block A (keys 1--2)};
+\node[above] at (7.0,0.55) {block B (keys 3--4)};
+\draw[-{Stealth[length=2.5mm]}, very thick, infor!80!black] (8.6,-1.75) -- (1.4,-1.75) node[midway, below] {flash reads the blocks last to first: \textbf{B, then A}};
+\node[pad] at (11.6,-0.4) {\textbf{the row's notepad}\\[1mm]
+$m$: biggest score so far\\
+$\ell$: sum of $e^{s-m}$ so far\\
+$\tilde O$: sum of $e^{s-m}\cdot v$ so far\\
+\phantom{$\tilde O$:} (a blend, not yet divided)};
+\end{tikzpicture}
+\vspace{3mm}
+\begin{itemize}\small
+\item A real row has thousands of keys. Flash loads them \textbf{one block at a time} (128 keys per block) into fast on-chip memory
+\item But step 3 needs the total of the \emph{whole} row before any weight is known. Do we have to wait?
+\item No: keep a small \textbf{notepad} per row and update it as each block passes. Our example: 2 blocks of 2 keys
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Online softmax, block B (keys 3, 4): start the notepad}
+\begin{columns}[c]
+\begin{column}{0.55\textwidth}
+\centering
+\begin{tikzpicture}
+\baseline{-0.2}{2.4}
+\vbar{0.0}{1.6}{validblue!45}{2}{$k_3$}
+\vbar{1.1}{0.0}{validblue!45}{0}{$k_4$}
+\node[note] at (0.9,2.6) {scores};
+\draw[-{Stealth[length=2.5mm]}, line width=1.5pt, black!50] (2.6,0.8) -- node[above, note]{$e^{s-2}$} (3.6,0.8);
+\begin{scope}[xshift=4.0cm]
+\baseline{-0.2}{2.4}
+\vbar{0.0}{1.6}{infor!50}{1.000}{$k_3$}
+\vbar{1.1}{0.22}{infor!50}{0.135}{$k_4$}
+\node[note] at (0.9,2.6) {shifted bars};
+\end{scope}
+\end{tikzpicture}
+\end{column}
+\begin{column}{0.43\textwidth}
+\small
+\begin{enumerate}
+\item biggest score in the block: $m=2$
+\item shifted bars: $e^{2-2}=1$,\ $e^{0-2}=0.135$
+\item add them up: $\ell = 1.135$
+\item blend the values with the bars:\\ $\tilde O = 1\cdot30 + 0.135\cdot40 = 35.41$
+\end{enumerate}
+\vspace{2mm}
+\centering
+\begin{tikzpicture}\node[pad] {\textbf{notepad after B}\\$m=2$\quad $\ell=1.135$\quad $\tilde O=35.41$};\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Block A (keys 1, 2) brings a bigger score: re-measure, then add}
+\centering
+\begin{tikzpicture}
+% panel 1: rescale old bars
+\begin{scope}
+\baseline{-0.2}{2.3}
+\draw[black!30, dashed] (0,0) rectangle ++(0.7,1.6); \draw[black!30, dashed] (1.1,0) rectangle ++(0.7,0.22);
+\vbar{0.0}{0.59}{infor!50}{0.368}{$k_3$}
+\vbar{1.1}{0.08}{infor!50}{0.050}{$k_4$}
+\node[note] at (0.9,2.65) {\textbf{1.} old bars $\times\,e^{2-3}=0.368$};
+\end{scope}
+\draw[-{Stealth[length=2.5mm]}, line width=1.5pt, black!50] (2.3,0.8) -- (3.2,0.8);
+% panel 2: new block bars
+\begin{scope}[xshift=3.7cm]
+\baseline{-0.2}{2.3}
+\vbar{0.0}{0.22}{infor!50}{0.135}{$k_1$}
+\vbar{1.1}{1.6}{infor!50}{1.000}{$k_2$}
+\node[note] at (0.9,2.65) {\textbf{2.} new bars $e^{s-3}$};
+\end{scope}
+\draw[-{Stealth[length=2.5mm]}, line width=1.5pt, black!50] (6.0,0.8) -- (6.9,0.8);
+% panel 3: all four
+\begin{scope}[xshift=7.4cm]
+\baseline{-0.2}{4.6}
+\vbar{0.0}{0.22}{infor!50}{0.135}{$k_1$}
+\vbar{1.1}{1.6}{infor!50}{1.000}{$k_2$}
+\vbar{2.2}{0.59}{infor!50}{0.368}{$k_3$}
+\vbar{3.3}{0.08}{infor!50}{0.050}{$k_4$}
+\node[note] at (2.2,2.65) {\textbf{3.} together: the whole row, shifted by $m=3$};
+\end{scope}
+\end{tikzpicture}
+\vspace{1mm}
+\begin{columns}[T]
+\begin{column}{0.56\textwidth}
+\small
+\begin{enumerate}
+\item New max $m=3$. The notepad was written relative to 2; \textbf{re-measure it relative to 3} by multiplying by $e^{2-3}=0.368$:\\ $\ell: 1.135\to0.418$,\quad $\tilde O: 35.41\to13.03$
+\item Shift the new bars by 3: $e^{1-3}=0.135$,\ $e^{3-3}=1$
+\item Add: $\ell = 0.418+0.135+1 = 1.553$\\ \phantom{Add: }$\tilde O = 13.03 + 0.135\cdot10 + 1\cdot20 = 34.38$
+\end{enumerate}
+\end{column}
+\begin{column}{0.42\textwidth}
+\centering
+\begin{tikzpicture}\node[pad] {\textbf{notepad after A}\\$m=3$\quad $\ell=1.553$\quad $\tilde O=34.38$};\end{tikzpicture}\\[2mm]
+\small Panel 3 is \textbf{exactly} the shifted row from the ``two pieces'' slide: $\ell=1.553$, as if we had seen all four keys at once. Nothing was approximated.
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{End of the row: divide once, and write the lse}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+\node[pad, font=\small] (n) at (0,0) {\textbf{final notepad}\\$m=3$\\$\ell=1.553$\\$\tilde O=34.38$};
+\node[draw, fill=validblue!30, rounded corners=2pt, align=center, font=\small] (o) at (6,0.9) {output $=\tilde O/\ell = 34.38/1.553 = \mathbf{22.14}$};
+\node[draw, fill=infor!40, rounded corners=2pt, align=center, font=\small] (l) at (6,-0.9) {$\mathrm{lse} = m+\log\ell = 3+0.440 = \mathbf{3.440}$};
+\draw[arr] (n.east) -- (o.west); \draw[arr] (n.east) -- (l.west);
+\node[note, anchor=west] at (9.7,0.9) {same as step 4};
+\node[note, anchor=west] at (9.7,-0.9) {same as the lse slide};
+\node[draw, dashed, rounded corners, fit=(o)(l), inner sep=4pt, label={[note]below:written to GPU memory}] {};
+\end{tikzpicture}
+\vspace{4mm}
+\begin{itemize}\small
+\item The division by the total happens \textbf{once, at the end}, on the blended sum: dividing each weight first or the blend last gives the same 22.14
+\item The notepad is 3 numbers (plus $d$ for $\tilde O$) per row, however many keys the row has. That is why the scores and weights never need to leave the chip
+\item \textbf{Order does not matter.} Reading A then B: A's max 3 comes first, so B needs no re-measuring ($e^{3-3}=1$), and the notepad ends identical
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{The same, for a whole tile: 128 notepads, and two rows that need a guard}
+\begin{columns}[c]
+\begin{column}{0.52\textwidth}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+\foreach \i in {0,...,5} { \fill[validblue!15] (0,\i*0.45) rectangle ++(2.6,0.45); \draw[black!35] (0,\i*0.45) rectangle ++(2.6,0.45);
+  \node[pad, inner sep=1pt, font=\tiny] at (3.6,\i*0.45+0.22) {$m$, $\ell$, $\tilde O$}; }
+\node at (1.3,2.95) {128 query rows (6 drawn)};
+\foreach \j in {0,1,2} { \fill[okgreen!20] (5.0+\j*0.7,0) rectangle ++(0.55,2.7); \draw[black!40] (5.0+\j*0.7,0) rectangle ++(0.55,2.7); }
+\node[align=center] at (6.0,2.95) {key blocks};
+\draw[-{Stealth}, thick, infor!80!black] (6.9,-0.25) -- (5.0,-0.25) node[midway, below] {streamed past every row};
+% two bad rows
+\begin{scope}[yshift=-2.2cm]
+\node[anchor=west] at (0,0.5) {\textbf{fully masked row}: no bars at all};
+\draw[black!60] (0.2,0) -- (2.6,0); \node[anchor=west] at (2.7,0) {$\ell=0$, $\log 0=-\infty$};
+\node[anchor=west] at (0,-0.55) {\textbf{a \NaN{} in the row}:};
+\node[anchor=west] at (2.7,-0.55) {$\ell=$ \NaN};
+\end{scope}
+\end{tikzpicture}
+\end{column}
+\begin{column}{0.46\textwidth}
+\small
+\begin{itemize}
+\item Each of the tile's 128 rows has its own notepad, kept in registers. Code names: $m$ = \code{row_max}, $\ell$ = \code{row_sum}, $\tilde O$ = \code{acc_o}
+\item Everything is done in base 2 ($2^x$ is one GPU instruction); the scale $\sigma$ is folded in. Same pictures, different units
+\item Two rows have no sensible lse: one with \textbf{no key to look at} ($\ell=0$) and one containing \textbf{\NaN} ($\ell=$ \NaN)
+\end{itemize}
+\begin{block}{The per-row guard (\code{softmax.h})}\scriptsize
+if $\ell=0$ or $\ell\neq\ell$ (\NaN): lse $=\pm\infty$ \;(split kernel: $-\infty$)\\
+otherwise: lse $= m\sigma + \log\ell$
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Online softmax in symbols: what the pictures did}
 \begin{columns}[T]
 \begin{column}{0.52\textwidth}
 For one row, after key blocks $1..j-1$ we hold $m$, $\ell$, $\tilde O$. For block $j$ with scores $s$:
@@ -193,13 +663,12 @@ After the last block: $O=\tilde O/\ell$, $\mathrm{lse}=m+\log\ell$.\\[2mm]
 \small The factor $e^{m-m'}\le1$ rescales what was accumulated under the old max. The result is exact, not an approximation.
 \end{column}
 \begin{column}{0.46\textwidth}
-\begin{block}{Worked example: scores $[1,\,3 \mid 2,\,0]$}\small
-block 1: $m=3$, $\ell = e^{-2}+e^{0} = 1.135$\\[1mm]
-block 2: $m'=\max(3,2)=3$,\\
-\quad $\ell' = e^{0}\cdot1.135 + e^{-1}+e^{-3}$\\
-\quad\phantom{$\ell'$} $= 1.135+0.368+0.050 = 1.553$\\[1mm]
-direct: $e^{-2}+1+e^{-1}+e^{-3}=1.553$ \checkmark\\[1mm]
-$\mathrm{lse} = 3+\log 1.553 = 3.440$
+\begin{block}{Our example, flash order (B then A)}\small
+after B: $m=2$, $\ell=1.135$, $\tilde O=35.41$\\[1mm]
+A: $m'=3$, factor $e^{m-m'}=e^{-1}=0.368$\\
+\quad $\ell' = 0.368\cdot1.135 + e^{-2}+e^{0} = 1.553$\\
+\quad $\tilde O' = 0.368\cdot35.41 + 0.135\cdot10+1\cdot20 = 34.38$\\[1mm]
+$O = 34.38/1.553 = 22.14$,\quad $\mathrm{lse} = 3.440$
 \end{block}
 \end{column}
 \end{columns}
@@ -316,6 +785,134 @@ store lse,     rows < seqlen_q only
 \end{itemize}
 \end{column}
 \end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Split-KV in pictures: two workers, each sees half the row}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+\foreach \s/\v [count=\j] in {1/10,3/20,2/30,0/40} { \node[keyb] (k\j) at (\j*1.9,0) {$k_\j$: \s,\ $v{=}\v$}; }
+\node[op, fill=validblue!10, font=\scriptsize] (wa) at (2.85,-1.3) {worker (CTA) A: keys 1--2};
+\node[op, fill=validblue!10, font=\scriptsize] (wb) at (6.65,-1.3) {worker (CTA) B: keys 3--4};
+\draw[arr] (k1) -- (wa); \draw[arr] (k2) -- (wa); \draw[arr] (k3) -- (wb); \draw[arr] (k4) -- (wb);
+\node[card, fill=infor!12] (ra) at (1.7,-3.2) {\textbf{A's receipt}\\notepad: $m=3$, $\ell=1.135$, $\tilde O=21.35$\\[1mm]
+its output: $O_A = 21.35/1.135 = 18.81$\\ $\mathrm{lse}_A = 3+\log1.135 = 3.127$};
+\node[card, fill=infor!12] (rb) at (8.0,-3.2) {\textbf{B's receipt}\\notepad: $m=2$, $\ell=1.135$, $\tilde O=35.41$\\[1mm]
+its output: $O_B = 35.41/1.135 = 31.19$\\ $\mathrm{lse}_B = 2+\log1.135 = 2.127$};
+\draw[arr] (wa) -- (ra); \draw[arr] (wb) -- (rb);
+\end{tikzpicture}
+\vspace{2mm}
+\begin{itemize}\small
+\item A decode step has a single query row, so flash would use one worker per head and leave most of the GPU idle. \textbf{Split-KV} gives each worker a slice of the keys
+\item Each worker finishes its slice \emph{as if it were the whole row}: an output averaged over its own keys, and its own lse
+\item Neither $O_A=18.81$ nor $O_B=31.19$ is the answer (22.14). They must be merged
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Combining: the lse says how much of the row each worker saw}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+\def\s{0.38}
+\fill[infor!55] (0,1.6) rectangle (22.80*\s,2.3); \fill[infor!25] (22.80*\s,1.6) rectangle (31.19*\s,2.3);
+\draw[black!55] (0,1.6) rectangle (31.19*\s,2.3); \draw[black!55] (22.80*\s,1.6) -- (22.80*\s,2.3);
+\node at (11.4*\s,1.95) {$e^{\mathrm{lse}_A}=e^{3.127}=22.80$ \;(keys 1--2: $2.72+20.09$)};
+\node at (27.0*\s,1.95) {$e^{\mathrm{lse}_B}=8.39$};
+\draw[decorate, decoration={brace, amplitude=4pt}] (0,2.7) -- (31.19*\s,2.7) node[midway, above=4pt] {\small the whole row's total $T=31.19$, so $\mathrm{lse}=\log 31.19=3.440$};
+\node[below] at (11.4*\s,1.55) {\textbf{73.1\%} of the row};
+\node[below] at (27.0*\s,1.55) {\textbf{26.9\%}};
+\end{tikzpicture}
+\vspace{2mm}
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\small
+\begin{itemize}
+\item $e^{\mathrm{lse}}$ is a worker's \textbf{part of the row total}: A's keys contributed 22.80 of the 31.19
+\item Add the parts to get the whole row's total, and its lse:
+\[ \mathrm{lse} = \log\bigl(e^{3.127}+e^{2.127}\bigr) = 3.440 \]
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\small
+\begin{itemize}
+\item Each worker's output is weighted by its share:
+\[ O = 0.731\cdot18.81 + 0.269\cdot31.19 = \mathbf{22.14} \]
+\item Exactly the answer from step 4. \textbf{This is why each worker writes an lse}: without its row summary, the halves could not be weighted correctly
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{The combine kernel does the same sum: \code{lse_sum}}
+\begin{columns}[c]
+\begin{column}{0.5\textwidth}
+\centering
+\begin{tikzpicture}
+\baseline{-0.2}{2.6}
+\vbar{0.0}{2.0}{infor!55}{1.000}{A}
+\vbar{1.1}{0.74}{infor!25}{0.368}{B}
+\node[note] at (2.2,-1.0) {bars $e^{\mathrm{lse}_s-L}$, with $L=\max_s\mathrm{lse}_s=3.127$};
+\begin{scope}[xshift=3.6cm]
+\fill[infor!55] (0,0) rectangle (0.7,2.0); \fill[infor!25] (0,2.0) rectangle (0.7,2.74);
+\draw[black!55] (0,0) rectangle (0.7,2.74);
+\node[font=\scriptsize, above] at (0.35,2.74) {1.368};
+\node[font=\scriptsize, below] at (0.35,0) {\code{lse_sum}};
+\end{scope}
+\end{tikzpicture}
+\end{column}
+\begin{column}{0.48\textwidth}
+\small
+Problem 1's trick again, with the lse values as the ``scores'':
+\begin{enumerate}
+\item $L$ = biggest lse $=3.127$ \;(\code{lse_max})
+\item bars $e^{\mathrm{lse}_s-L}$: $1$ and $e^{-1}=0.368$
+\item \code{lse_sum} $= 1.368$ \;(between 1 and \#splits)
+\item \code{lse_logsum} $= L + \log(\text{\code{lse_sum}}) = 3.127+0.313 = 3.440$ \checkmark
+\item share of split $s$ $= e^{\mathrm{lse}_s-\text{\code{lse_logsum}}}$: 0.731, 0.269
+\end{enumerate}
+\end{column}
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{The two ways \code{lse_sum} can go wrong, and the guard for each}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+% normal
+\begin{scope}
+\node[font=\small\bfseries] at (1.0,3.0) {normal};
+\baseline{-0.2}{2.2}
+\vbar{0.0}{1.6}{infor!55}{1}{3.127}
+\vbar{1.1}{0.59}{infor!25}{0.368}{2.127}
+\node at (1.0,-0.85) {$\mathrm{lse}_s$ under the bars};
+\node[align=center] at (1.0,-1.6) {\code{lse_sum} $=1.368$\\guard: no};
+\end{scope}
+% all empty
+\begin{scope}[xshift=4.6cm]
+\node[font=\small\bfseries] at (1.0,3.0) {every split empty};
+\baseline{-0.2}{2.2}
+\vbar{0.0}{0}{infor!55}{0}{$-\infty$}
+\vbar{1.1}{0}{infor!25}{0}{$-\infty$}
+\node[align=center] at (1.0,1.3) {no bars:\\$e^{-\infty}=0$};
+\node at (1.0,-0.85) {(row with no key to see)};
+\node[align=center, text=validblue] at (1.0,-1.6) {\code{lse_sum} $=0$\\guard: \textbf{\code{lse_sum == 0}}};
+\end{scope}
+% +inf
+\begin{scope}[xshift=9.2cm]
+\node[font=\small\bfseries] at (1.0,3.0) {one split says $+\infty$};
+\baseline{-0.2}{2.2}
+\fill[nanred!60] (0,0) rectangle ++(0.7,1.6); \draw[black!55] (0,0) rectangle ++(0.7,1.6); \node[above] at (0.35,1.6) {\NaN}; \node[below] at (0.35,0) {$+\infty$};
+\vbar{1.1}{0}{infor!25}{0}{2.127}
+\node[align=center] at (1.0,-0.85) {$L=+\infty$: $e^{\infty-\infty}$};
+\node[align=center, text=nanred] at (1.0,-1.6) {\code{lse_sum} $=$ \NaN\\guard: \textbf{\code{lse_sum != lse_sum}}};
+\end{scope}
+\end{tikzpicture}
+\vspace{3mm}
+\begin{itemize}\small
+\item \textbf{Empty}: happens for real (causal rows, padding rows). The guard sets \code{lse_logsum} $=+\infty$ so the shares are $e^{-\infty-\infty}=0$ rather than \NaN
+\item \textbf{$+\infty$}: needs a split whose $\ell$ (sum of bars) is infinite. With bars $\le1$ that is impossible\ldots{} unless the scale is negative. Parts 5 and 6
+\end{itemize}
 \end{frame}
 
 %-----------------------------------------------------------------------------
@@ -530,7 +1127,7 @@ $O$, row 0 (the output) & 128 & \textbf{0}\\\bottomrule
 \begin{column}{0.5\textwidth}
 \small
 \begin{itemize}
-\item \textbf{Rows are independent} (slide 3): a padding row's garbage cannot reach a real row, so it can be computed and dropped
+\item \textbf{Rows are independent} (part 1): a padding row's garbage cannot reach a real row, so it can be computed and dropped
 \item \textbf{Keys are mixed into every row}, so padding keys must be neutralized: the mask overwrites the score, and V is cleared so that $0\cdot V=0$
 \end{itemize}
 \end{column}
@@ -562,6 +1159,41 @@ $O$, row 0 (the output) & 128 & \textbf{0}\\\bottomrule
 
 %=============================================================================
 \section{When the guard does not fire}
+%-----------------------------------------------------------------------------
+\begin{frame}{In pictures: why a split's $\ell$ stays finite for $\sigma>0$, and not for $\sigma<0$}
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+\begin{scope}
+\node[font=\small\bfseries, align=center] at (2.2,3.3) {$\sigma>0$ (every real model)};
+\baseline{-0.2}{4.6}
+\vbar{0.0}{0.27}{infor!50}{0.135}{real}
+\vbar{1.1}{2.0}{infor!50}{1}{real (max)}
+\vbar{2.2}{0}{infor!50}{0}{masked}
+\vbar{3.3}{0}{infor!50}{0}{masked}
+\draw[dashed, black!40] (-0.2,2.0) -- (4.2,2.0) node[right] {1};
+\node[align=center] at (2.2,-1.0) {masked: $(-\infty)\cdot\sigma=-\infty$, bar $e^{-\infty}=0$\\every bar $\le 1$ $\Rightarrow$ $\ell\le$ number of keys};
+\end{scope}
+\begin{scope}[xshift=7.6cm]
+\node[font=\small\bfseries, align=center] at (2.2,3.3) {$\sigma<0$ (e.g.\ \code{scale=-0.1})};
+\baseline{-0.2}{4.6}
+\vbar{0.0}{2.0}{infor!50}{1}{real (max)}
+\vbar{1.1}{2.3}{infor!50}{$>1$}{real}
+\draw[dashed, black!40] (-0.2,2.0) -- (4.2,2.0) node[right] {1};
+\foreach \x in {2.2,3.3} {
+  \fill[nanred!60] (\x,0) -- (\x,2.6) -- (\x+0.175,2.75) -- (\x+0.35,2.6) -- (\x+0.525,2.75) -- (\x+0.7,2.6) -- (\x+0.7,0) -- cycle;
+  \draw[black!55] (\x,2.6) -- (\x,0) -- (\x+0.7,0) -- (\x+0.7,2.6);
+  \node at (\x+0.35,3.0) {$+\infty$}; \node[below] at (\x+0.35,0) {masked};
+}
+\node[align=center] at (2.2,-1.0) {real bars $\ge1$; masked: $(-\infty)\cdot(-0.1)=+\infty$, bar $+\infty$\\$\ell=+\infty$ $\Rightarrow$ $\mathrm{lse}_s=+\infty$};
+\end{scope}
+\end{tikzpicture}
+\vspace{3mm}
+\begin{itemize}\small
+\item With $\sigma>0$, subtracting the max guarantees bars in $[0,1]$: $\ell$ is finite, 0 (empty row) or \NaN{} (bad input), and \code{softmax.h} turns 0 and \NaN{} into $-\infty$. So no split ever reports $+\infty$: the ``empty'' panel can happen, the $+\infty$ panel cannot
+\item With $\sigma<0$ the order flips: the \emph{masked} keys become the biggest bars, infinitely big. That is the $+\infty$ panel, and \code{lse_sum != lse_sum} fires. The next slides make both arguments precise
+\end{itemize}
+\end{frame}
+
 
 \begin{frame}{Scenarios A and B: the combine guard on clean and poisoned input}
 \begin{columns}[T]
