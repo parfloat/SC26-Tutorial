@@ -351,6 +351,155 @@ the prediction comes out of the output layer at the very end. (``Head'' and ``ou
 \end{frame}
 
 %-----------------------------------------------------------------------------
+% A5 through head 0 of block 0: all numbers from the trained tinygpt.pt
+% (q, k after RoPE; q, k, v rounded to FP16 as handed to the flash kernel)
+\tikzset{
+  mA/.style={fill=okgreen!25},    % row/column of A
+  m5/.style={fill=validblue!20},  % row/column of 5
+  hl/.style={draw=infor, line width=1.6pt},
+  pr/.style={fill=infor!15},
+  ns/.style={},
+  vc/.style={draw=black!40, minimum width=11mm, minimum height=4.6mm, inner sep=0pt, font=\tiny},
+}
+\begin{frame}{Attention on \texttt{A5}, step 1: scores $S = Q\,K^{\top}$ \;(head 0, block 0)}
+\centering
+\begin{tikzpicture}[sz/.style={font=\tiny, text=black!55}]
+  % Q: 2 x 32
+  \node[font=\scriptsize\bfseries] at (1.6,0.35) {$Q$ \;($2\times32$)};
+  \fill[mA] (0,0) rectangle (3.2,-0.4); \fill[m5] (0,-0.4) rectangle (3.2,-0.8);
+  \draw[black!50] (0,0) rectangle (3.2,-0.8); \draw[black!50] (0,-0.4) -- (3.2,-0.4);
+  \draw[hl] (0,-0.4) rectangle (3.2,-0.8);
+  \node[font=\scriptsize, anchor=east] at (-0.05,-0.2) {$q_A$};
+  \node[font=\scriptsize, anchor=east] at (-0.05,-0.6) {$q_5$};
+  \node[sz] at (1.6,-1.05) {32 numbers per row};
+  \node at (3.6,-0.4) {$\times$};
+  % K^T: 32 x 2
+  \node[font=\scriptsize\bfseries] at (4.4,1.55) {$K^{\top}$ \;($32\times2$)};
+  \fill[mA] (4.0,1.2) rectangle (4.4,-2.0); \fill[m5] (4.4,1.2) rectangle (4.8,-2.0);
+  \draw[black!50] (4.0,1.2) rectangle (4.8,-2.0); \draw[black!50] (4.4,1.2) -- (4.4,-2.0);
+  \draw[hl] (4.0,1.2) rectangle (4.4,-2.0);
+  \node[font=\scriptsize] at (4.2,1.33) {}; 
+  \node[font=\scriptsize] at (4.2,-2.2) {$k_A$}; \node[font=\scriptsize] at (4.6,-2.2) {$k_5$};
+  \node at (5.2,-0.4) {$=$};
+  % S: 2 x 2
+  \node[font=\scriptsize\bfseries] at (6.6,0.35) {$S$ \;($2\times2$)};
+  \node[vc, minimum width=12mm] at (6.0,-0.2) {$7.596$};
+  \node[vc, minimum width=12mm, fill=black!6, text=black!40] at (7.2,-0.2) {$-6.630$};
+  \node[vc, minimum width=12mm, hl] at (6.0,-0.6) {$\mathbf{-22.571}$};
+  \node[vc, minimum width=12mm] at (7.2,-0.6) {$-41.157$};
+  \node[sz] at (6.0,0.08) {key A}; \node[sz] at (7.2,0.08) {key 5};
+  \node[sz, anchor=west] at (7.85,-0.2) {query A}; \node[sz, anchor=west] at (7.85,-0.6) {query 5};
+  \node[sz, text=black!45, anchor=north] at (7.2,-0.85) {future: masked};
+  % context card
+  \node[card, anchor=north west, text width=4.1cm] at (9.3,1.5) {%
+    In training this is the \textbf{top-left $2\times2$ corner} of each head's $21\times21$ grid.\\[3pt]
+    Rows A and 5 may only use keys A and 5 (causal), so the other 19 positions of the word cannot change these numbers.\\[3pt]
+    Each entry: one query row meets one key column.};
+
+  % zoom: q5 . kA
+  \begin{scope}[shift={(0.6,-3.0)}]
+    \node[font=\scriptsize\bfseries, anchor=east, text=infor!80!black] at (-0.15,0.45) {one pair:};
+    \foreach \lab/\vals/\sty/\y in {$q_5$/{0.673,3.543,5.020,-2.008,\cdots,2.209}/m5/0,
+                                   $k_A$/{6.453,-9.391,-0.717,-4.605,\cdots,-0.437}/mA/-0.55,
+                                   products/{4.342,-33.271,-3.598,9.247,\cdots,-0.965}/pr/-1.25} {
+      \node[font=\scriptsize, anchor=east] at (-0.15,\y) {\lab};
+      \foreach \v [count=\i from 0] in \vals {\node[vc, \sty] at (\i*1.15+0.55,\y) {$\v$};}}
+    \foreach \i in {0,1,2,3,5} {\node[font=\tiny, text=black!50] at (\i*1.15+0.55,-0.9) {$\times$};}
+    \foreach \i/\c in {0/1,1/2,2/3,3/4,5/32} {\node[sz] at (\i*1.15+0.55,0.32) {\c};}
+    \draw[arr] (7.1,-1.25) -- node[above, note] {sum of 32} (8.4,-1.25);
+    \node[vc, hl, minimum width=14mm] at (9.2,-1.25) {$\mathbf{-22.571}$};
+    \node[note, anchor=west, align=left] at (10.1,-1.25) {$=S_{5A}$};
+  \end{scope}
+\end{tikzpicture}
+
+\vspace{1mm}
+\small Head 0 of block 0, trained \code{tinygpt.pt}; $q, k$ after RoPE, all rounded to FP16 as handed to the flash kernel.
+$q_5\cdot k_A = -22.6$ is larger than $q_5\cdot k_5 = -41.2$: query 5 prefers key A.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+% \twobytwo{x}{title}{a}{b}{c}{d}{style b}
+  \newcommand{\twobytwo}[7]{%
+    \node[font=\scriptsize\bfseries] at (#1+0.6,0.35) {#2};
+    \node[vc, minimum width=12mm] at (#1,-0.2) {$#3$};
+    \node[vc, minimum width=12mm, #7] at (#1+1.2,-0.2) {$#4$};
+    \node[vc, minimum width=12mm] at (#1,-0.66) {$#5$};
+    \node[vc, minimum width=12mm] at (#1+1.2,-0.66) {$#6$};}
+\begin{frame}{Step 2: divide by $\sqrt{32}$, mask the future, softmax each row}
+\centering
+\begin{tikzpicture}[sz/.style={font=\tiny, text=black!55}]
+  \twobytwo{0}{$S$}{7.596}{-6.630}{-22.571}{-41.157}{}
+  \draw[arr] (2.0,-0.43) -- node[above, note] {$\div\sqrt{32}$} node[below, note] {$=5.657$} (3.0,-0.43);
+  \twobytwo{3.6}{$S/\sqrt{32}$}{1.343}{-1.172}{-3.990}{-7.276}{}
+  \draw[arr] (5.6,-0.43) -- node[above, note] {mask} node[below, note] {$j>i$} (6.6,-0.43);
+  \twobytwo{7.2}{masked}{1.343}{-\infty}{-3.990}{-7.276}{fill=black!8, text=nanred}
+  \draw[arr] (9.2,-0.43) -- node[above, note] {softmax} node[below, note] {each row} (10.5,-0.43);
+  \twobytwo{11.1}{$P$ (weights)}{1.000}{0}{\mathbf{0.964}}{\mathbf{0.036}}{}
+  \draw[hl] (10.5,-0.43) rectangle (12.9,-0.89);
+
+  % why sqrt(32)
+  \node[card, anchor=north west, text width=6.3cm] at (-0.6,-1.4) {%
+    \textbf{Why $\sqrt{32}$?} A score is a sum of 32 products. If they were independent with spread~1, the sum's spread would be $\sqrt{32}$ (spreads add in quadrature).
+    Dividing by $\sqrt{32}$ keeps scores near $\pm1$ at the start of training, so the softmax is not already one-hot and gradients can flow.\\[3pt]
+    The 32 is the head size, not the 128 of the whole position.};
+  % softmax of row 5
+  \node[card, anchor=north west, text width=5.5cm] at (6.3,-1.4) {%
+    \textbf{Row 5 by hand} (row A has one key, so its weight is 1):\\[2pt]
+    subtract the row max: $(-3.990,\,-7.276) - (-3.990) = (0,\,-3.286)$\\[2pt]
+    exponentiate: $(1,\; e^{-3.286}) = (1,\; 0.0374)$\\[2pt]
+    divide by the sum $1.0374$: $(0.964,\; 0.036)$\\[3pt]
+    These are the $0.96 / 0.04$ of the $n=2$ snapshot.};
+\end{tikzpicture}
+
+\vspace{1mm}
+\small Subtracting the row max changes nothing mathematically but keeps $e^x \le 1$ in FP16/FP32. Flash keeps exactly this max as a \emph{running} max while it streams over key blocks (the online softmax).
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Step 3: $O = P\,V$, each output row is a weighted blend of value rows}
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[sz/.style={font=\tiny, text=black!55}]
+  % P
+  \node[font=\scriptsize\bfseries] at (0.6,0.35) {$P$ \;($2\times2$)};
+  \node[vc, minimum width=12mm] at (0,-0.2) {$1.000$};
+  \node[vc, minimum width=12mm] at (1.2,-0.2) {$0$};
+  \node[vc, minimum width=12mm, hl] at (0,-0.66) {$0.964$};
+  \node[vc, minimum width=12mm, hl] at (1.2,-0.66) {$0.036$};
+  \node at (2.1,-0.43) {$\times$};
+  % V
+  \node[font=\scriptsize\bfseries] at (5.4,0.35) {$V$ \;($2\times32$)};
+  \foreach \lab/\vals/\sty/\y in {$v_A$/{1.091,-3.324,-1.461,1.686,\cdots,-0.149}/mA/-0.2,
+                                 $v_5$/{-0.135,-0.839,0.869,-0.151,\cdots,1.936}/m5/-0.66} {
+    \node[font=\scriptsize, anchor=east] at (2.95,\y) {\lab};
+    \foreach \v [count=\i from 0] in \vals {\node[vc, \sty] at (\i*1.15+3.5,\y) {$\v$};}}
+  \node at (10.0,-0.43) {$=$};
+  % O
+  \node[font=\scriptsize\bfseries] at (12.0,0.35) {$O$ \;($2\times32$)};
+  \foreach \lab/\vals/\sty/\y in {$o_A$/{1.091,-3.324,\cdots,-0.149}/ns/-0.2,
+                                 $o_5$/{1.047,-3.235,\cdots,-0.074}/hl/-0.66} {
+    \node[font=\scriptsize, anchor=east] at (10.85,\y) {\lab};
+    \foreach \v [count=\i from 0] in \vals {\node[vc, \sty] at (\i*1.15+11.4,\y) {$\v$};}}
+
+  % row 5 column by column
+  \node[card, anchor=north west, text width=7.4cm] at (-0.6,-1.3) {%
+    \textbf{Row 5, column by column:} $o_5 = 0.964\,v_A + 0.036\,v_5$\\[3pt]
+    col 1: \; $0.964\times1.091 + 0.036\times(-0.135) = 1.047$\\[1pt]
+    col 2: \; $0.964\times(-3.324) + 0.036\times(-0.839) = -3.235$\\[1pt]
+    col 32: $0.964\times(-0.149) + 0.036\times1.936 = -0.074$\\[3pt]
+    Row A has weight 1 on itself, so $o_A = v_A$ exactly.\\
+    Position 5 borrows almost everything from A: this head looks back at the start symbol.};
+  % what happens next
+  \node[card, anchor=north west, text width=5.0cm] at (7.4,-1.3) {%
+    \textbf{Then:} heads 1--3 do the same on their own slices; the four $2\times32$ outputs are glued into $2\times128$, mixed by \code{proj}, and added back to $x$.\\[3pt]
+    \textbf{Sizes in training:} per word and head, $S, P$ are $21\times21$ and $O$ is $21\times32$; per step $100\times4$ of each, in each of 4 blocks.};
+\end{tikzpicture}}
+
+\vspace{1mm}
+\small Flash attention does steps 1--3 tile by tile on tensor cores (FP16 in, FP32 accumulate): a tile of $S$ lives only in registers, is scaled, masked and exponentiated, multiplied by a tile of $V$ and added into $O$. $S$ and $P$ are never written to memory.
+\end{frame}
+
+%-----------------------------------------------------------------------------
 % \snapshot{n}{token cells}{head-0 weights of the last position}{12 probabilities}{target index}{title}{result}
 \newcommand{\snapshot}[7]{%
   \node[font=\scriptsize\bfseries, anchor=west] at (-0.3,0.55) {#6};
