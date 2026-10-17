@@ -37,10 +37,11 @@ PyTorch is needed.
 ## Quick start
 
 ```
-python3 check_env.py --nixnan    # Python, torch, GPU, flash on tensor cores, nixnan sees HMMA (~3 min)
+python3 check_env.py --nixnan    # Python, torch, GPU, flash on tensor cores, nixnan sees HMMA (~15 s)
 python3 test_tinygpt.py          # 8 tests: tokens, checkpoint, completion, KV cache, memorisation
 python3 generate.py              # 312 -> 312323
 ./nixnan.sh gen312 generate.py   # the same under nixnan (~2.5 min) -> logs/gen312.log
+./run_nixnan.sh                  # every nixnan result below (~12 min) -> logs/SUMMARY.md
 ```
 
 ## TinyGPT
@@ -61,9 +62,10 @@ python3 generate.py              # 312 -> 312323
 and any nixnan variable you set (`SAMPLING`, `INSTR_MEM`, `HISTOGRAM`, …).
 The log goes to `logs/NAME.log`.
 
-* **Cost.** NVBit scans every function in PyTorch's GPU binaries as they
-  load: a fixed ~2.5 min per process (RTX 3090), even with nothing
-  instrumented. The instrumentation itself is cheap for these kernels, so
+* **Cost.** NVBit scans every function of each GPU module the program loads,
+  instrumented or not. `smoke_flash.py` (flash only) takes 12 s; TinyGPT also
+  loads cuBLAS and takes ~2.5 min per process (RTX 3090), even with nothing
+  instrumented. The instrumentation of the three flash kernels is cheap, so
   `SAMPLING` matters only for long runs.
 * **Which kernels.** nixnan's whitelist needs exact demangled names.
   `flash-kernels.txt` holds the flash kernels chosen for capture (see below).
@@ -72,21 +74,34 @@ The log goes to `logs/NAME.log`.
 
 ### The flash kernels this model launches (PyTorch 2.3.1, head dim 32)
 
-Measured with `SAMPLING=50 ./nixnan.sh train3 train.py --steps 3` (all five
-instrumented once), then `generate.py`. `flash-kernels.txt` keeps the **three
-kernels around the softmax**, which are also the ones where nixnan reports
-exceptional values:
+`flash-kernels-all.txt` lists all five; `flash-kernels.txt` keeps the
+**three kernels around the softmax**, chosen by the `select` run below
+(all five instrumented, `train.py --steps 3`): the two that never report an
+exceptional value are dropped.
 
-| kernel | when | what it computes | reports (3 training steps) | captured |
+| kernel | when | what it computes | reports in `select` | captured |
 |---|---|---|---|---|
-| `flash_fwd_kernel` (causal) | training, prefill | QKᵀ, mask, online softmax, PV, lse | 662: −inf (mask into the softmax's `FFMA`, `MUFU.EX2`), FP16 subnormals in `HMMA` | yes |
-| `flash_fwd_kernel` (non-causal) | decode steps (1 query) | the same, no mask | not launched in training. In `generate.py` the two forward variants together give 1,288 reports (−inf, subnormal); nixnan's reports name the kernel without its template arguments, so they cannot be split by variant | yes |
-| `flash_bwd_dq_dk_dv_loop_seqk_parallel_kernel` | training | recomputes the softmax P = exp(S − lse), then dQ, dK, dV | 480: −inf, **+inf** (`FFMA`, `FMUL`), subnormals in `HMMA` | yes |
+| `flash_fwd_kernel` (causal) | training, prefill | QKᵀ, mask, online softmax, PV, lse | 678: −inf (mask into the softmax's `FFMA`, `FMUL`, `MUFU.EX2`), FP16 subnormals in `HMMA` | **yes** |
+| `flash_fwd_kernel` (non-causal) | decode steps (1 query) | the same, no mask | not launched in training | **yes** |
+| `flash_bwd_dq_dk_dv_loop_seqk_parallel_kernel` | training | recomputes the softmax P = exp(S − lse), then dQ, dK, dV | 480: −inf, **+inf** (`FFMA`, `FMUL`), subnormals in `HMMA` | **yes** |
 | `flash_bwd_dot_do_o_kernel` | training | rowsum(dO · O) for the softmax gradient | 0 | no |
 | `flash_bwd_convert_dq_kernel` | training | FP32 dQ accumulator → FP16 | 0 | no |
 
-Run times with these three captured (`SAMPLING=50`): `generate.py` 148 s,
-`train.py --steps 3` 400 s.
+## nixnan results (`run_nixnan.sh`, `SAMPLING=50`, details in `logs/SUMMARY.md`)
+
+| run | program | kernels instrumented | time | reports | what nixnan sees |
+|---|---|---|---:|---:|---|
+| `select` | `train.py --steps 3` | all 5 flash kernels (4 launched) | 401 s | 1,158 | forward 678, `dq_dk_dv` 480, the other two 0 |
+| `smoke` | `smoke_flash.py`: one causal call, a +inf in K | `flash_fwd_kernel` (causal) | 12 s | 1,166 | **NaN**: 272 in `FADD`, 126+8 in `HMMA` (FP32 accumulator, FP16 input), 64 in `FMUL`; +inf in `HMMA` and `FFMA`; output 32/768 NaN |
+| `gen312` | `generate.py`: `312` → `312323` | `flash_fwd_kernel` causal + non-causal | 148 s | 1,288 | only −inf (`FFMA` 512, `FMUL` 512, `MUFU.EX2` 256) and 8 FP16 subnormals in `HMMA`; **no NaN, no +inf** |
+| `train3` | `train.py --steps 3` | `flash_fwd_kernel` (causal), `flash_bwd_dq_dk_dv_loop_seqk_parallel_kernel` | 401 s | 1,142 | forward: −inf, subnormals; backward: −inf, **+inf** in `FFMA` (64) and `FMUL` (8), subnormals; **no NaN** |
+
+* With clean data the only exceptional values are the mask's −inf feeding the
+  softmax, FP16 subnormals in the tensor-core `HMMA`, and in the backward pass
+  +inf. No NaN appears unless the input carries an inf (`smoke`).
+* nixnan's reports name the kernel without template arguments
+  (`flash_fwd_kernel`), so the causal and non-causal forward variants can't be
+  told apart in a report; the "instrumented" column comes from the launch log.
 
 ## Files
 
@@ -98,5 +113,7 @@ Run times with these three captured (`SAMPLING=50`): `generate.py` 148 s,
 | `generate.py` | completion |
 | `test_tinygpt.py` | tests |
 | `check_env.py`, `smoke_flash.py` | environment check; the smallest flash call that makes inf/NaN inside the kernel |
-| `nixnan.sh`, `flash-kernels.txt` | nixnan wrapper and the kernels it instruments |
+| `nixnan.sh`, `flash-kernels.txt` | nixnan wrapper and the three kernels it instruments |
+| `flash-kernels-all.txt` | all five flash kernels (the `select` run) |
+| `run_nixnan.sh`, `summarize.py`, `logs/` | the nixnan runs, their summary (`logs/SUMMARY.md`), logs and program output |
 | `requirements.txt` | PyTorch pin |

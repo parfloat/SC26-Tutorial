@@ -65,9 +65,9 @@ except RuntimeError as e:
 print("nixnan")
 if check(os.path.isfile(NIXNAN_SO), "nixnan.so present", os.path.realpath(NIXNAN_SO)):
     if "--nixnan" in sys.argv:
-        r = subprocess.run([os.path.join(HERE, "nixnan.sh"), "smoke", "smoke_flash.py"],
+        r = subprocess.run([os.path.join(HERE, "nixnan.sh"), "envcheck", "smoke_flash.py"],
                            cwd=HERE, capture_output=True, text=True)
-        log = os.path.join(HERE, "logs", "smoke.log")
+        log = os.path.join(HERE, "logs", "envcheck.log")
         text = open(log).read() if os.path.exists(log) else ""
         hmma = re.search(r"#nixnan: error \[(\w+)\] detected in operand \d+ of instruction (HMMA[^;]*)", text)
         check(r.returncode == 0 and hmma is not None,
