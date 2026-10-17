@@ -263,52 +263,194 @@ takes all 1500 optimizer steps on that same batch (no shuffling, no sampling).
 \end{frame}
 
 %-----------------------------------------------------------------------------
-\begin{frame}{The batch on its way into attention}
+\begin{frame}{TinyGPT in miniature: what happens to one position}
 \centering
-\begin{tikzpicture}
-  \node[shp] (ids) at (0,0) {token ids\\$100\times21$};
-  \node[shp, right=1.0cm of ids] (emb) {vectors\\$100\times21\times128$};
-  \node[shp, right=1.0cm of emb] (heads) {4 heads of 32\\$100\times4\times21\times32$};
-  \node[shp, right=1.0cm of heads, fill=validblue!12] (sc) {scores, one $21\times21$\\per word per head};
-  \draw[arr] (ids) -- node[above, note] {embed} (emb);
-  \draw[arr] (emb) -- node[above, note] {split} (heads);
-  \draw[arr] (heads) -- node[above, note] {$QK^{\mathsf T}$} (sc);
+\begin{tikzpicture}[
+    mb/.style={draw=black!55, rounded corners=2pt, fill=white, minimum height=8mm, text width=13mm, align=center, font=\scriptsize, inner sep=1pt},
+    sz/.style={font=\tiny, text=black!55}]
+  \node[cell=5mm, cs] (t) at (0,0) {A};
+  \node[mb] (e)  at (1.5,0) {embed};
+  \node[mb, fill=infor!20, very thick] (a) at (3.6,0) {attention\\{\tiny 4 heads}};
+  \node[mb] (m)  at (5.6,0) {MLP};
+  \node[mb] (o)  at (8.4,0) {output\\layer};
+  \node[mb] (s)  at (10.3,0) {softmax};
+  \node[mb, fill=okgreen!15, text width=17mm] (p) at (12.5,0) {probabilities\\of the next token};
+  \draw[arr] (t) -- (e); \draw[arr] (e) -- (a); \draw[arr] (a) -- (m); \draw[arr] (m) -- (o);
+  \draw[arr] (o) -- (s); \draw[arr] (s) -- (p);
+  \draw[rounded corners=4pt, dashed, black!45] (2.65,0.75) rectangle (6.5,-0.75);
+  \node[font=\scriptsize\bfseries, text=black!60, anchor=south] at (4.6,0.75) {one block, repeated 4 times};
+  \node[sz] at (0.75,-0.95) {id};
+  \node[sz] at (2.55,-0.95) {128};  \node[sz] at (4.6,-0.95) {128};  \node[sz] at (7.0,-0.95) {128};
+  \node[sz] at (9.35,-0.95) {12 scores}; \node[sz] at (11.15,-0.95) {12, sum 1};
 
-  % two score grids
-  \def\c{0.11}
-  \begin{scope}[shift={(1.2,-1.3)}]
-    \node[font=\scriptsize\bfseries, anchor=south west] at (0,0.05) {word 32: all 21 positions real};
-    \foreach \r in {0,...,20} { \foreach \k in {0,...,20} {
-      \ifnum\k>\r \def\f{white}\else \def\f{validblue!35}\fi
-      \fill[\f] (\k*\c,-\r*\c-\c) rectangle ++(\c,\c); } }
-    \draw[black!50] (0,0) rectangle (21*\c,-21*\c);
-    \node[note, anchor=north west] at (0,-21*\c-0.05) {query $i$ sees keys $0..i$ (causal)};
-    \node[note, anchor=east, rotate=90] at (-0.15,-0.2) {queries};
-    \node[note, anchor=west] at (0,0.0) {};
-  \end{scope}
-  \begin{scope}[shift={(6.0,-1.3)}]
-    \node[font=\scriptsize\bfseries, anchor=south west] at (0,0.05) {word 1 (\texttt{5881}): 6 real, 15 padding};
-    \foreach \r in {0,...,20} { \foreach \k in {0,...,20} {
-      \ifnum\k>\r \def\f{white}\else
-        \ifnum\r<6 \def\f{validblue!35}\else
-          \ifnum\k<6 \def\f{padgray!35}\else \def\f{padgray!15}\fi\fi\fi
-      \fill[\f] (\k*\c,-\r*\c-\c) rectangle ++(\c,\c); } }
-    \draw[black!50] (0,0) rectangle (21*\c,-21*\c);
-    \draw[nanred, thick] (0,0) rectangle (6*\c,-6*\c);
-    \node[note, anchor=west, align=left] at (21*\c+0.2,-0.75) {real queries see only real keys:\\a pad comes \emph{after} every real token,\\so causal masking hides it.\\No padding mask is needed.};
-    \node[note, anchor=west, align=left] at (21*\c+0.2,-1.95) {pad queries (gray) are\\computed, then ignored by the loss};
+  % positions mix only in attention
+  \begin{scope}[shift={(1.0,-2.0)}]
+    \node[font=\scriptsize\bfseries, anchor=west] at (-1.0,0.15) {four positions of \texttt{A5881F}, side by side:};
+    \foreach \t/\s [count=\i from 0] in {A/cs,5/cd,8/cd,8/cd} {
+      \pgfmathsetmacro{\yy}{-0.45-\i*0.45}
+      \node[cell=4mm, \s] (p\i) at (0,\yy) {\t};
+      \draw[black!45] (0.3,\yy) -- (9.0,\yy);
+      \node[draw=black!40, fill=white, minimum width=7mm, minimum height=3mm, inner sep=0pt, font=\tiny] at (1.5,\yy) {emb};
+      \node[draw=black!40, fill=white, minimum width=7mm, minimum height=3mm, inner sep=0pt, font=\tiny] at (5.6,\yy) {MLP};
+      \node[draw=black!40, fill=white, minimum width=7mm, minimum height=3mm, inner sep=0pt, font=\tiny] at (8.4,\yy) {out};
+      \fill[infor] (3.9,\yy) circle (1.6pt);
+    }
+    \foreach \q in {1,2,3} { \foreach \k in {0,...,2} { \ifnum\k<\q
+      \draw[infor, thick, -{Stealth[length=1.5mm]}] (3.0,-0.45-\k*0.45) .. controls (3.5,-0.45-\k*0.45) .. (3.85,-0.45-\q*0.45); \fi } }
+    \node[note, anchor=west, align=left] at (9.4,-1.1) {only the orange\\attention arrows\\cross between\\positions, and only\\from \textbf{earlier} ones};
   \end{scope}
 \end{tikzpicture}
 
-\vspace{2mm}
-\begin{columns}[T]
-\column{0.5\textwidth}\small
-\textbf{Training} (\code{train.py}): $100\times4 = 400$ score grids of $21\times21$ in each of the 4 blocks,
-every step, on the same batch for all 1500 steps.
-\column{0.46\textwidth}\small
-\textbf{Generation} (\code{generate.py}): batch \textbf{1}. Prompt \texttt{A312} is one call ($1\times4\times4\times32$),
-then one call per new token, attending over the stored keys: up to 7 positions.
-\end{columns}
+\vspace{1mm}
+\small Every box except attention works on each position by itself. Attention is how position 3 learns what came at positions 0, 1, 2.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Inside attention: the 128 numbers are split into 4 heads of 32}
+\centering
+\begin{tikzpicture}[sz/.style={font=\tiny, text=black!55}]
+  \def\hc{{"validblue","okgreen","infor","violet"}}
+  % one position's vector
+  \node[font=\scriptsize\bfseries, anchor=west] at (-0.2,0.55) {one position: 128 numbers};
+  \foreach \h/\col in {0/validblue,1/okgreen,2/infor,3/violet}
+    {\fill[\col!35] (\h*1.2,0) rectangle ++(1.2,0.35); \draw[black!50] (\h*1.2,0) rectangle ++(1.2,0.35);}
+  \draw[arr] (2.4,-0.1) -- node[right, note] {\code{qkv} (learned)} (2.4,-0.75);
+  % q k v each split
+  \foreach \n/\y in {q/-1.1,k/-1.6,v/-2.1} {
+    \node[font=\scriptsize\bfseries, anchor=east] at (-0.1,\y+0.17) {\n};
+    \foreach \h/\col in {0/validblue,1/okgreen,2/infor,3/violet}
+      {\fill[\col!35] (\h*1.2,\y) rectangle ++(1.2,0.35); \draw[black!50] (\h*1.2,\y) rectangle ++(1.2,0.35);}}
+  \foreach \h in {0,1,2,3} {\node[sz] at (\h*1.2+0.6,-2.35) {head \h: 32};}
+  \draw[nanred, very thick] (-0.05,-2.15) rectangle (1.25,-0.7);
+
+  % head 0 alone
+  \begin{scope}[shift={(5.9,0)}]
+    \node[font=\scriptsize\bfseries, anchor=west, text=validblue!80!black] at (-0.2,0.55) {head 0 works alone, on its 32-number slices};
+    \node[card, anchor=north west, text width=6.9cm] at (-0.2,0.2) {%
+      for every position $i$ (query) and every \textbf{earlier or same} position $j$ (key):\\[2pt]
+      \quad score$_{ij}$ $= q_i \cdot k_j \,/\, \sqrt{32}$ \hfill (32 products, summed)\\[2pt]
+      \quad weights: softmax of the scores along row $i$\\[2pt]
+      \quad output$_i$ $=$ weighted blend of the $v_j$ \hfill (32 numbers)};
+    \node[font=\scriptsize, anchor=west] at (-0.2,-2.15) {heads 1, 2, 3: the same, on their own slices, in parallel};
+  \end{scope}
+
+  % concat
+  \begin{scope}[shift={(0,-3.4)}]
+    \node[font=\scriptsize\bfseries, anchor=east] at (-0.1,0.17) {outputs};
+    \foreach \h/\col in {0/validblue,1/okgreen,2/infor,3/violet}
+      {\fill[\col!60] (\h*1.2,0) rectangle ++(1.2,0.35); \draw[black!50] (\h*1.2,0) rectangle ++(1.2,0.35);
+       \node[sz, text=black] at (\h*1.2+0.6,0.17) {32};}
+    \draw[arr] (5.0,0.17) -- node[above, note] {glue back to 128,} node[below, note] {then \code{proj} mixes the heads} (8.4,0.17);
+    \node[draw=black!55, rounded corners=2pt, fill=white, font=\scriptsize, minimum height=6mm, inner sep=2pt] at (9.5,0.17) {128 again};
+  \end{scope}
+\end{tikzpicture}
+
+\vspace{1mm}
+\small A head does \emph{not} make a prediction. It only decides what each position borrows from earlier positions;
+the prediction comes out of the output layer at the very end. (``Head'' and ``output head'' are unrelated names.)
+\end{frame}
+
+%-----------------------------------------------------------------------------
+% \snapshot{n}{token cells}{head-0 weights of the last position}{12 probabilities}{target index}{title}{result}
+\newcommand{\snapshot}[7]{%
+  \node[font=\scriptsize\bfseries, anchor=west] at (-0.3,0.55) {#6};
+  \foreach \t/\s [count=\i from 0] in {#2} {\node[cell=4.5mm, \s] at (0,-\i*0.5) {\t};
+     \draw[black!40, -{Stealth[length=1.2mm]}] (0.25,-\i*0.5) -- (0.9,-\i*0.5);}
+  \draw[rounded corners=3pt, draw=black!50, fill=black!3] (0.6,0.25) rectangle (2.9,-2.0);
+  \node[font=\tiny, text=black!60, anchor=north] at (1.75,-2.02) {head 0 of block 0};
+  \foreach \w [count=\i from 0] in {#3} {
+    \draw[infor, line width={0.2pt+3pt*\w}] (0.95,-\i*0.5) -- (2.6,{-(#1-1)*0.5});
+    \fill[black!60] (0.95,-\i*0.5) circle (1.2pt);
+    \node[font=\tiny, fill=black!3, inner sep=0.5pt] at (1.3,-\i*0.5+0.14) {\w};}
+  \fill[infor!80!black] (2.6,{-(#1-1)*0.5}) circle (2pt);
+  \node[font=\tiny, text=black!60, anchor=south] at (2.6,{-(#1-1)*0.5+0.06}) {last};
+  \draw[arr] (2.65,{-(#1-1)*0.5}) -- (3.3,{-(#1-1)*0.5}) -- (3.3,-1.75) -- (3.45,-1.75);
+  \foreach \p [count=\c from 0] in {#4} {
+    \ifnum\c=#5 \def\bc{okgreen} \else \def\bc{validblue!45} \fi
+    \fill[\bc] (3.55+\c*0.24,-1.95) rectangle ++(0.19,{0.02+1.9*\p});}
+  \foreach \t [count=\c from 0] in {0,1,2,3,4,5,6,7,8,9,A,F}
+    {\node[font=\tiny\ttfamily, text=black!60] at (3.645+\c*0.24,-2.1) {\t};}
+  \draw[black!40] (3.5,-1.95) -- (6.45,-1.95);
+  \node[font=\tiny, text=black!60, anchor=south west] at (3.5,0.12) {next-token probabilities};
+  \node[note, anchor=north west, align=left] at (-0.3,-2.35) {#7};}
+
+\begin{frame}{Training snapshots on \texttt{A5881F}: $n=1$ and $n=2$ tokens seen}
+\centering
+\begin{tikzpicture}
+  \begin{scope}[shift={(0,0)}]
+    \snapshot{1}{A/cs}{1.00}{0.08,0.10,0.13,0.06,0.08,0.14,0.10,0.10,0.11,0.10,0,0}{5}
+      {$n=1$: seen \texttt{A}, must predict \texttt{5}}
+      {$p(\texttt{5}) = 0.14$, loss $-\ln 0.14 = 1.97$\\14 of the 100 words start with 5: the model\\has learned how often each first digit occurs}
+  \end{scope}
+  \begin{scope}[shift={(7.6,0)}]
+    \snapshot{2}{A/cs,5/cd}{0.96,0.04}{0.143,0.143,0,0,0.286,0.071,0.143,0,0.071,0.071,0,0.071}{8}
+      {$n=2$: seen \texttt{A5}, must predict \texttt{8}}
+      {$p(\texttt{8}) = 0.07 = 1/14$, loss $2.64$\\of the 14 words starting with 5, only one goes on\\with 8 (and four with 4): \texttt{A5} alone can't tell}
+  \end{scope}
+\end{tikzpicture}
+
+\vspace{1mm}
+\small Orange lines: how much the last position's head 0 (block 0) takes from each position seen so far (the numbers sum to 1).
+A position can never look at a later one. All values are from the trained \code{tinygpt.pt}.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Training snapshots on \texttt{A5881F}: $n=3$ and $n=4$ tokens seen}
+\centering
+\begin{tikzpicture}
+  \begin{scope}[shift={(0,0)}]
+    \snapshot{3}{A/cs,5/cd,8/cd}{1.00,0.00,0.00}{0,0,0,0,0,0,0,0,1.0,0,0,0}{8}
+      {$n=3$: seen \texttt{A58}, must predict \texttt{8}}
+      {$p(\texttt{8}) = 1.00$, loss $0.00$\\\texttt{5881} is the only word starting \texttt{58},\\so three tokens pin it down}
+  \end{scope}
+  \begin{scope}[shift={(7.6,0)}]
+    \snapshot{4}{A/cs,5/cd,8/cd,8/cd}{1.00,0.00,0.00,0.00}{0,1.0,0,0,0,0,0,0,0,0,0,0}{1}
+      {$n=4$: seen \texttt{A588}, must predict \texttt{1}}
+      {$p(\texttt{1}) = 1.00$, loss $0.00$\\(and at $n=5$, \texttt{A5881} $\to$ \texttt{F}, also with $p=1.00$)}
+  \end{scope}
+\end{tikzpicture}
+
+\vspace{1mm}
+\small Block 0's head 0 mostly looks back at \texttt{A}; other heads and later blocks pick up the digits.
+The loss pushes $p(\text{correct next token})$ up at every position, and the gradient flows back through all of it, the embedding rows included.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Training does every snapshot at once}
+\centering
+\begin{tikzpicture}
+  % the 6x6 head-0 grid for A5881F
+  \def\c{0.5}
+  \node[font=\scriptsize\bfseries, anchor=south west] at (-0.4,0.35) {head 0, block 0, word \texttt{A5881F}: one row per snapshot};
+  \foreach \t [count=\k from 0] in {A,5,8,8,1,F} {\node[font=\tiny\ttfamily] at (\k*\c+\c/2,0.15) {\t};
+                                                 \node[font=\tiny\ttfamily, anchor=east] at (-0.05,-\k*\c-\c/2) {\t};}
+  \node[font=\tiny, text=black!55] at (3*\c,0.42) {};
+  \foreach \row [count=\r from 0] in {{1.00},{0.96,0.04},{1.00,0.00,0.00},{1.00,0.00,0.00,0.00},{0.01,0.88,0.00,0.00,0.11},{0.40,0.06,0.08,0.03,0.09,0.33}} {
+    \foreach \w [count=\k from 0] in \row {
+      \pgfmathsetmacro{\op}{int(100*\w)}
+      \fill[infor!\op] (\k*\c,-\r*\c) rectangle ++(\c,-\c);
+      \node[font=\tiny] at (\k*\c+\c/2,-\r*\c-\c/2) {\w};}}
+  \foreach \r in {0,...,5} { \foreach \k in {0,...,5} { \ifnum\k>\r \fill[black!8] (\k*\c,-\r*\c) rectangle ++(\c,-\c); \fi }}
+  \draw[black!50, step=\c] (0,0) grid (6*\c,-6*\c);
+  \node[note, anchor=north west, align=left] at (-0.4,-3.15) {row $n$ = snapshot $n$:\\the last position's weights;\\gray = later positions,\\never looked at};
+  \foreach \tg/\r in {5/0,8/1,8/2,1/3,F/4} {\node[font=\tiny, anchor=west] at (6*\c+0.1,-\r*\c-\c/2) {$\to$ predict \texttt{\tg}};}
+  \node[font=\tiny, anchor=west, text=black!45] at (6*\c+0.1,-5*\c-\c/2) {(ignored)};
+
+  % the counts
+  \begin{scope}[shift={(5.4,0.3)}]
+    \node[card, anchor=north west, text width=8.3cm] {%
+      \textbf{One forward pass computes all the snapshots together:}\\[3pt]
+      $\bullet$ every word: \textbf{21} positions $=$ 21 snapshots (one row each)\\[1pt]
+      $\bullet$ every head: one $21\times21$ grid per word, like the one at left\\[1pt]
+      $\bullet$ per step: 100 words $\times$ 4 heads $\times$ 4 blocks $=$ \textbf{1,600 grids}\\[1pt]
+      $\bullet$ loss $=$ average of $-\ln p(\text{correct next token})$ over all real positions\\[1pt]
+      $\bullet$ one backward pass, one AdamW step; repeat 1500 times};
+    \node[card, anchor=north west, text width=8.3cm, fill=yellow!12] at (0,-2.85) {%
+      \textbf{Generation is different:} batch 1, one snapshot at a time.
+      \code{312} $\to$ \texttt{A312} (4 positions) in one call, then one new position per call,
+      reusing the stored keys and values of earlier positions.};
+  \end{scope}
+\end{tikzpicture}
 \end{frame}
 
 \end{document}
