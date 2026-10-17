@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Step 4: train TinyGPT on the fixed training set and save tinygpt.pt.
 
-Each word w is the sequence BOS w EOS. All 100 sequences form one batch,
-right-padded (pads are ignored by the loss; with causal attention a pad
+Each word w is the sequence A w F (start symbol, digits, end symbol), e.g.
+5881 -> A5881F. All 100 sequences form one batch, right-padded with F
+(pads are ignored by the loss; with causal attention a pad
 can never influence a real position, so no attention mask is needed and
 the flash backend stays eligible).
 
@@ -14,7 +15,7 @@ import time
 import torch
 import torch.nn.functional as F
 
-from tinygpt import TinyGPT, BOS, EOS, encode
+from tinygpt import TinyGPT, EOS, decode, encode
 
 p = argparse.ArgumentParser()
 p.add_argument("--steps", type=int, default=1500)
@@ -33,6 +34,7 @@ for i, s in enumerate(seqs):
     x[i, :len(s)] = torch.tensor(s)
     y[i, :len(s) - 1] = torch.tensor(s[1:])
 x, y = x[:, :-1].cuda(), y[:, :-1].cuda()
+print(f"{len(seqs)} sequences, e.g. {decode(seqs[0])}, {decode(seqs[1])}; batch {tuple(x.shape)}")
 
 model = TinyGPT().cuda()
 print(f"TinyGPT: {sum(p.numel() for p in model.parameters()):,} params, {model.cfg}")

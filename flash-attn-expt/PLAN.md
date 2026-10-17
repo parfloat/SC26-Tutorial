@@ -65,8 +65,9 @@ The experiment is designed to test points 1–4 empirically.
 
 ## Fixed choices
 
-* Tokens 0–9, plus BOS = 10 and EOS = 11 (needed to start and end a word).
-  BOS/EOS logits are masked during completion, so the output is pure digits.
+* Tokens 0–9, plus the start symbol `A` (id 10) and the end symbol `F` (id 11),
+  written as hex digits: the word `5881` is the sequence `A5881F`.
+  The A/F logits are masked during completion, so the output is pure digits.
 * Precision: FP32 parameters and linears; FP16 for attention only. Flash
   supports only FP16/BF16 and runs only on tensor cores (HMMA), so attention
   can't avoid tensor cores. Everything else does.

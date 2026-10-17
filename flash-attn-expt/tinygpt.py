@@ -1,6 +1,8 @@
 """Step 3: TinyGPT, a decoder-only transformer over the digits 0..9.
 
-    tokens 0..9 = digits, BOS = 10, EOS = 11
+    12 tokens, written as hex digits: 0..9 = the digits,
+    A (id 10) = start of a word, F (id 11) = end of a word
+    e.g. the training word 5881 is the sequence A5881F
     4 blocks: x += Attn(LN(x)); x += MLP(LN(x))    (pre-LN, RoPE, no biases)
     d_model 128, 4 heads (head_dim 32), MLP 4x
 
@@ -27,7 +29,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.attention import SDPBackend, sdpa_kernel
 
-VOCAB, BOS, EOS = 12, 10, 11
+TOKENS = "0123456789AF"                            # token id i is written TOKENS[i]
+VOCAB = len(TOKENS)                                # 12
+STOI = {c: i for i, c in enumerate(TOKENS)}
+BOS, EOS = STOI["A"], STOI["F"]                    # start symbol A = 10, end symbol F = 11
 torch.backends.cuda.matmul.allow_tf32 = False      # FP32 GEMMs stay off tensor cores
 torch.backends.cudnn.allow_tf32 = False
 
@@ -107,14 +112,21 @@ class TinyGPT(nn.Module):
 
 
 def encode(word):
-    return [BOS] + [int(c) for c in word]
+    """'312' (or 'A312') -> [10, 3, 1, 2]: the start symbol A, then the digits."""
+    word = word if word.startswith("A") else "A" + word
+    return [STOI[c] for c in word]
+
+
+def decode(ids):
+    """[10, 3, 1, 2, 11] -> 'A312F'."""
+    return "".join(TOKENS[int(i)] for i in ids)
 
 
 @torch.no_grad()
 def complete(model, prompt, length, device="cuda"):
     """Greedy autoregressive completion of the digit string `prompt` to
     `length` digits (KV cache: one prefill call, then one call per token).
-    BOS/EOS are masked so the completion is digits only."""
+    A and F are masked so the completion is digits only."""
     ids = torch.tensor([encode(prompt)], device=device)
     cache = {}
     logits = model(ids, cache, 0)

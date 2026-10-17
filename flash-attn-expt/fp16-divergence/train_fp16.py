@@ -34,7 +34,7 @@ a = p.parse_args()
 torch.manual_seed(a.seed)
 here = os.path.dirname(os.path.abspath(__file__))
 words = open(os.path.join(here, "..", "training-set.txt")).read().split()
-seqs = [encode(w) + [EOS] for w in words]
+seqs = [encode(w) + [EOS] for w in words]                # A w F
 T = max(map(len, seqs))
 x = torch.full((len(seqs), T), EOS, dtype=torch.long)
 y = torch.full((len(seqs), T), -100, dtype=torch.long)

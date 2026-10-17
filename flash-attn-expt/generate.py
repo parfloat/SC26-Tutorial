@@ -15,7 +15,7 @@ import argparse
 import torch
 import torch.nn as nn
 
-from tinygpt import load, complete
+from tinygpt import load, complete, encode, decode
 
 p = argparse.ArgumentParser()
 p.add_argument("--prompt", default="312")
@@ -65,4 +65,5 @@ elif a.linear == "nf4":
 
     swap_linears(model, NF4)
 
-print(f"completion ({a.linear} linears): {a.prompt} -> {complete(model, a.prompt, a.length)}")
+out = complete(model, a.prompt, a.length)
+print(f"completion ({a.linear} linears): {a.prompt} -> {out}   (tokens {decode(encode(a.prompt))} -> {decode(encode(out))})")

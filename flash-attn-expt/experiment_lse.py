@@ -7,7 +7,7 @@
 The guard lives in flash_fwd_splitkv_combine_kernel. PyTorch launches that
 kernel only when its heuristic picks num_splits > 1, which for head_dim 32
 needs seqlen_k > 256 (one key block = 256). So the prompt is a fixed
-297-digit context followed by "312": BOS + 300 digits = 301 keys -> 2 splits.
+297-digit context followed by "312": A + 300 digits = 301 keys -> 2 splits.
 
 The external input is a vector added to the token embedding of the last
 prompt position (as a soft prompt or a vision encoder's output would be):
@@ -38,7 +38,7 @@ a = p.parse_args()
 
 rng = random.Random(7)
 prompt = "".join(rng.choice("0123456789") for _ in range(a.context)) + "312"
-T = 1 + len(prompt)                                    # BOS + digits
+T = 1 + len(prompt)                                    # A + digits
 model = load(a.ckpt)
 ext = torch.zeros(T + 8, model.cfg["d"], device="cuda")
 if a.input == "B":

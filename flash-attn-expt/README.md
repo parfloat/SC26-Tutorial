@@ -81,7 +81,7 @@ binaries. The plan is in `PLAN.md`, and the full run recipe is in `run_all.sh`.
 
 | | |
 |---|---|
-| tokens | 0–9, plus BOS = 10 and EOS = 11 (masked during completion) |
+| tokens | 12, written as hex digits: 0–9, plus the start symbol `A` (id 10) and the end symbol `F` (id 11), both masked during completion. The word `5881` trains as `A5881F` |
 | training set | `training-set.txt`: 100 random words, length 1–20 (`gen_training_set.py`, seed 2026) |
 | model | 4 blocks, d_model 128, 4 heads (head_dim 32), RoPE, pre-LN, MLP 4×, 791,808 params |
 | precision | FP32 parameters and Linears with TF32 off (SIMT, no tensor cores). Attention in FP16 via `F.scaled_dot_product_attention` with flash forced, which only exists as tensor-core HMMA code. |
