@@ -52,56 +52,131 @@
 %=============================================================================
 \section{TinyGPT's input}
 %-----------------------------------------------------------------------------
-\begin{frame}{A token is a row number, not a number}
+\begin{frame}{Step 1: a word becomes a list of token ids}
 \centering
 \begin{tikzpicture}
   % the alphabet
-  \node[font=\scriptsize\bfseries, anchor=east] at (-0.3,0) {12 tokens};
-  \cellrow{0}{0}{0.5}{0/cd,1/cd,2/cd,3/cd,4/cd,5/cd,6/cd,7/cd,8/cd,9/cd,A/cs,F/ce}
-  \foreach \i in {0,...,11} {\node[font=\tiny, text=black!55] at (\i*0.5,-0.42) {\i};}
-  \node[font=\tiny, text=black!55, anchor=east] at (-0.3,-0.42) {id};
-  \node[note, anchor=west] at (6.1,0) {\textbf{A} = start, \textbf{F} = end};
+  \node[font=\scriptsize\bfseries, anchor=east] at (-0.3,0) {the 12 tokens};
+  \cellrow{0}{0}{0.55}{0/cd,1/cd,2/cd,3/cd,4/cd,5/cd,6/cd,7/cd,8/cd,9/cd,A/cs,F/ce}
+  \foreach \i in {0,...,11} {\node[font=\tiny, text=black!55] at (\i*0.55,-0.45) {\i};}
+  \node[font=\tiny, text=black!55, anchor=east] at (-0.3,-0.45) {token id};
+  \node[note, anchor=west, align=left] at (6.5,-0.1) {\textbf{A} (id 10) = start of a word\\\textbf{F} (id 11) = end of a word};
 
-  % a word becomes ids
-  \node[font=\scriptsize, anchor=east] at (-0.3,-1.6) {word \texttt{312}};
-  \cellrow{0}{-1.6}{0.5}{A/cs,3/cd,1/cd,2/cd}
-  \foreach \v [count=\i from 0] in {10,3,1,2} {\node[font=\tiny, text=black!55] at (\i*0.5,-2.02) {id \v};}
+  % the word
+  \node[font=\scriptsize, anchor=east] at (-0.3,-1.7) {word \texttt{312}};
+  \node[note, anchor=east] at (-0.3,-2.05) {put \texttt{A} in front};
+  \cellrow{0}{-1.7}{0.55}{A/cs,3/cd,1/cd,2/cd}
+  \foreach \v [count=\i from 0] in {10,3,1,2} {\draw[-{Stealth[length=1.3mm]}, black!50] (\i*0.55,-1.97) -- (\i*0.55,-2.35);
+     \node[font=\scriptsize\bfseries] at (\i*0.55,-2.55) {\v};}
+  \node[note, anchor=west] at (2.0,-2.55) {$\leftarrow$ the ids: \textbf{4 positions}};
 
-  % the embedding table
-  \begin{scope}[shift={(4.6,-0.9)}]
-    \node[font=\scriptsize\bfseries] at (1.55,0.25) {embedding table, $12\times128$};
-    \foreach \r [count=\k from 0] in {0,1,2,3,4,5,6,7,8,9,A,F} {
-      \pgfmathsetmacro{\yy}{-\k*0.3}
-      \node[font=\tiny\ttfamily, anchor=east] at (-0.05,\yy) {\r};
-      \foreach \c in {0,...,7} {\draw[black!35, fill=black!3] (\c*0.36,\yy-0.13) rectangle ++(0.36,0.26);}
-      \node[font=\tiny] at (3.1,\yy) {$\cdots$};
-    }
-    % highlight rows A,3,1,2
-    \foreach \k/\col in {10/okgreen, 3/validblue, 1/validblue, 2/validblue} {
-      \fill[\col!30, opacity=0.8] (0,-\k*0.3-0.13) rectangle ++(2.88,0.26);
-      \draw[\col!70!black, thick] (0,-\k*0.3-0.13) rectangle ++(2.88,0.26);
-    }
-    \draw[br] (3.35,0.12) -- (3.35,-3.43) node[midway, right=3pt, note] {12 rows,\\one per\\token};
-    \draw[br] (2.88,-3.55) -- (0,-3.55) node[midway, below=2pt, note] {128 numbers per row, \textbf{learned}};
+  % one-hot matrix
+  \begin{scope}[shift={(7.3,-1.55)}]
+    \node[font=\scriptsize\bfseries, anchor=south west] at (-0.3,0.35) {the same ids as one-hot rows ($4\times12$)};
+    \foreach \t [count=\c from 0] in {0,1,2,3,4,5,6,7,8,9,A,F} {\node[font=\tiny\ttfamily, text=black!55] at (\c*0.4,0.15) {\t};}
+    \foreach \t/\id/\col [count=\r from 0] in {A/10/okgreen,3/3/validblue,1/1/validblue,2/2/validblue} {
+      \node[font=\tiny\ttfamily, anchor=east] at (-0.25,-\r*0.4-0.2) {\t};
+      \foreach \c in {0,...,11} {
+        \ifnum\c=\id
+          \node[cell=4mm, fill=\col!35, font=\tiny\bfseries] at (\c*0.4,-\r*0.4-0.2) {1};
+        \else
+          \node[cell=4mm, text=black!30] at (\c*0.4,-\r*0.4-0.2) {0};
+        \fi}}
+    \node[note, anchor=north west, align=left] at (-0.3,-1.75) {each row has a single 1, in the column of its id};
   \end{scope}
-  \draw[arr] (1.95,-1.6) -- node[above, note] {look up} (4.25,-1.6);
+\end{tikzpicture}
 
-  % output vectors
-  \begin{scope}[shift={(10.4,-1.25)}]
-    \node[font=\scriptsize\bfseries] at (1.45,0.45) {what block 0 gets};
-    \foreach \r/\col [count=\k from 0] in {A/okgreen,3/validblue,1/validblue,2/validblue} {
-      \node[font=\tiny\ttfamily, anchor=east] at (-0.05,-\k*0.36) {\r};
-      \foreach \c in {0,...,7} {\draw[\col!70!black, fill=\col!25] (\c*0.36,-\k*0.36-0.15) rectangle ++(0.36,0.3);}
-    }
-    \node[note] at (1.45,-1.75) {4 positions $\times$ 128};
+\vspace{3mm}
+\begin{itemize}\small
+\item An id is a \textbf{label}: \texttt{3} is ``token number 3'', just as \texttt{A} is token number 10. The network never adds or compares ids as numbers.
+\item The next step turns each id into a vector of 128 numbers by picking one row of a table.
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Step 2: each id picks one row of 128 numbers from the embedding table}
+\centering
+\begin{tikzpicture}
+  % the table with real numbers
+  \def\cw{0.9} \def\rh{0.29}
+  \node[font=\scriptsize\bfseries, anchor=south west] at (-0.4,0.3) {embedding table in \code{tinygpt.pt} ($12\times128$, after training)};
+  \foreach \h [count=\c from 0] in {col 0,col 1,col 2,col 3,,col 127} {\node[font=\tiny, text=black!55] at (\c*\cw+0.45,0.12) {\h};}
+  \foreach \t/\a/\b/\cc/\d/\e/\f [count=\r from 0] in {
+      0/-0.015/+0.010/-0.044/+0.061/\cdots/+0.002,
+      1/+0.037/-0.001/-0.059/-0.017/\cdots/-0.139,
+      2/+0.013/+0.025/+0.058/-0.007/\cdots/+0.004,
+      3/+0.033/+0.016/-0.141/+0.070/\cdots/-0.077,
+      4/-0.008/+0.048/+0.008/+0.039/\cdots/-0.031,
+      5/+0.030/+0.016/+0.027/+0.009/\cdots/-0.013,
+      6/+0.008/+0.066/+0.063/-0.054/\cdots/+0.012,
+      7/+0.075/+0.091/+0.013/-0.058/\cdots/+0.014,
+      8/+0.035/-0.010/+0.030/-0.076/\cdots/+0.022,
+      9/-0.014/-0.014/+0.020/+0.049/\cdots/+0.078,
+      A/-0.001/+0.000/-0.006/-0.012/\cdots/-0.014,
+      F/+0.010/+0.016/-0.020/+0.020/\cdots/+0.005} {
+    \node[font=\tiny\ttfamily, anchor=east] at (-0.05,-\r*\rh-0.1) {\t};
+    \foreach \v [count=\c from 0] in {\a,\b,\cc,\d,\e,\f} {
+      \node[draw=black!30, fill=black!2, minimum width=\cw cm, minimum height=\rh cm, inner sep=0pt, font=\tiny]
+        at (\c*\cw+0.45,-\r*\rh-0.1) {$\v$};}}
+  \foreach \r/\col in {10/okgreen,3/validblue,1/validblue,2/validblue}
+    {\draw[\col!80!black, very thick] (-0.03,-\r*\rh-0.1-\rh/2) rectangle ++(6*\cw,\rh);}
+  \draw[br] (6*\cw+0.08,0.0) -- (6*\cw+0.08,-12*\rh+0.05) node[midway, right=3pt, note] {12 rows:\\one per\\token};
+
+  % the picked rows
+  \begin{scope}[shift={(9.5,-0.75)}]
+    \node[font=\scriptsize\bfseries, anchor=south west] at (-0.4,0.25) {what block 0 gets for \texttt{A312}};
+    \foreach \t/\r/\col [count=\k from 0] in {A/10/okgreen,3/3/validblue,1/1/validblue,2/2/validblue} {
+      \node[font=\tiny\ttfamily, anchor=east] at (-0.1,-\k*0.36) {\t};
+      \foreach \c in {0,...,9} {\draw[\col!70!black, fill=\col!25] (\c*0.36,-\k*0.36-0.15) rectangle ++(0.36,0.3);}
+      \node[font=\tiny] at (3.85,-\k*0.36) {$\cdots$};}
+    \draw[br] (3.6,-1.33) -- (0,-1.33) node[midway, below=2pt, note] {4 positions $\times$ 128 numbers};
+    \node[note, anchor=north west, align=left] at (-0.4,-2.0) {one-hot ($4\times12$) $\times$ table ($12\times128$)\\$=$ these 4 rows ($4\times128$): a matrix\\multiply that just copies rows};
   \end{scope}
-  \draw[arr] (8.4,-1.9) -- (10.2,-1.9);
+  \draw[arr] (7.55,-1.5) -- node[above, note] {copy rows} node[below, note] {A, 3, 1, 2} (8.95,-1.5);
 \end{tikzpicture}
 
 \vspace{1mm}
 \begin{itemize}\small
-\item The network never sees that \texttt{3} means three. To it, \texttt{3} is whatever vector sits in row 3; training moves the rows.
-\item The code multiplies a one-hot matrix by the table (same rows, same FP32 values) instead of calling \code{nn.Embedding}: the lookup kernel hangs NVBit.
+\item Every entry is one \textbf{FP32 number} (32 bits). A row is 128 numbers, i.e.\ $128\times32 = 4096$ bits, not 128 bits.
+\item Row 3 is what the network means by \texttt{3}. Its 128 numbers are coordinates of a point; no single column means anything by itself.
+\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\newcommand{\barstrip}[3]{% {y}{values}{color}: 128 bars around a baseline at y
+  \foreach \v [count=\i from 0] in #2 {\fill[#3] (\i*0.045,#1) rectangle ++(0.035,\v*6);}
+  \draw[black!40] (0,#1) -- (128*0.045,#1);}
+\begin{frame}{Where the numbers come from: random at first, then moved by training}
+\centering
+\begin{tikzpicture}
+  \def\rowthreeinit{-0.006,0.013,-0.060,0.017,0.001,-0.021,0.007,-0.001,0.013,-0.007,0.016,-0.012,0.000,0.018,0.022,0.008,0.018,0.013,-0.003,-0.009,-0.011,0.001,0.022,-0.029,-0.012,-0.018,0.009,-0.018,-0.039,-0.001,0.013,-0.012,0.013,-0.004,0.002,-0.016,0.029,0.005,-0.004,0.039,-0.003,-0.006,-0.026,-0.010,-0.025,-0.002,-0.024,0.020,-0.008,0.026,0.006,0.008,-0.012,0.002,0.031,0.030,0.012,0.007,0.025,-0.018,-0.007,0.020,-0.043,-0.034,-0.007,0.008,-0.002,-0.003,-0.020,-0.006,-0.007,-0.010,0.006,0.006,0.010,-0.005,0.025,-0.020,0.023,-0.010,-0.019,0.033,-0.021,-0.000,-0.008,0.011,-0.029,0.010,0.018,-0.001,-0.002,-0.055,0.020,-0.011,-0.013,0.019,-0.009,-0.001,-0.000,-0.021,-0.014,-0.002,0.004,0.008,-0.024,-0.025,-0.004,-0.018,-0.031,-0.008,0.040,0.009,0.001,0.003,-0.015,0.021,0.022,-0.015,0.006,0.029,0.039,-0.016,0.008,0.010,0.018,0.038,0.025,-0.024}
+  \def\rowthree{0.033,0.016,-0.141,0.070,0.028,0.014,0.010,0.021,0.055,0.064,0.005,-0.051,-0.053,-0.001,0.017,0.080,-0.010,-0.019,-0.013,-0.022,-0.032,-0.043,0.030,-0.033,-0.031,-0.039,0.034,-0.094,-0.079,-0.031,0.017,0.006,0.054,0.010,-0.033,-0.049,0.079,0.070,0.041,0.063,0.024,-0.005,-0.028,-0.001,-0.085,-0.012,-0.057,0.062,-0.045,0.019,0.033,-0.008,0.013,-0.040,0.127,0.054,0.005,-0.016,0.031,-0.073,-0.006,0.018,-0.131,0.008,-0.093,0.001,0.010,-0.064,-0.006,-0.064,0.012,-0.029,0.011,0.004,0.005,-0.041,-0.002,-0.028,0.031,-0.029,-0.056,0.086,0.007,-0.001,0.003,0.035,-0.018,-0.031,0.024,0.031,0.049,-0.022,-0.035,-0.034,-0.027,0.040,0.044,-0.011,-0.038,-0.011,-0.007,0.006,0.047,0.072,-0.002,-0.043,0.027,-0.091,-0.070,-0.025,0.064,-0.014,-0.006,0.026,0.001,0.020,0.066,0.016,0.001,0.002,0.055,-0.034,0.024,-0.046,0.017,0.034,0.014,-0.077}
+  \def\rowFinit{0.010,0.016,-0.020,0.020,-0.007,0.010,0.032,-0.012,0.002,0.021,0.025,-0.029,0.008,-0.001,0.011,-0.018,0.018,-0.056,0.001,0.000,-0.004,-0.011,0.014,-0.021,-0.018,-0.032,0.007,0.007,-0.000,-0.014,-0.023,-0.010,-0.025,-0.026,-0.009,0.019,0.004,0.033,-0.022,-0.012,-0.007,0.016,-0.029,0.014,-0.005,-0.019,-0.007,0.008,0.012,-0.047,0.005,0.011,-0.003,-0.011,-0.009,-0.012,-0.015,-0.015,-0.005,-0.011,-0.024,0.026,-0.008,0.023,-0.006,-0.018,-0.012,0.026,0.017,-0.017,-0.005,-0.002,-0.011,0.046,-0.003,-0.041,-0.041,0.009,0.011,0.044,-0.038,0.015,-0.013,0.002,-0.005,-0.041,-0.004,0.034,0.023,0.001,-0.026,0.027,0.020,0.010,-0.046,0.006,-0.027,0.015,-0.003,-0.012,0.010,-0.011,-0.003,0.007,-0.001,-0.004,-0.036,0.026,0.021,0.029,-0.055,-0.018,-0.051,0.016,0.002,0.006,-0.024,-0.053,-0.014,0.004,0.019,-0.010,-0.012,-0.014,-0.009,0.003,0.019,0.005}
+  \def\rowF{0.010,0.016,-0.020,0.020,-0.007,0.010,0.032,-0.012,0.002,0.021,0.025,-0.029,0.008,-0.001,0.011,-0.018,0.018,-0.056,0.001,0.000,-0.004,-0.011,0.014,-0.021,-0.018,-0.032,0.007,0.007,-0.000,-0.014,-0.023,-0.010,-0.025,-0.026,-0.009,0.019,0.004,0.033,-0.022,-0.012,-0.007,0.016,-0.029,0.014,-0.005,-0.019,-0.007,0.008,0.012,-0.047,0.005,0.011,-0.003,-0.011,-0.009,-0.012,-0.015,-0.015,-0.005,-0.011,-0.024,0.026,-0.008,0.023,-0.006,-0.018,-0.012,0.026,0.017,-0.017,-0.005,-0.002,-0.011,0.046,-0.003,-0.041,-0.041,0.009,0.011,0.044,-0.038,0.015,-0.013,0.002,-0.005,-0.041,-0.004,0.034,0.023,0.001,-0.026,0.027,0.020,0.010,-0.046,0.006,-0.027,0.015,-0.003,-0.012,0.010,-0.011,-0.003,0.007,-0.001,-0.004,-0.036,0.026,0.021,0.029,-0.055,-0.018,-0.051,0.016,0.002,0.006,-0.024,-0.053,-0.014,0.004,0.019,-0.010,-0.012,-0.014,-0.009,0.003,0.019,0.005}
+  \node[font=\scriptsize\bfseries] at (2.9,1.2) {row \texttt{3}};
+  \node[font=\scriptsize\bfseries] at (10.1,1.2) {row \texttt{F}};
+  \node[font=\scriptsize, anchor=east] at (-0.2,0.6) {at the start};
+  \node[font=\scriptsize, anchor=east] at (-0.2,-1.1) {after 1500 steps};
+  \barstrip{0.6}{\rowthreeinit}{validblue!45}
+  \barstrip{-1.1}{\rowthree}{validblue}
+  \begin{scope}[shift={(7.2,0)}]
+    \barstrip{0.6}{\rowFinit}{nanred!45}
+    \barstrip{-1.1}{\rowF}{nanred!45}
+    \node[note, anchor=north] at (2.9,-2.0) {\textbf{unchanged}: bit-for-bit the random start};
+  \end{scope}
+  \node[note, anchor=north] at (2.9,-2.0) {spread out: values now $-0.14$ to $+0.13$};
+  % scale
+  \draw[black!50] (-0.05,0.0) -- (-0.05,1.2); \node[font=\tiny, anchor=east] at (-0.05,1.2) {$+0.1$};
+  \node[font=\tiny, anchor=east] at (-0.05,0.0) {$-0.1$};
+\end{tikzpicture}
+
+\vspace{1mm}
+\begin{itemize}\small
+\item \textbf{Start:} every entry is drawn at random from a normal distribution with mean 0 and spread 0.02 (seed 0).
+\item \textbf{Training:} each of the 1500 AdamW steps nudges every entry in the direction that lowers the loss,
+      exactly like TinyGPT's other parameters (the table is 1,536 of 791,808).
+\item \textbf{Why \texttt{F} never moves:} \texttt{F} is only ever an \emph{input} after a word has ended, where the target is ignored ($-100$).
+      Causal attention lets it affect only those positions, so its gradient is exactly zero.
 \end{itemize}
 \end{frame}
 
