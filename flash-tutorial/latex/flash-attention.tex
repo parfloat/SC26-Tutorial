@@ -6,6 +6,8 @@
 \usepackage{lmodern}
 \usepackage{amsmath}
 \usepackage{xcolor}
+\usepackage{listings}
+\usepackage{array}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing}
 
@@ -600,6 +602,337 @@ The loss pushes $p(\text{correct next token})$ up at every position, and the gra
       reusing the stored keys and values of earlier positions.};
   \end{scope}
 \end{tikzpicture}
+\end{frame}
+
+%=============================================================================
+\section{The flash loop, tile by tile}
+% Walk-through of the 28-line educational flash_attention (pdf-papers/flash-attention.png),
+% kv_block_size = 2, on query F of A5881F, block 2 head 1 of tinygpt.pt
+% (q, k after RoPE, rounded to FP16; the loop itself in FP64).
+\tikzset{
+  tn/.style={fill=infor!40, thick},           % key tile being processed
+  td/.style={fill=okgreen!18},                % tile already folded into the notepad
+  tf/.style={fill=white, text=black!35},      % tile not read yet
+}
+\newcommand{\stp}[1]{\tikz[baseline=-0.6ex]\node[circle, draw=infor!80!black, fill=infor!15, inner sep=0.6pt, font=\tiny\bfseries]{#1};}
+% \keystrip{tok/style/score, ... (6 entries)}
+\newcommand{\keystrip}[1]{%
+  \node[font=\scriptsize\bfseries, anchor=east] at (-0.45,0) {keys};
+  \node[font=\tiny, text=black!55, anchor=east] at (-0.45,-0.5) {score $s$};
+  \foreach \t/\s/\sc [count=\i from 0] in {#1} {
+    \node[cell=6mm, \s] at (\i*0.85,0) {\t};
+    \node[font=\tiny] at (\i*0.85,-0.5) {\sc};}
+  \foreach \k in {1,2,3}
+    {\draw[br] ({(2*\k-2)*0.85-0.3},0.38) -- ({(2*\k-1)*0.85+0.3},0.38) node[midway, above=1pt, font=\tiny] {tile \k};}}
+% \notepad{x}{y}{title}{m}{l}{U}{style}
+\newcommand{\notepad}[7]{%
+  \node[card, anchor=north west, fill=yellow!14, #7] at (#1,#2) {%
+    \textbf{#3}\\[1pt]
+    \begin{tabular}{@{}l@{\;\;}l@{}}
+      $m$ & $#4$\\
+      $\ell$ & $#5$\\
+      $U$ & $#6$
+    \end{tabular}};}
+
+\begin{frame}[fragile]{The educational flash loop (\texttt{pdf-papers/flash-attention.png})}
+\begin{columns}[T]
+\column{0.56\textwidth}
+\begin{lstlisting}[language=Python, basicstyle=\ttfamily\tiny, numbers=left, numberstyle=\tiny\color{black!40}]
+def flash_attention(q, k, v, kv_block_size=2):
+    n_q, d = q.shape
+    n_k = k.shape[0]
+    scale = 1.0 / math.sqrt(d)
+
+    running_max = q.new_full((n_q, 1), -torch.inf)  # m
+    running_sum = q.new_zeros(n_q, 1)               # l
+    accumulator = q.new_zeros(n_q, v.shape[1])      # U
+
+    for start in range(0, n_k, kv_block_size):
+        k_tile = k[start:start + kv_block_size]
+        v_tile = v[start:start + kv_block_size]
+
+        scores = q @ k_tile.T * scale                   # (1)
+        new_max = torch.maximum(running_max,
+                    scores.max(-1, keepdim=True).values) # (2)
+        old_scale = torch.exp(running_max - new_max)    # (3)
+        tile_weights = torch.exp(scores - new_max)      # (4)
+        running_sum = old_scale * running_sum \
+                    + tile_weights.sum(-1, keepdim=True) # (5)
+        accumulator = old_scale * accumulator \
+                    + tile_weights @ v_tile             # (6)
+        running_max = new_max
+
+    return accumulator / running_sum                    # (7)
+\end{lstlisting}
+\column{0.42\textwidth}
+\small
+\textbf{The notepad} (one per query row): $m$ = largest score so far, $\ell$ = sum of $e^{s-m}$ so far, $U$ = sum of $e^{s-m}\,v$ so far (32 numbers).\\[4pt]
+\textbf{Our run:}
+\begin{itemize}\scriptsize
+\item word \texttt{A5881F}, query \texttt{F} (position 5): it may see all 6 keys, so the code needs no causal mask
+\item block 2, head 1 of the trained \code{tinygpt.pt}; $d = 32$, scale $= 1/\sqrt{32} = 0.1768$
+\item tiles of 2 keys: \texttt{[A,5]} \texttt{[8,8]} \texttt{[1,F]}
+\item why this head: its running max rises in \emph{every} tile, so steps \stp{3} and \stp{6} have work to do. (In block 0, head 0 the largest score is in tile 1, and \stp{3} is always $e^0=1$.)
+\end{itemize}
+\vspace{2pt}
+\textbf{Start:} $m=-\infty$, $\ell=0$, $U=(0,\dots,0)$.
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Tile 1: keys \texttt{A} and \texttt{5}}
+\centering
+\begin{tikzpicture}
+  \keystrip{A/tn/$-11.03$,5/tn/$-11.71$,8/tf/,8/tf/,1/tf/,F/tf/}
+  \notepad{4.9}{0.75}{before}{-\infty}{0}{(0,\,0,\dots,0)}{}
+  \draw[arr] (8.75,-0.1) -- (9.2,-0.1);
+  \notepad{9.3}{0.75}{after tile 1}{-11.03}{1.506}{(-1.043,\,0.956,\dots,0.416)}{draw=infor, thick}
+  \node[card, anchor=north west, text width=13.2cm] at (-1.6,-1.0) {%
+  \begin{tabular}{@{}c@{\;\;}>{\scriptsize}p{2.3cm}@{\;\;}p{10.2cm}@{}}
+  \stp{1} & \code{scores} & $q_F\cdot k_A = -62.39,\; q_F\cdot k_5 = -66.24$; \;$\times 0.1768 \Rightarrow s = (-11.03,\,-11.71)$\\[3pt]
+  \stp{2} & \code{new_max} & $\max(-\infty,\,-11.03,\,-11.71) = -11.03$\\[3pt]
+  \stp{3} & \code{old_scale} & $e^{-\infty} = 0$ \quad (nothing on the notepad yet)\\[3pt]
+  \stp{4} & \code{tile_weights} & $(e^{0},\, e^{-0.68}) = (1,\; 0.5065)$\\[3pt]
+  \stp{5} & \code{running_sum} & $0\cdot 0 + (1 + 0.5065) = 1.506$\\[3pt]
+  \stp{6} & \code{accumulator} & $0 + 1\cdot v_A + 0.5065\cdot v_5$;\; col 1: $1\cdot(-0.932) + 0.5065\cdot(-0.221) = -1.043$
+  \end{tabular}};
+\end{tikzpicture}
+
+\vspace{1mm}
+\small The weights are measured against the best score \emph{seen so far} ($-11.03$), not the true row max, which the loop cannot know yet.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Tile 2: keys \texttt{8} and \texttt{8}, and the first rescale}
+\centering
+\begin{tikzpicture}
+  \keystrip{A/td/$-11.03$,5/td/$-11.71$,8/tn/$-7.097$,8/tn/$-7.453$,1/tf/,F/tf/}
+  \notepad{4.9}{0.75}{before}{-11.03}{1.506}{(-1.043,\,0.956,\dots,0.416)}{}
+  \draw[arr] (8.75,-0.1) -- (9.2,-0.1);
+  \notepad{9.3}{0.75}{after tile 2}{-7.097}{1.730}{(-0.959,\,-0.264,\dots,0.834)}{draw=infor, thick}
+  \node[card, anchor=north west, text width=13.2cm] at (-1.6,-1.0) {%
+  \begin{tabular}{@{}c@{\;\;}>{\scriptsize}p{2.3cm}@{\;\;}p{10.2cm}@{}}
+  \stp{1} & \code{scores} & $(-40.15,\,-42.16)\times0.1768 \Rightarrow s = (-7.097,\,-7.453)$\\[3pt]
+  \stp{2} & \code{new_max} & $\max(-11.03,\,-7.097,\,-7.453) = -7.097$ \quad \textbf{the max went up}\\[3pt]
+  \stp{3} & \code{old_scale} & $e^{-11.03-(-7.097)} = e^{-3.93} = 0.0196$\\[3pt]
+  \stp{4} & \code{tile_weights} & $(e^{0},\, e^{-0.356}) = (1,\; 0.7006)$\\[3pt]
+  \stp{5} & \code{running_sum} & $0.0196\cdot1.506 + (1 + 0.7006) = 0.0295 + 1.7006 = 1.730$\\[3pt]
+  \stp{6} & \code{accumulator} & $0.0196\,U + v_8 + 0.7006\,v_{8}'$;\; col 1: $0.0196\cdot(-1.043) - 0.640 + 0.7006\cdot(-0.426) = -0.959$
+  \end{tabular}};
+\end{tikzpicture}
+
+\vspace{1mm}
+\small Tile 1's weights were $e^{s-(-11.03)}$; multiplying by $0.0196 = e^{-11.03-(-7.097)}$ turns them into $e^{s-(-7.097)}$, i.e.\ measured against the new max.
+Old work is \textbf{rescaled, not redone}: keys \texttt{A}, \texttt{5} are never read again.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Tile 3: keys \texttt{1} and \texttt{F}, the max jumps again}
+\centering
+\begin{tikzpicture}
+  \keystrip{A/td/$-11.03$,5/td/$-11.71$,8/td/$-7.097$,8/td/$-7.453$,1/tn/$3.992$,F/tn/$4.740$}
+  \notepad{4.9}{0.75}{before}{-7.097}{1.730}{(-0.959,\,-0.264,\dots,0.834)}{}
+  \draw[arr] (8.75,-0.1) -- (9.2,-0.1);
+  \notepad{9.3}{0.75}{after tile 3}{4.740}{1.473}{(-0.618,\,0.415,\dots,-0.022)}{draw=infor, thick}
+  \node[card, anchor=north west, text width=13.2cm] at (-1.6,-1.0) {%
+  \begin{tabular}{@{}c@{\;\;}>{\scriptsize}p{2.3cm}@{\;\;}p{10.2cm}@{}}
+  \stp{1} & \code{scores} & $(22.58,\;26.82)\times0.1768 \Rightarrow s = (3.992,\;4.740)$\\[3pt]
+  \stp{2} & \code{new_max} & $\max(-7.097,\;3.992,\;4.740) = 4.740$\\[3pt]
+  \stp{3} & \code{old_scale} & $e^{-7.097-4.740} = e^{-11.84} = 0.0000072$\\[3pt]
+  \stp{4} & \code{tile_weights} & $(e^{-0.748},\, e^{0}) = (0.473,\; 1)$\\[3pt]
+  \stp{5} & \code{running_sum} & $0.0000072\cdot1.730 + (0.473 + 1) = 1.473$\\[3pt]
+  \stp{6} & \code{accumulator} & $0.0000072\,U + 0.473\,v_1 + v_F$;\; col 1: $\approx 0 + 0.473\cdot0.327 - 0.773 = -0.618$
+  \end{tabular}};
+\end{tikzpicture}
+
+\vspace{1mm}
+\small The rescale shrinks everything from tiles 1--2 by $7\times10^{-6}$: those four keys turn out to matter almost not at all.
+The loop only learns this at tile 3, and fixes the notepad with one multiply.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Step \stp{7}: divide once, and check against plain attention}
+\centering
+\begin{tikzpicture}
+  % final division
+  \node[card, anchor=north west, text width=7.6cm, align=left] at (-0.6,0) {%
+    \textbf{\stp{7}\; \code{return accumulator / running_sum}}\\[3pt]
+    $U/\ell = (-0.618,\;0.415,\,-1.124,\dots,-0.022)\,/\,1.473$\\[1pt]
+    \hspace*{6mm}$= (\mathbf{-0.4195,\;0.2815,\,-0.7632,\dots,-0.0146})$\\[5pt]
+    \textbf{Plain attention} (the A5 slides' recipe, all 6 keys at once):\\[2pt]
+    $P = \mathrm{softmax}(s)$\\[1pt]
+    \hspace*{6mm}$= (10^{-7},\,5{\times}10^{-8},\,5{\times}10^{-6},\,3{\times}10^{-6},\,0.321,\,0.679)$\\[2pt]
+    $P\,V = (\mathbf{-0.4195,\;0.2815,\,-0.7632,\dots,-0.0146})$\\[5pt]
+    Same 32 numbers; in FP64 they differ by $2\times10^{-16}$. The loop is \textbf{exact}, not an approximation.};
+  % bars: final e^{s-m}
+  \begin{scope}[shift={(8.2,-3.6)}]
+    \node[font=\scriptsize\bfseries, anchor=south west] at (-0.3,3.25) {what the notepad holds at the end};
+    \foreach \t/\w/\lab [count=\i from 0] in {A/0.0000002/{$\approx0$},5/0.0000001/{$\approx0$},8/0.0000072/{$\approx0$},8/0.0000051/{$\approx0$},1/0.473/{0.473},F/1/{1}} {
+      \fill[validblue!45] (\i*0.8,0) rectangle ++(0.55,{2.5*\w+0.02});
+      \node[font=\tiny] at (\i*0.8+0.275,{2.5*\w+0.2}) {\lab};
+      \node[cell=5mm, td] at (\i*0.8+0.275,-0.35) {\t};}
+    \draw[black!50] (-0.1,0) -- (4.65,0);
+    \node[note, anchor=north west, align=left] at (-0.3,-0.7) {bars: $e^{s_j-m}$ with the final $m=4.740$;\\$\ell$ = their sum $= 1.473$, \;$U = \sum e^{s_j-m}\,v_j$};
+  \end{scope}
+\end{tikzpicture}
+
+\vspace{2mm}
+\small \textbf{Why it works:} after every tile, $\ell = \sum e^{s_j-m}$ and $U = \sum e^{s_j-m}v_j$ over the keys read so far, with $m$ the current max.
+Changing $m$ only changes the reference point, and \stp{3} moves both sums to the new one. In $U/\ell$ the reference cancels.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{From the 28-line loop to PyTorch's flash kernel}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\small
+\textbf{The same loop, scaled up:}
+\begin{itemize}\scriptsize
+\item \textbf{many query rows at once:} one thread block owns a tile of queries, each row with its own $m$, $\ell$, $U$ in registers
+\item \textbf{big key tiles:} for head size 32, PyTorch's kernel uses 128 queries $\times$ 128 keys per tile (\code{Flash_fwd_kernel_traits<32, 128, 128, 4, ...>} in the nixnan logs)
+\item \stp{1} and \stp{6} are matrix multiplies on \textbf{tensor cores} (\texttt{HMMA}): FP16 in, FP32 out; $m$, $\ell$, $U$ stay FP32
+\item the \textbf{causal mask} is applied to the score tile ($-\infty$ for $j>i$), and tiles entirely in the future are skipped
+\item $S$ and $P$ never leave the chip; only $O$ (and the lse $= m + \log\ell$, kept for the backward pass) are written
+\end{itemize}
+\column{0.46\textwidth}
+\small
+\textbf{What this means for TinyGPT:}
+\begin{itemize}\scriptsize
+\item a word has at most 21 positions, so all its keys fit in \textbf{one} 128-key tile
+\item the kernel runs the loop body \textbf{once}: \stp{3} multiplies an empty notepad, and the rescale never matters
+\item the rescale earns its keep only for sequences longer than one tile (and in split-KV decoding, where partial notepads from several thread blocks are merged with the same $e^{m_{\text{old}}-m_{\text{new}}}$ trick)
+\item in \code{logs/smoke.log}, nixnan's reports name these steps' instructions: \texttt{HMMA.16816.F32} for \stp{1}/\stp{6}, \texttt{MUFU.EX2} for \stp{3}/\stp{4}, \texttt{FADD}/\texttt{FFMA}/\texttt{FMUL} for \stp{5} and the rescales
+\end{itemize}
+\end{columns}
+\end{frame}
+
+%=============================================================================
+\section{Split-KV and \texttt{lse\_sum}}
+% Kernel choices, grids and times: torch 2.3.1 SDPA (flash forced) on the RTX 3090, head size 32, 4 heads,
+% measured with torch.profiler. Combine numbers: walk_flash_tiles.py.
+% \smgrid{x}{y}{number of busy SMs}{busy colour}: the RTX 3090's 82 SMs as 14 columns
+\newcommand{\smgrid}[4]{%
+  \foreach \s in {0,...,81} {
+    \pgfmathtruncatemacro{\cx}{mod(\s,14)} \pgfmathtruncatemacro{\cy}{\s/14}
+    \ifnum\s<#3 \def\f{#4}\else\def\f{black!5}\fi
+    \fill[\f] ({#1+\cx*0.27},{#2-\cy*0.27}) rectangle ++(0.22,-0.22);
+    \draw[black!30] ({#1+\cx*0.27},{#2-\cy*0.27}) rectangle ++(0.22,-0.22);}}
+
+\begin{frame}{Why split the keys? Decoding one token leaves the GPU almost idle}
+\centering
+\begin{tikzpicture}
+  \node[font=\scriptsize\bfseries, anchor=west] at (0,0.75) {training: 100 words $\times$ 4 heads, 21 queries each};
+  \node[note, anchor=west] at (0,0.35) {grid $(1, 100, 4)$ = \textbf{400 thread blocks}};
+  \smgrid{0}{0}{82}{okgreen!55}
+  \node[note, anchor=north west, align=left] at (0,-1.75) {all 82 SMs busy (400 blocks spread over them);\\each block: 21 queries $\times$ 21 keys};
+
+  \node[font=\scriptsize\bfseries, anchor=west] at (6.9,0.75) {decoding: 4 heads, \textbf{1 new query}};
+  \node[note, anchor=west] at (6.9,0.35) {unsplit: grid $(1, 1, 4)$ = \textbf{4 thread blocks}};
+  \smgrid{6.9}{0}{4}{nanred!60}
+  \node[note, anchor=north west, align=left] at (6.9,-1.75) {4 of 82 SMs work, 78 wait;\\each block walks \emph{all} the keys of its head};
+
+  % the long key row
+  \begin{scope}[shift={(1.0,-3.25)}]
+    \node[font=\scriptsize, anchor=east] at (-0.1,0) {one head, $L$ keys:};
+    \fill[validblue!15] (0,-0.17) rectangle (10.0,0.17); \draw[black!50] (0,-0.17) rectangle (10.0,0.17);
+    \foreach \x in {0.625,1.25,...,9.9} {\draw[black!25] (\x,-0.17) -- (\x,0.17);}
+    \draw[-{Stealth[length=2mm]}, very thick, nanred] (0.1,-0.38) -- (9.9,-0.38) node[midway, below, font=\tiny, text=nanred] {one thread block, tile after tile (the png loop's \code{for start in range(0, n_k, ...)})};
+  \end{scope}
+\end{tikzpicture}
+
+\vspace{1mm}
+\small Flash attention parallelizes over (query tiles, sequences, heads). Training has plenty of those.
+A decoding step has one query per head: the work is a long walk over the KV cache, and almost nothing runs in parallel.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Split-KV: several thread blocks share one row's keys}
+\centering
+\begin{tikzpicture}
+  \node[font=\scriptsize, anchor=east] at (-0.1,0) {one head, $L$ keys};
+  \foreach \w [count=\i from 0] in {1,2,3,4} {
+    \pgfmathsetmacro{\xa}{\i*2.9}
+    \fill[validblue!15] (\xa,-0.17) rectangle ++(2.8,0.34); \draw[black!50] (\xa,-0.17) rectangle ++(2.8,0.34);
+    \draw[-{Stealth[length=1.6mm]}, thick, infor!90!black] (\xa+0.1,0.36) -- (\xa+2.7,0.36);
+    \node[font=\tiny, text=infor!80!black] at (\xa+1.4,0.55) {split \w: own thread block};
+    \node[card, fill=yellow!14, anchor=north, font=\tiny, align=center] (r\w) at (\xa+1.4,-0.45) {png loop on these keys\\$\Rightarrow$ receipt $(O_{\w},\ \mathrm{lse}_{\w})$};}
+  \node[draw=black!60, rounded corners=2pt, fill=okgreen!15, font=\scriptsize, align=center, inner sep=3pt] (cmb) at (5.75,-2.25)
+       {\code{flash_fwd_splitkv_combine_kernel}\\merge the receipts with \code{lse_sum} $\Rightarrow O$};
+  \foreach \w in {1,2,3,4} {\draw[arr] (r\w.south) -- (cmb.north);}
+  \node[note, anchor=west, align=left] at (9.0,-2.25) {receipt = the split's own\\normalized output $O_s$ and\\$\mathrm{lse}_s = m_s + \log \ell_s$};
+\end{tikzpicture}
+
+\vspace{2mm}
+\scriptsize
+{\small\textbf{Measured here}} (PyTorch 2.3.1, RTX 3090, 1 sequence $\times$ 4 heads, 1 query, head size 32;
+times vary by about 1\,\textmu s run to run; \code{split_kv_probe.py}):\\[2pt]
+\begin{tabular}{@{}r l c r l@{}}
+keys $L$ & kernels launched & splits & thread blocks & time\\\hline
+7 (TinyGPT \code{312}) & \code{flash_fwd_kernel} & 1 & 4 & \\
+256 & \code{flash_fwd_kernel} & 1 & 4 & 10\,\textmu s\\
+320--512 & \code{flash_fwd_splitkv_kernel} + \code{..._combine_kernel} & 2 & 8 & 6--7 + 2\,\textmu s\\
+1024 & same & 4 & 16 & 6 + 2\,\textmu s\\
+2048 & same & 8 & 32 & 7 + 3\,\textmu s\\
+8192 & same & 16 & 64 & 11 + 5\,\textmu s\\
+8192, but 100 sequences & \code{flash_fwd_kernel} (400 blocks already) & 1 & 400 & \\
+\end{tabular}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{The combine: \texttt{lse\_sum} on our three tiles as three splits}
+\centering
+\begin{tikzpicture}
+  \node[card, anchor=north west, text width=6.3cm] at (-0.4,0) {%
+    \textbf{Receipts} (query \texttt{F}, block 2 head 1; each split runs the png loop on 2 keys):\\[3pt]
+    \begin{tabular}{@{}l r r r r@{}}
+    split & $m_s$ & $\ell_s$ & $\mathrm{lse}_s$ & $O_s$ col 1\\\hline
+    1: \texttt{A},\texttt{5} & $-11.03$ & 1.506 & $-10.62$ & $-0.693$\\
+    2: \texttt{8},\texttt{8} & $-7.097$ & 1.701 & $-6.566$ & $-0.552$\\
+    3: \texttt{1},\texttt{F} & 4.740 & 1.473 & 5.128 & $-0.4195$
+    \end{tabular}\\[4pt]
+    $\mathrm{lse}_s = m_s + \log\ell_s = \log\sum_{j\in s} e^{s_j}$: the log of the split's \textbf{row total}.
+    Each $O_s$ is a correct answer for its 2 keys only.};
+  \node[card, anchor=north west, text width=6.3cm, fill=okgreen!8] at (6.5,0) {%
+    \textbf{Combine kernel:}\\[3pt]
+    $\mathrm{lse\_max} = \max_s \mathrm{lse}_s = 5.128$\\[3pt]
+    $\mathtt{lse\_sum} = \log\big(\sum_s e^{\mathrm{lse}_s - \mathrm{lse\_max}}\big) + \mathrm{lse\_max}$\\[2pt]
+    \hspace*{4mm}$= \log(e^{-15.75} + e^{-11.69} + 1) + 5.128 = \mathbf{5.128}$\\[3pt]
+    shares: $e^{\mathrm{lse}_s - \mathtt{lse\_sum}}$\\[1pt]
+    \hspace*{4mm}$= (1.4{\times}10^{-7},\; 8.3{\times}10^{-6},\; 1.000)$\\[3pt]
+    $O = \sum_s \text{share}_s\, O_s$, col 1 $= -0.4195$:\\
+    the single loop's $U/\ell$ (within $7\times10^{-16}$, FP64)};
+  \node[note, anchor=north west, align=left, text width=13cm] at (-0.4,-3.7) {\texttt{lse\_sum} is the log of the \textbf{whole row's total} $\sum_j e^{s_j}$, rebuilt from the splits' totals; a split's share is its fraction of that total. The shares match the softmax weights summed per split ($9.6{\times}10^{-8} + 4.9{\times}10^{-8}$, \dots).};
+\end{tikzpicture}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Where \texttt{lse\_sum} sits in the png code}
+\centering
+\small
+\scriptsize
+\begin{tabular}{@{}p{5.2cm}@{\;\;}p{8.2cm}@{}}
+\textbf{png loop} (keys tile by tile, one notepad) & \textbf{split-KV combine} (whole splits, one receipt each)\\\hline
+line 21 \code{new_max = max(...)} & $\mathrm{lse\_max} = \max_s \mathrm{lse}_s$\\
+line 22 \code{old_scale = exp(...)} & the factors $e^{\mathrm{lse}_s - \mathrm{lse\_max}}$\\
+\textbf{line 24} \code{running_sum = ...} & \textbf{the sum inside} \code{lse_sum}: row totals added at a common reference\\
+line 25 \code{accumulator = ...} & $O = \sum_s e^{\mathrm{lse}_s - \mathtt{lse\_sum}}\,O_s$\\
+line 28 \code{accumulator / running_sum} & already inside the shares: $-\mathtt{lse\_sum}$ in the exponent is the division by $\ell$\\
+\end{tabular}
+
+\vspace{4mm}
+\begin{columns}[T]
+\column{0.48\textwidth}\scriptsize
+\textbf{Same idea, different bookkeeping.} The loop keeps $m$ and $\ell$ apart and adds 2 keys at a time.
+The combine keeps each split's total as one number, its log $\mathrm{lse}_s$, so \code{lse_sum} is ``line 24 plus a log'' applied to whole splits.
+The png code never needs \code{lse_sum}: it has a single worker.
+\column{0.48\textwidth}\scriptsize
+\textbf{Why the combine checks \code{lse_sum}:}
+\begin{itemize}\scriptsize
+\item \textbf{every split empty} (all keys masked): all $\mathrm{lse}_s = -\infty$, the sum is 0, \code{lse_sum} $= -\infty$; in png terms \code{running_sum} stays 0 and line 28 is $0/0$
+\item \textbf{NaN}: needs a split with $\mathrm{lse}_s = +\infty$, which only a negative softmax scale produces (line 9's \code{scale} $<0$)
+\end{itemize}
+\textbf{TinyGPT:} generation sees at most 7 keys, so it never splits; the combine (and \code{lse_sum}) appear from $L > 256$ keys on this GPU.
+\end{columns}
 \end{frame}
 
 \end{document}
