@@ -879,7 +879,7 @@ keys $L$ & kernels launched & splits & thread blocks & time\\\hline
 \end{frame}
 
 %-----------------------------------------------------------------------------
-\begin{frame}{The combine: \texttt{lse\_sum} on our three tiles as three splits}
+\begin{frame}{The combine kernel on our three tiles as three splits}
 \centering
 \begin{tikzpicture}
   \node[card, anchor=north west, text width=6.3cm] at (-0.4,0) {%
@@ -890,48 +890,96 @@ keys $L$ & kernels launched & splits & thread blocks & time\\\hline
     2: \texttt{8},\texttt{8} & $-7.097$ & 1.701 & $-6.566$ & $-0.552$\\
     3: \texttt{1},\texttt{F} & 4.740 & 1.473 & 5.128 & $-0.4195$
     \end{tabular}\\[4pt]
-    $\mathrm{lse}_s = m_s + \log\ell_s = \log\sum_{j\in s} e^{s_j}$: the log of the split's \textbf{row total}.
-    Each $O_s$ is a correct answer for its 2 keys only.};
+    $\mathrm{lse}_s = m_s + \log\ell_s = \log\sum_{j\in s} e^{s_j}$: the log of the split's \textbf{row total}
+    (the kernel's \code{lse_accum}). Each $O_s$ is a correct answer for its 2 keys only.};
   \node[card, anchor=north west, text width=6.3cm, fill=okgreen!8] at (6.5,0) {%
-    \textbf{Combine kernel:}\\[3pt]
-    $\mathrm{lse\_max} = \max_s \mathrm{lse}_s = 5.128$\\[3pt]
-    $\mathtt{lse\_sum} = \log\big(\sum_s e^{\mathrm{lse}_s - \mathrm{lse\_max}}\big) + \mathrm{lse\_max}$\\[2pt]
-    \hspace*{4mm}$= \log(e^{-15.75} + e^{-11.69} + 1) + 5.128 = \mathbf{5.128}$\\[3pt]
-    shares: $e^{\mathrm{lse}_s - \mathtt{lse\_sum}}$\\[1pt]
+    \textbf{Combine kernel} (names as in \code{flash_fwd_kernel.h}):\\[3pt]
+    \code{lse_max} $= \max_s \mathrm{lse}_s = 5.128$\\[3pt]
+    \code{lse_sum} $= \sum_s e^{\mathrm{lse}_s - \mathtt{lse\_max}}$\\[1pt]
+    \hspace*{4mm}$= e^{-15.75} + e^{-11.69} + e^{0} = \mathbf{1.0000085}$\\[3pt]
+    \code{lse_logsum} $= \log(\mathtt{lse\_sum}) + \mathtt{lse\_max} = \mathbf{5.128}$\\[3pt]
+    shares $e^{\mathrm{lse}_s - \mathtt{lse\_logsum}}$\\[1pt]
     \hspace*{4mm}$= (1.4{\times}10^{-7},\; 8.3{\times}10^{-6},\; 1.000)$\\[3pt]
     $O = \sum_s \text{share}_s\, O_s$, col 1 $= -0.4195$:\\
     the single loop's $U/\ell$ (within $7\times10^{-16}$, FP64)};
-  \node[note, anchor=north west, align=left, text width=13cm] at (-0.4,-3.7) {\texttt{lse\_sum} is the log of the \textbf{whole row's total} $\sum_j e^{s_j}$, rebuilt from the splits' totals; a split's share is its fraction of that total. The shares match the softmax weights summed per split ($9.6{\times}10^{-8} + 4.9{\times}10^{-8}$, \dots).};
+  \node[note, anchor=north west, align=left, text width=13cm] at (-0.4,-4.45) {%
+    \code{lse_sum} is the row's total $\sum_j e^{s_j}$ measured against \code{lse_max} (here $\approx 1$: split 3 dominates);
+    \code{lse_logsum} is the log of the true total, i.e.\ the whole row's lse, and is what the kernel stores.
+    A split's share is its fraction of the total; the shares match the softmax weights summed per split.};
 \end{tikzpicture}
 \end{frame}
 
 %-----------------------------------------------------------------------------
 \begin{frame}{Where \texttt{lse\_sum} sits in the png code}
 \centering
-\small
 \scriptsize
 \begin{tabular}{@{}p{5.2cm}@{\;\;}p{8.2cm}@{}}
 \textbf{png loop} (keys tile by tile, one notepad) & \textbf{split-KV combine} (whole splits, one receipt each)\\\hline
-line 21 \code{new_max = max(...)} & $\mathrm{lse\_max} = \max_s \mathrm{lse}_s$\\
-line 22 \code{old_scale = exp(...)} & the factors $e^{\mathrm{lse}_s - \mathrm{lse\_max}}$\\
-\textbf{line 24} \code{running_sum = ...} & \textbf{the sum inside} \code{lse_sum}: row totals added at a common reference\\
-line 25 \code{accumulator = ...} & $O = \sum_s e^{\mathrm{lse}_s - \mathtt{lse\_sum}}\,O_s$\\
-line 28 \code{accumulator / running_sum} & already inside the shares: $-\mathtt{lse\_sum}$ in the exponent is the division by $\ell$\\
+line 21 \code{new_max = max(...)} & \code{lse_max} $= \max_s \mathrm{lse}_s$\\
+line 22 \code{old_scale = exp(...)} & the factors $e^{\mathrm{lse}_s - \mathtt{lse\_max}}$\\
+\textbf{line 24} \code{running_sum = ...} & \textbf{\code{lse_sum}}: row totals added at a common reference, \textbf{the same job}\\
+$m + \log(\mathtt{running\_sum})$ (not in the code) & \code{lse_logsum} $= \log(\mathtt{lse\_sum}) + \mathtt{lse\_max}$, stored as the row's lse\\
+line 25 \code{accumulator = ...} & $O = \sum_s e^{\mathrm{lse}_s - \mathtt{lse\_logsum}}\,O_s$\\
+line 28 \code{accumulator / running_sum} & already inside the shares: $-\mathtt{lse\_logsum}$ in the exponent is the division\\
 \end{tabular}
 
 \vspace{4mm}
 \begin{columns}[T]
 \column{0.48\textwidth}\scriptsize
 \textbf{Same idea, different bookkeeping.} The loop keeps $m$ and $\ell$ apart and adds 2 keys at a time.
-The combine keeps each split's total as one number, its log $\mathrm{lse}_s$, so \code{lse_sum} is ``line 24 plus a log'' applied to whole splits.
-The png code never needs \code{lse_sum}: it has a single worker.
+The combine receives each split's total as one number, its log $\mathrm{lse}_s$; \code{lse_sum} re-adds those totals exactly as line 24 does,
+and \code{lse_logsum} turns the result back into a log.
 \column{0.48\textwidth}\scriptsize
-\textbf{Why the combine checks \code{lse_sum}:}
-\begin{itemize}\scriptsize
-\item \textbf{every split empty} (all keys masked): all $\mathrm{lse}_s = -\infty$, the sum is 0, \code{lse_sum} $= -\infty$; in png terms \code{running_sum} stays 0 and line 28 is $0/0$
-\item \textbf{NaN}: needs a split with $\mathrm{lse}_s = +\infty$, which only a negative softmax scale produces (line 9's \code{scale} $<0$)
-\end{itemize}
-\textbf{TinyGPT:} generation sees at most 7 keys, so it never splits; the combine (and \code{lse_sum}) appear from $L > 256$ keys on this GPU.
+\textbf{The png code never needs it:} it has a single worker that walks every tile.\\[3pt]
+\textbf{TinyGPT:} generation sees at most 7 keys, so it never splits; the combine (and \code{lse_sum}) appear from $L > 256$ keys on this GPU.\\[3pt]
+\textbf{Next:} the one line where the combine checks \code{lse_sum}.
+\end{columns}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}[fragile]{The guard on \texttt{lse\_sum} (\texttt{pdf-papers/lse\_sum\_gpt\_notes.pdf})}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\tiny]
+// all splits -inf  =>  lse_max = 0
+lse_max = lse_max == -INFINITY ? 0.0f : lse_max;
+// lse_sum = sum_l expf(lse_accum(l) - lse_max)
+ElementAccum lse_logsum =
+  (lse_sum == 0.f || lse_sum != lse_sum)
+    ? INFINITY                 // empty or NaN
+    : logf(lse_sum) + lse_max;
+gLSE(row) = lse_logsum;        // the stored lse
+// each split's share:
+sLSE[l][row] = expf(lse_accum(l) - lse_logsum);
+\end{lstlisting}
+\vspace{-1mm}
+{\tiny \code{flash_fwd_kernel.h} combine kernel, condensed. \code{x != x} is true only for NaN.}
+
+\vspace{2mm}
+\scriptsize
+\textbf{Case 1: \code{lse_sum == 0}}, the row has no visible key (fully masked).
+Every split reports $\mathrm{lse}_s = -\infty$ (the split kernel's own guard, \code{softmax.h:177}),
+\code{lse_max} becomes 0, and $e^{-\infty} = 0$, so \code{lse_sum} $= 0$.
+In png terms: \code{running_sum} stays 0 and line 28 computes $0/0 = $ NaN.
+
+\column{0.47\textwidth}
+\centering
+\begin{tikzpicture}[bx/.style={draw=black!50, rounded corners=2pt, align=left, font=\tiny, inner sep=3pt, text width=5.6cm}]
+  \node[bx, fill=nanred!10] (a) at (0,0) {%
+    \textbf{if \code{lse_logsum} were $\log 0 = -\infty$} (the ``right'' value):\\
+    share $= e^{\,-\infty - (-\infty)} = e^{\text{NaN}} = $ \textbf{NaN}\\
+    $\Rightarrow$ the empty row's output becomes NaN};
+  \node[bx, fill=okgreen!12, below=3mm of a] (b) {%
+    \textbf{with the sentinel \code{lse_logsum} $= +\infty$:}\\
+    share $= e^{\,-\infty - (+\infty)} = e^{-\infty} = 0$ for every split\\
+    $\Rightarrow$ output row $= 0$, stored lse $= +\infty$, no NaN};
+  \node[bx, fill=yellow!14, below=3mm of b] (c) {%
+    \textbf{Case 2: \code{lse_sum} is NaN}: some $\mathrm{lse}_s$ is NaN, or $+\infty$ (then \code{lse_max} $=+\infty$ and $e^{\infty-\infty}$ = NaN).\\
+    The guard keeps the \emph{stored lse} from being NaN ($+\infty$ instead).
+    It does not repair the output: that split's share $e^{\text{NaN}-\infty}$ is still NaN.\\[2pt]
+    With finite inputs and a positive scale every $\mathrm{lse}_s$ is finite or $-\infty$;
+    $+\infty$ needs a negative softmax scale (the \code{nan-flash-attention} deck).};
+\end{tikzpicture}
 \end{columns}
 \end{frame}
 
