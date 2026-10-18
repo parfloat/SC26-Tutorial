@@ -28,3 +28,17 @@ with torch.no_grad():
     print('Oref',f(Oref[0,:3]),f(Oref[0,31:]),'maxdiff',(O-Oref).abs().max().item())
     print('v rows'); 
     for j in range(6): print(j,f(v[j,:3]),f(v[j,31:]))
+
+# Split-KV view: each tile as a separate worker returning (O_s, lse_s), then the combine.
+with torch.no_grad():
+    lses, Os = [], []
+    for st in range(0, 6, 2):
+        s_ = (qF @ k[st:st+2].T) * scale
+        m_ = s_.max(); e_ = torch.exp(s_ - m_); l_ = e_.sum()
+        Os.append((e_ @ v[st:st+2]) / l_); lses.append(m_ + torch.log(l_))
+        print(f'worker keys {st},{st+1}: m {m_.item():.4g} l {l_.item():.4g} lse {lses[-1].item():.4g} | O_s {f(Os[-1][0,:3])} .. {f(Os[-1][0,31:])}')
+    lse = torch.stack(lses); lse_max = lse.max()
+    lse_sum = torch.log(torch.exp(lse - lse_max).sum()) + lse_max
+    share = torch.exp(lse - lse_sum)
+    Oc = sum(sh * o for sh, o in zip(share, Os))
+    print(f'lse_max {lse_max.item():.4g} lse_sum {lse_sum.item():.6g} shares {f(share)} | O {f(Oc[0,:3])} .. {f(Oc[0,31:])} maxdiff {(Oc-Oref).abs().max().item():.3g}')

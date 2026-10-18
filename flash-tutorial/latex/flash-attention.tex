@@ -806,4 +806,133 @@ Changing $m$ only changes the reference point, and \stp{3} moves both sums to th
 \end{columns}
 \end{frame}
 
+%=============================================================================
+\section{Split-KV and \texttt{lse\_sum}}
+% Kernel choices, grids and times: torch 2.3.1 SDPA (flash forced) on the RTX 3090, head size 32, 4 heads,
+% measured with torch.profiler. Combine numbers: walk_flash_tiles.py.
+% \smgrid{x}{y}{number of busy SMs}{busy colour}: the RTX 3090's 82 SMs as 14 columns
+\newcommand{\smgrid}[4]{%
+  \foreach \s in {0,...,81} {
+    \pgfmathtruncatemacro{\cx}{mod(\s,14)} \pgfmathtruncatemacro{\cy}{\s/14}
+    \ifnum\s<#3 \def\f{#4}\else\def\f{black!5}\fi
+    \fill[\f] ({#1+\cx*0.27},{#2-\cy*0.27}) rectangle ++(0.22,-0.22);
+    \draw[black!30] ({#1+\cx*0.27},{#2-\cy*0.27}) rectangle ++(0.22,-0.22);}}
+
+\begin{frame}{Why split the keys? Decoding one token leaves the GPU almost idle}
+\centering
+\begin{tikzpicture}
+  \node[font=\scriptsize\bfseries, anchor=west] at (0,0.75) {training: 100 words $\times$ 4 heads, 21 queries each};
+  \node[note, anchor=west] at (0,0.35) {grid $(1, 100, 4)$ = \textbf{400 thread blocks}};
+  \smgrid{0}{0}{82}{okgreen!55}
+  \node[note, anchor=north west, align=left] at (0,-1.75) {all 82 SMs busy (400 blocks spread over them);\\each block: 21 queries $\times$ 21 keys};
+
+  \node[font=\scriptsize\bfseries, anchor=west] at (6.9,0.75) {decoding: 4 heads, \textbf{1 new query}};
+  \node[note, anchor=west] at (6.9,0.35) {unsplit: grid $(1, 1, 4)$ = \textbf{4 thread blocks}};
+  \smgrid{6.9}{0}{4}{nanred!60}
+  \node[note, anchor=north west, align=left] at (6.9,-1.75) {4 of 82 SMs work, 78 wait;\\each block walks \emph{all} the keys of its head};
+
+  % the long key row
+  \begin{scope}[shift={(1.0,-3.25)}]
+    \node[font=\scriptsize, anchor=east] at (-0.1,0) {one head, $L$ keys:};
+    \fill[validblue!15] (0,-0.17) rectangle (10.0,0.17); \draw[black!50] (0,-0.17) rectangle (10.0,0.17);
+    \foreach \x in {0.625,1.25,...,9.9} {\draw[black!25] (\x,-0.17) -- (\x,0.17);}
+    \draw[-{Stealth[length=2mm]}, very thick, nanred] (0.1,-0.38) -- (9.9,-0.38) node[midway, below, font=\tiny, text=nanred] {one thread block, tile after tile (the png loop's \code{for start in range(0, n_k, ...)})};
+  \end{scope}
+\end{tikzpicture}
+
+\vspace{1mm}
+\small Flash attention parallelizes over (query tiles, sequences, heads). Training has plenty of those.
+A decoding step has one query per head: the work is a long walk over the KV cache, and almost nothing runs in parallel.
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Split-KV: several thread blocks share one row's keys}
+\centering
+\begin{tikzpicture}
+  \node[font=\scriptsize, anchor=east] at (-0.1,0) {one head, $L$ keys};
+  \foreach \w [count=\i from 0] in {1,2,3,4} {
+    \pgfmathsetmacro{\xa}{\i*2.9}
+    \fill[validblue!15] (\xa,-0.17) rectangle ++(2.8,0.34); \draw[black!50] (\xa,-0.17) rectangle ++(2.8,0.34);
+    \draw[-{Stealth[length=1.6mm]}, thick, infor!90!black] (\xa+0.1,0.36) -- (\xa+2.7,0.36);
+    \node[font=\tiny, text=infor!80!black] at (\xa+1.4,0.55) {split \w: own thread block};
+    \node[card, fill=yellow!14, anchor=north, font=\tiny, align=center] (r\w) at (\xa+1.4,-0.45) {png loop on these keys\\$\Rightarrow$ receipt $(O_{\w},\ \mathrm{lse}_{\w})$};}
+  \node[draw=black!60, rounded corners=2pt, fill=okgreen!15, font=\scriptsize, align=center, inner sep=3pt] (cmb) at (5.75,-2.25)
+       {\code{flash_fwd_splitkv_combine_kernel}\\merge the receipts with \code{lse_sum} $\Rightarrow O$};
+  \foreach \w in {1,2,3,4} {\draw[arr] (r\w.south) -- (cmb.north);}
+  \node[note, anchor=west, align=left] at (9.0,-2.25) {receipt = the split's own\\normalized output $O_s$ and\\$\mathrm{lse}_s = m_s + \log \ell_s$};
+\end{tikzpicture}
+
+\vspace{2mm}
+\scriptsize
+{\small\textbf{Measured here}} (PyTorch 2.3.1, RTX 3090, 1 sequence $\times$ 4 heads, 1 query, head size 32;
+times vary by about 1\,\textmu s run to run; \code{split_kv_probe.py}):\\[2pt]
+\begin{tabular}{@{}r l c r l@{}}
+keys $L$ & kernels launched & splits & thread blocks & time\\\hline
+7 (TinyGPT \code{312}) & \code{flash_fwd_kernel} & 1 & 4 & \\
+256 & \code{flash_fwd_kernel} & 1 & 4 & 10\,\textmu s\\
+320--512 & \code{flash_fwd_splitkv_kernel} + \code{..._combine_kernel} & 2 & 8 & 6--7 + 2\,\textmu s\\
+1024 & same & 4 & 16 & 6 + 2\,\textmu s\\
+2048 & same & 8 & 32 & 7 + 3\,\textmu s\\
+8192 & same & 16 & 64 & 11 + 5\,\textmu s\\
+8192, but 100 sequences & \code{flash_fwd_kernel} (400 blocks already) & 1 & 400 & \\
+\end{tabular}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{The combine: \texttt{lse\_sum} on our three tiles as three splits}
+\centering
+\begin{tikzpicture}
+  \node[card, anchor=north west, text width=6.3cm] at (-0.4,0) {%
+    \textbf{Receipts} (query \texttt{F}, block 2 head 1; each split runs the png loop on 2 keys):\\[3pt]
+    \begin{tabular}{@{}l r r r r@{}}
+    split & $m_s$ & $\ell_s$ & $\mathrm{lse}_s$ & $O_s$ col 1\\\hline
+    1: \texttt{A},\texttt{5} & $-11.03$ & 1.506 & $-10.62$ & $-0.693$\\
+    2: \texttt{8},\texttt{8} & $-7.097$ & 1.701 & $-6.566$ & $-0.552$\\
+    3: \texttt{1},\texttt{F} & 4.740 & 1.473 & 5.128 & $-0.4195$
+    \end{tabular}\\[4pt]
+    $\mathrm{lse}_s = m_s + \log\ell_s = \log\sum_{j\in s} e^{s_j}$: the log of the split's \textbf{row total}.
+    Each $O_s$ is a correct answer for its 2 keys only.};
+  \node[card, anchor=north west, text width=6.3cm, fill=okgreen!8] at (6.5,0) {%
+    \textbf{Combine kernel:}\\[3pt]
+    $\mathrm{lse\_max} = \max_s \mathrm{lse}_s = 5.128$\\[3pt]
+    $\mathtt{lse\_sum} = \log\big(\sum_s e^{\mathrm{lse}_s - \mathrm{lse\_max}}\big) + \mathrm{lse\_max}$\\[2pt]
+    \hspace*{4mm}$= \log(e^{-15.75} + e^{-11.69} + 1) + 5.128 = \mathbf{5.128}$\\[3pt]
+    shares: $e^{\mathrm{lse}_s - \mathtt{lse\_sum}}$\\[1pt]
+    \hspace*{4mm}$= (1.4{\times}10^{-7},\; 8.3{\times}10^{-6},\; 1.000)$\\[3pt]
+    $O = \sum_s \text{share}_s\, O_s$, col 1 $= -0.4195$:\\
+    the single loop's $U/\ell$ (within $7\times10^{-16}$, FP64)};
+  \node[note, anchor=north west, align=left, text width=13cm] at (-0.4,-3.7) {\texttt{lse\_sum} is the log of the \textbf{whole row's total} $\sum_j e^{s_j}$, rebuilt from the splits' totals; a split's share is its fraction of that total. The shares match the softmax weights summed per split ($9.6{\times}10^{-8} + 4.9{\times}10^{-8}$, \dots).};
+\end{tikzpicture}
+\end{frame}
+
+%-----------------------------------------------------------------------------
+\begin{frame}{Where \texttt{lse\_sum} sits in the png code}
+\centering
+\small
+\scriptsize
+\begin{tabular}{@{}p{5.2cm}@{\;\;}p{8.2cm}@{}}
+\textbf{png loop} (keys tile by tile, one notepad) & \textbf{split-KV combine} (whole splits, one receipt each)\\\hline
+line 21 \code{new_max = max(...)} & $\mathrm{lse\_max} = \max_s \mathrm{lse}_s$\\
+line 22 \code{old_scale = exp(...)} & the factors $e^{\mathrm{lse}_s - \mathrm{lse\_max}}$\\
+\textbf{line 24} \code{running_sum = ...} & \textbf{the sum inside} \code{lse_sum}: row totals added at a common reference\\
+line 25 \code{accumulator = ...} & $O = \sum_s e^{\mathrm{lse}_s - \mathtt{lse\_sum}}\,O_s$\\
+line 28 \code{accumulator / running_sum} & already inside the shares: $-\mathtt{lse\_sum}$ in the exponent is the division by $\ell$\\
+\end{tabular}
+
+\vspace{4mm}
+\begin{columns}[T]
+\column{0.48\textwidth}\scriptsize
+\textbf{Same idea, different bookkeeping.} The loop keeps $m$ and $\ell$ apart and adds 2 keys at a time.
+The combine keeps each split's total as one number, its log $\mathrm{lse}_s$, so \code{lse_sum} is ``line 24 plus a log'' applied to whole splits.
+The png code never needs \code{lse_sum}: it has a single worker.
+\column{0.48\textwidth}\scriptsize
+\textbf{Why the combine checks \code{lse_sum}:}
+\begin{itemize}\scriptsize
+\item \textbf{every split empty} (all keys masked): all $\mathrm{lse}_s = -\infty$, the sum is 0, \code{lse_sum} $= -\infty$; in png terms \code{running_sum} stays 0 and line 28 is $0/0$
+\item \textbf{NaN}: needs a split with $\mathrm{lse}_s = +\infty$, which only a negative softmax scale produces (line 9's \code{scale} $<0$)
+\end{itemize}
+\textbf{TinyGPT:} generation sees at most 7 keys, so it never splits; the combine (and \code{lse_sum}) appear from $L > 256$ keys on this GPU.
+\end{columns}
+\end{frame}
+
 \end{document}
