@@ -1,5 +1,6 @@
 \documentclass[aspectratio=169,10pt]{beamer}
 \usetheme{metropolis}
+\metroset{sectionpage=none}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc}
 \usepackage{listings}
@@ -49,7 +50,7 @@ env -u LD_LIBRARY_PATH \
 \section{Architecture}
 \begin{frame}{Callback architecture}
 \centering
-\begin{tikzpicture}[node distance=7mm and 12mm]
+\resizebox{0.97\textwidth}{!}{\begin{tikzpicture}[node distance=9mm and 24mm]
 \node[box,minimum width=2.6cm] (app) {Application\\(\texttt{rd\_nixnan}, \texttt{rd\_tc})};
 \node[box,right=of app,minimum width=3cm,fill=orange!15] (nv) {NVBit core\\intercepts driver API\\\texttt{LD\_PRELOAD}};
 \node[box,right=of nv,minimum width=3.4cm] (tool) {\nn{} tool callbacks};
@@ -62,7 +63,7 @@ env -u LD_LIBRARY_PATH \
 \texttt{nvbit\_tool\_init(ctx)}\\
 \texttt{nvbit\_at\_cuda\_event(entry/exit)}\\
 \texttt{nvbit\_at\_ctx\_term}};
-\end{tikzpicture}
+\end{tikzpicture}}
 \end{frame}
 
 \begin{frame}{Lifecycle of the tool (\texttt{nixnan.cu})}
@@ -134,7 +135,7 @@ env -u LD_LIBRARY_PATH \
 
 \begin{frame}{Turning an operand into register reads: \texttt{get\_regs}}
 \small
-\begin{tabular}{@{}ll@{}}
+\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
 \textbf{Operand kind} & \textbf{What \nn{} does}\\\hline
 \texttt{REG} / \texttt{UREG} & one lambda per register: \texttt{nvbit\_add\_call\_arg\_reg\_val / ureg\_val(instr, clamp(reg+i))}\\
 \texttt{CBANK} & lambda: \texttt{nvbit\_add\_call\_arg\_cbank\_val(instr, id, imm\_offset+4i)}\\
@@ -215,9 +216,9 @@ Repeats are therefore only \emph{counted}, never transmitted: that is the ``(N r
 
 \begin{frame}{The packet: \texttt{exception\_info}}
 \centering
-\begin{tikzpicture}[x=0.42cm,y=1cm]
-\foreach \a/\b/\t in {0/4/cta {\tiny(int4: x,y,z,w=warp)},4/5/inst\_id,5/6/exce,6/7/oper,7/8/tp\_override,8/9/skip}{
-\draw[fill=blue!8] (\a*1.2,0) rectangle (\b*1.2,1); \node[font=\tiny,align=center] at ({(\a+\b)*0.6},0.5){\t};}
+\begin{tikzpicture}[y=1cm]
+\foreach \a/\b/\t in {0/4.2/cta\\{\tiny int4 (x,y,z; w=warp)},4.2/6/inst\_id,6/7.6/exce,7.6/9.2/oper,9.2/11.6/tp\_override,11.6/13/skip}{
+\draw[fill=blue!8] (\a,0) rectangle (\b,1); \node[font=\scriptsize,align=center] at ({(\a+\b)/2},0.5){\t};}
 \end{tikzpicture}
 
 \small\raggedright
@@ -231,16 +232,18 @@ Repeats are therefore only \emph{counted}, never transmitted: that is the ``(N r
 \section{Channel}
 \begin{frame}{GPU $\to$ CPU channel (NVBit \texttt{channel.hpp})}
 \centering
-\begin{tikzpicture}[node distance=8mm and 10mm]
+\resizebox{0.97\textwidth}{!}{\begin{tikzpicture}[node distance=8mm and 30mm]
 \node[gbox] (w) {warps call\\\texttt{push(\&ei,n)}};
 \node[box,right=of w,minimum width=3cm] (buf) {pinned host buffer\\(\texttt{cudaHostAlloc})\\head/tail pointers};
 \node[box,right=of buf] (db) {doorbell\\mapped \texttt{int}};
 \node[rbox,right=of db] (r) {\texttt{recv\_thread}\\\texttt{channel\_host.recv}};
-\draw[arr](w)--node[lbl,above]{\texttt{atomicAdd(head)}\\\texttt{memcpy}\\\texttt{atomicAdd(tail)}}(buf);
-\draw[arr](buf)--node[lbl,above]{full $\Rightarrow$\\\texttt{flush()}}(db);
+\draw[arr](w)--(buf);
+\node[lbl,above=1mm of $(w.east)!0.5!(buf.west)$] {\texttt{atomicAdd(head)}};
+\node[lbl,below=1mm of $(w.east)!0.5!(buf.west)$] {\texttt{memcpy,}\\\texttt{atomicAdd(tail)}};
+\draw[arr](buf)--node[lbl,above]{full $\Rightarrow$ \texttt{flush()}}(db);
 \draw[arr](db)--node[lbl,above]{polled}(r);
-\draw[arr,dashed,red!70!black] (r.south) -- ++(0,-0.9) -| node[lbl,below,pos=0.25]{host writes remaining bytes / 0} (db.south);
-\end{tikzpicture}
+\draw[arr,dashed,red!70!black] (r.south) -- ++(0,-0.9) -| node[lbl,below,pos=0.25]{host writes bytes left (0 = release)} (db.south);
+\end{tikzpicture}}
 
 \small\raggedright
 \textbf{push:} reserve space with \texttt{atomicAdd} on the head; if it runs past \texttt{buff\_end}, the first warp to notice waits for tail==its pointer and calls \texttt{flush()}; others spin until head is reset.\\
