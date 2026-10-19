@@ -1,75 +1,364 @@
 \documentclass[11pt]{article}
+\emergencystretch=3em
 \usepackage[margin=1in]{geometry}
-\usepackage{listings,booktabs,hyperref,amsmath}
-\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,columns=fullflexible,frame=single,framerule=0.2pt}
+\usepackage{listings,booktabs,hyperref,amsmath,array}
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,columns=fullflexible,frame=single,framerule=0.2pt,keepspaces=true}
 \newcommand{\nn}{\textsc{nixnan}}
-\title{How \nn{} works: from load to the first HMMA report\\\large Report accompanying the slides \texttt{nixnan-walkthru-tc-rd\_nixnan}}
+\newcommand{\slide}[1]{\subsection*{Slide: #1}\addcontentsline{toc}{subsection}{#1}}
+\title{How \nn{} works: from load to the first HMMA report\\\large Slide-by-slide report accompanying \texttt{nixnan-walkthru-tc-rd\_nixnan}}
 \author{Ganesh Gopalakrishnan}
 \date{2026-10-19}
 \begin{document}\maketitle\tableofcontents
 \section*{Scope and provenance}
-Everything below comes from reading \nn{} (branch \texttt{print\_histo\_instrn}, commit \texttt{ce35185}): \texttt{nixnan.cu}, \texttt{inject\_funs.cu}, \texttt{instruction\_info.cu/.cuh}, \texttt{instructions.h/.json}, \texttt{common.cuh}, \texttt{exception\_info.cuh}, \texttt{fp\_utils.cuh}, \texttt{recording.cu/.h}, \texttt{reginfo.cuh}, and NVBit~1.8's \texttt{core/utils/channel.hpp}; plus real runs of \texttt{rd\_nixnan} (scalar) and \texttt{tensor\_core/rd\_tc} on an RTX~3090, CUDA~12.4, whose raw logs are in \texttt{latex/data/}. Statements marked \emph{(computed)} or \emph{(my reading)} were derived by hand and not observed in a run.
+Everything below comes from reading \nn{} (branch \texttt{print\_histo\_instrn}, commit \texttt{ce35185}): \texttt{nixnan.cu}, \texttt{inject\_funs.cu}, \texttt{instruction\_info.cu/.cuh}, \texttt{instructions.h/.json}, \texttt{common.cuh}, \texttt{exception\_info.cuh}, \texttt{fp\_utils.cuh}, \texttt{recording.cu/.h}, \texttt{reginfo.cuh}, and NVBit~1.8's \texttt{core/utils/channel.hpp}; plus real runs of \texttt{rd\_nixnan} (scalar) and \texttt{tensor\_core/rd\_tc} on an RTX~3090, CUDA~12.4. Raw logs: \texttt{latex/data/} (Parts A and B) and \texttt{tensor\_core/logs/}. Statements marked \emph{(my reading)} are inferences from the code, not observations.
 
-\section{Setup and the environment trap (slide ``Setup'')}
-Run with \texttt{env -u LD\_LIBRARY\_PATH LINE\_INFO=1 PRINT\_ILL\_INSTR=1 TOOL\_VERBOSE=1 LOGFILE=... LD\_PRELOAD=\~{}/repos/nixnan/nixnan.so <binary>}. With my normal \texttt{LD\_LIBRARY\_PATH} (a nonexistent \texttt{/usr/local/cuda-13.2/lib64} and a dyninst directory) \nn{} printed its banner and no reports; unsetting it fixed that. I did not determine which entry matters. Before this, a driver-module/library mismatch (595.84 vs 595.99.02) made NVBit see no launches at all; a reboot fixed that.
+This report follows the deck slide by slide, in order. Each section gives the slide title, a prose explanation, the source excerpt behind it, and real output where the slide shows any.
 
-\section{Callback architecture}
-\texttt{LD\_PRELOAD} puts \nn{} and the NVBit core in the process. NVBit intercepts CUDA driver calls and invokes four tool callbacks: \texttt{nvbit\_at\_init}, \texttt{nvbit\_tool\_init(ctx)}, \texttt{nvbit\_at\_cuda\_event(ctx,is\_exit,cbid,\dots)} and \texttt{nvbit\_at\_ctx\_term}. The application is unmodified.
+\section{Opening slides}
+\slide{Roadmap}
+The deck has three movements. First the \emph{machinery common to every instrumented instruction} (setup, callbacks, lifecycle, first-launch instrumentation, the compact encoding, the two injected calls, the device function, the channel, the receiver and the final report). Then \textbf{Part A}, one ordinary SASS instruction (an \texttt{HFMA2} from the scalar FP16 reaction--diffusion kernel). Then \textbf{Part B}, one tensor-core instruction (\texttt{HMMA.16816.F16} from \texttt{rd\_tc}). The point of the order is that HMMA needs \emph{no special machinery}: it is one more table entry in \texttt{instructions.json} whose operand groups happen to be wide.
 
-\section{Lifecycle}
-\paragraph{\texttt{nvbit\_at\_init}.} Reads all configuration through \texttt{GET\_VAR\_INT/STR} (which also build the banner help text): \texttt{INSTR\_BEGIN/END}, \texttt{TOOL\_VERBOSE}, \texttt{ENABLE\_FUN\_DETAIL}, \texttt{PRINT\_ILL\_INSTR}, \texttt{SAMPLING}, \texttt{INSTRUMENT\_EXCEPTIONS}, \texttt{INSTR\_MEM}, \texttt{LOGFILE}, \texttt{LINE\_INFO}, \texttt{LOG\_KERNELS}, \texttt{MAX\_ERRORS}, \texttt{TIME\_KERNELS}, \texttt{FUNCTION\_WHITELIST/BLACKLIST} (mutually exclusive), plus the histogram settings. It sets \texttt{CUDA\_MANAGED\_FORCE\_DEVICE\_ALLOC=1} because the device channel object is \texttt{\_\_managed\_\_}.
-\paragraph{\texttt{nvbit\_tool\_init}.} Prints ``Initializing GPU context\dots'', reads the white/black list, constructs \texttt{recorder(TABLE\_SIZE)} with $\texttt{TABLE\_SIZE}=2^{17}$, sets \texttt{recv\_thread\_started}, initialises \texttt{channel\_host} with packet size \texttt{sizeof(exception\_info)} and starts \texttt{recv\_thread}.
-\paragraph{Launch entry.} For \texttt{cuLaunchKernel}, the \texttt{\_ptsz} variant and the cooperative variants: set \texttt{recv\_thread\_receiving=true}; call \texttt{instrument\_function}; print ``running kernel [name] \dots'' the first time (always, with \texttt{ENABLE\_FUN\_DETAIL}); increment the per-name counter; call \texttt{nvbit\_enable\_instrumented(ctx,f, sampling>0 ? count\%sampling==0 : true)}.
-\paragraph{Launch exit.} Optional timing, then \texttt{cudaDeviceSynchronize()} and a \texttt{cudaGetLastError()} check.
-\paragraph{\texttt{nvbit\_at\_ctx\_term}.} Stops and joins the receiver, copies counters back, prints the report (Section~\ref{sec:report}).
-
-\section{First launch: instrumenting a function}
-\texttt{instrument\_function} collects \texttt{nvbit\_get\_related\_functions} plus the kernel and, for each function not already in \texttt{instrumented\_functions}, applies \texttt{should\_instrument} (white/black list, off in \texttt{LOG\_KERNELS} mode). For each instruction from \texttt{nvbit\_get\_instrs}: \texttt{get\_reginfo} (skip if no operand has an entry and it is not a memory instruction), possibly histogram instrumentation, then either memory instrumentation or exception instrumentation. Exception instrumentation does \texttt{mk\_entry} (gets \texttt{inst\_id}) and two \texttt{nvbit\_insert\_call}s. Because this is done once per function, later launches cost only the toggle.
-
-\section{Compact encoding}
-\subsection{\texttt{instructions.json}}
-Keys are opcode strings, some regular expressions (e.g.\ the \texttt{FFMA} key allows \texttt{.FTZ}, rounding and \texttt{.SAT}). \texttt{get\_reginfo} tries each key with \texttt{std::regex\_match} against \texttt{instr->getOpcode()}, falls back to the plain opcode, then reads \texttt{"registers"}: one entry per operand with \texttt{type} (\texttt{f16/bf16/f32/f64}), \texttt{count} (values) and optional \texttt{div0}. Opcodes absent from the table are ignored; I verified \texttt{F2FP} is absent.
-\subsection{\texttt{reginfo}}
+\slide{Setup, and the trap}
+All runs use
 \begin{lstlisting}
-struct reginfo { int count:6; int32_t type:4; bool half_h0:1, half_h1:1, div0:1;
-                 unsigned operand:2; int num_regs:4; bool f64high:1; int32_t reserved:12; };
-static_assert(sizeof(reginfo)==sizeof(int32_t));
+env -u LD_LIBRARY_PATH LINE_INFO=1 PRINT_ILL_INSTR=1 TOOL_VERBOSE=1 \
+  LOGFILE=latex/data/partA-scalar.log \
+  LD_PRELOAD=~/repos/nixnan/nixnan.so ./rd_nixnan
 \end{lstlisting}
-The whole descriptor travels as one 32-bit constant argument. \texttt{count} and \texttt{num\_regs} are \emph{signed} bit-fields, so \texttt{num\_regs} is reliable only to 7 even though \texttt{get\_reginfo} asserts \texttt{get\_num\_regs<16} (my reading). The operand field is 2 bits: four operands maximum (\texttt{OPERANDS=4}).
-\subsection{Register extraction}
-\texttt{get\_regs} converts operand $k$ into a list of deferred \texttt{reginsertion} lambdas: for \texttt{REG}/\texttt{UREG} one \texttt{nvbit\_add\_call\_arg\_reg\_val} (or \texttt{ureg\_val}) per register, indices clamped to 255; for \texttt{CBANK} one \texttt{nvbit\_add\_call\_arg\_cbank\_val} per 4-byte word; double-precision immediates are classified on the host and merely warned about; integer immediates are ignored; generic operands containing NAN/INF text produce a warning. Registers needed: f16/bf16 $\lceil n/2\rceil$, f32 $n$, f64 $2n$. \texttt{f64high} opcodes (suffix \texttt{64H}) start one register lower and use only the high word.
-\subsection{Host table}
-\texttt{recorder::mk\_entry} stores SASS text, function name (cut at the first \texttt{<} or \texttt{(}), operand types and, with \texttt{LINE\_INFO}, the file:line from \texttt{nvbit\_get\_line\_info} under a temporary \texttt{SIGSEGV} handler. The returned index is the \texttt{inst\_id}. The device array is indexed \texttt{(id<<7)|(op<<5)|exce}, i.e.\ 32 flag-combinations $\times$ 4 operands per instruction, \texttt{uint32} each; at $2^{17}$ instructions this is $2^{24}$ words (64~MiB).
+\texttt{LD\_PRELOAD} makes the dynamic loader map \texttt{nixnan.so} (which statically contains the NVBit core) before the CUDA runtime, so NVBit can intercept every driver call. Two things went wrong on this machine and are worth telling an audience.
+\begin{enumerate}
+\item A driver upgrade without a reboot left the kernel module at 595.84 while \texttt{libcuda} was 595.99.02. Plain CUDA programs still ran, but NVBit never saw a kernel launch (even NVBit's own \texttt{instr\_count} sample printed nothing). A reboot fixed it.
+\item After the reboot, \nn{} still printed only its banner until \texttt{LD\_LIBRARY\_PATH} (which contained a nonexistent \texttt{/usr/local/cuda-13.2/lib64} and a dyninst directory) was removed with \texttt{env -u}. The same binary then reported. I did not isolate which entry matters.
+\end{enumerate}
 
-\section{The two injected calls}
-\begin{description}
-\item[AFTER] (\texttt{IPOINT\_AFTER}): arguments: guard predicate, 64-bit \texttt{device\_recorder} (a device pointer), \texttt{inst\_id}, 64-bit pointer to \texttt{channel\_dev}, \texttt{arg\_count} $=1+\#\text{lambdas}$, the \texttt{reginfo} of operand 0, then operand 0's register values.
-\item[BEFORE] (\texttt{IPOINT\_BEFORE}): same prefix, \texttt{arg\_count} $=\sum\texttt{num\_regs}+(\#\text{operands}-1)$, then for each source operand its \texttt{reginfo} followed by its register values.
-\end{description}
-Reading the destination after and the sources before matters when a register is both (e.g.\ accumulate in place). The guard predicate argument makes predicated-off threads return immediately.
+\section{Architecture}
+\slide{Callback architecture}
+NVBit sits between the application and the driver. The tool exports four callbacks, which NVBit calls:
+\begin{lstlisting}
+void nvbit_at_init();                         // before any CUDA call
+void nvbit_tool_init(CUcontext ctx);          // context created
+void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
+                         const char *name, void *params, CUresult *pStatus);
+void nvbit_at_ctx_term(CUcontext ctx);        // context destroyed
+\end{lstlisting}
+\texttt{nvbit\_at\_cuda\_event} is invoked twice around every driver call (\texttt{is\_exit} = 0 then 1). \nn{} only reacts to the launch APIs: \texttt{cuLaunchKernel}, its \texttt{\_ptsz} form, and the cooperative variants.
 
-\section{Device side}
-\texttt{nixnan\_check\_regs} is \texttt{extern "C" \_\_noinline\_\_} and variadic. After the predicate test it computes the active mask and first active lane, then iterates \texttt{arg\_count}: each \texttt{reginfo} is followed by \texttt{count} values (FP16/BF16 consume two values per 32-bit register; FP64 consumes low then high words). Classification: \texttt{half2\_classify}, \texttt{bf162\_classify}, \texttt{float\_classify}, \texttt{double\_classify}, each OR-ing the flags NaN(1), Inf(2), -Inf(4), Sub(8), and Div0(16, zero when requested). Per-operand results are OR-ed across lanes with \texttt{\_\_shfl\_sync}. The first active lane then, for every operand with a non-zero flag word, atomically increments \texttt{device\_errors[idx]}; \emph{only if the old value was 0} does it push two \texttt{exception\_info} packets (\texttt{skip=0}, \texttt{skip=1}) to the channel.
+\slide{Lifecycle of the tool (\texttt{nixnan.cu})}
+\paragraph{\texttt{nvbit\_at\_init}.} Reads configuration with \texttt{GET\_VAR\_INT/STR}, which also builds the banner text seen at the top of every log. It sets \texttt{CUDA\_MANAGED\_FORCE\_DEVICE\_ALLOC=1}, because \texttt{channel\_dev} is declared \texttt{static \_\_managed\_\_}.
+\begin{lstlisting}
+setenv("ACK_CTX_INIT_LIMITATION", "1", 1);
+setenv("CUDA_MANAGED_FORCE_DEVICE_ALLOC", "1", 1);
+GET_VAR_INT(instr_begin_interval, "INSTR_BEGIN", 0, ...);
+GET_VAR_INT(sampling, "SAMPLING", 0, ...);
+GET_VAR_INT(line_info, "LINE_INFO", 1, ...);
+\end{lstlisting}
+\paragraph{\texttt{nvbit\_tool\_init}.} Prints ``Initializing GPU context\ldots'', builds the recorder, the channel and the receiver thread:
+\begin{lstlisting}
+recorder = std::make_shared<nixnan::recorder>(TABLE_SIZE);   // 1<<17
+recv_thread_started = true;
+channel_host.init(0, CHANNEL_SIZE, &channel_dev, NULL);
+recv_thread = std::thread(recv_thread_fun, recorder, channel_host);
+\end{lstlisting}
+Note that \texttt{channel\_host.init} is given \texttt{NULL} as thread function: NVBit's own receiver thread is not used; \nn{} runs its own \texttt{std::thread}. Also \texttt{CHANNEL\_SIZE = sizeof(exception\_info)}, so the buffer size passed to the channel is one packet's size (see the channel slides).
+\paragraph{\texttt{nvbit\_at\_cuda\_event}, entry.} Sets \texttt{recv\_thread\_receiving = true}, calls \texttt{instrument\_function}, prints ``running kernel [\ldots]'' the first time a kernel name is seen, and calls \texttt{nvbit\_enable\_instrumented(ctx, f, sampling>0 ? count\%sampling==0 : true)}.
+\paragraph{Exit.} \texttt{cudaDeviceSynchronize()} and a \texttt{cudaGetLastError()} check (see the sentinel slide for what was removed).
+\paragraph{\texttt{nvbit\_at\_ctx\_term}.} Stops and joins the receiver, copies the counters back, prints the report.
+\paragraph{Real output.} The head of a real run:
+\begin{lstlisting}
+#nixnan: Initializing GPU context...
+#nixnan: Instrumenting all functions
+#nixnan: running kernel [rd_tc_fp16acc16] ...
+\end{lstlisting}
 
-\section{The channel}
-\paragraph{Device push.} \texttt{atomicAdd} on the 64-bit head reserves \texttt{nbytes}; if the reservation passes \texttt{buff\_end} the first warp past the end waits until tail equals its pointer (all earlier writers finished) and calls \texttt{flush()}, other warps spin on head; otherwise \texttt{memcpy} then \texttt{atomicAdd} on tail.
-\paragraph{Flush and doorbell.} \texttt{flush()} computes bytes $=$ tail$-$buff, returns if 0, \texttt{\_\_threadfence\_system()}, writes the byte count to the mapped doorbell and spins until it reads 0, then resets tail, a fence, and head.
-\paragraph{Host receive.} \texttt{ChannelHost::recv} reads the doorbell, copies at most \texttt{max} bytes from the pinned buffer (default build, no \texttt{USE\_ASYNC\_STREAM}), and writes back the bytes left (0 releases the GPU). \nn{} asks for one packet at a time.
-\paragraph{Receiver thread.} Loops while \texttt{recv\_thread\_started} and \texttt{recv\_thread\_receiving}; skips \texttt{to\_skip()} packets; treats \texttt{warp()==-1} as end-of-kernel; otherwise formats ``error [flags] detected in operand $k$ of instruction S in function F [at path:line] of type T'' through the mutex-guarded \texttt{nnout\_line}.
-\paragraph{Why two packets.} The device pushes \texttt{skip=0} and \texttt{skip=1}. The receiver ignores the \texttt{skip=1} copy. The repository does not state why; my reading is that the second packet is a trailing marker that keeps a partially read buffer from being interpreted as a new event. \emph{(my reading; unverified)}
-\paragraph{The final sentinel message.} The design: \texttt{flush\_channel<<<1,1>>>} pushes \texttt{exception\_info(int4\{-1,-1,-1,-1\},0,0,0,0)} and flushes, the receiver sees \texttt{warp()==-1}, clears \texttt{recv\_thread\_receiving}, and the exit callback waits for that flag with \texttt{sched\_yield()}, so that no output of a kernel is lost and the next launch starts from a drained channel. \textbf{In commit \texttt{ce35185} the launch, the \texttt{skip\_flag} manipulation and the wait loop are commented out in \texttt{nvbit\_at\_cuda\_event}.} The receiver still handles the sentinel; nothing sends it. I did not test whether any report is lost because of this.
+\slide{First launch of a kernel: what happens}
+\texttt{instrument\_function} is the heart of the tool. Its steps:
+\begin{enumerate}
+\item \texttt{nvbit\_get\_related\_functions(ctx, kernel)} returns device functions the kernel can call; the kernel itself is appended.
+\item A set \texttt{instrumented\_functions} (\texttt{insert(f).second}) makes sure each function is instrumented exactly once; later launches skip to step 6.
+\item \texttt{should\_instrument} applies the whitelist/blacklist (and is false when \texttt{LOG\_KERNELS} is active).
+\item For every \texttt{Instr*} from \texttt{nvbit\_get\_instrs(ctx, f)}: \texttt{get\_reginfo(instr)}; if it is empty and the instruction is not a memory instruction, skip.
+\item Otherwise \texttt{recorder->mk\_entry} allocates an \texttt{inst\_id} and two \texttt{nvbit\_insert\_call}s are made (next slides).
+\item Back in the callback, \texttt{nvbit\_enable\_instrumented} switches the instrumented copy on or off for this launch. With \texttt{SAMPLING=k}, only every $k$-th launch of a kernel runs the instrumented code.
+\end{enumerate}
+\begin{lstlisting}
+for (auto instr : nvbit_get_instrs(ctx, f)){
+  auto reg_infos = instruction_info::get_reginfo(instr);
+  bool meminstr = is_memory_instruction(instr);
+  if (reg_infos.empty() && !meminstr) { continue; }
+  ...
+\end{lstlisting}
+The verbose log shows this loop at work, one ``Instrumenting instruction'' per accepted SASS instruction; instructions with no table entry never appear (and \texttt{STG.E.U16} appears with ``Unsupported store instruction'' since \texttt{INSTR\_MEM} is off):
+\begin{lstlisting}
+#nixnan: Inspecting function rd_step_fp16(__half const*, __half*, __half, __half) at address 0x7271d7371300
+#nixnan: Instrumenting instruction @!P0 STG.E.U16 [R2.64], RZ ;
+#nixnan: Unsupported store instruction: STG.E.U16
+#nixnan: Instrumenting instruction HADD2 R0, R0.H0_H0, R7.H0_H0 ;
+\end{lstlisting}
 
-\section{End-of-run report}\label{sec:report}
-\texttt{recorder->end()} copies the counters to the host. For each instruction, operand and flag value with non-zero count, counts are added to buckets keyed by (type, memory/not) and flag; ``distinct'' counts locations and ``repeats'' is total minus distinct. The report prints FP16, BF16, FP32, FP64 sections (and memory variants).
+\section{Encoding}
+\slide{Table-driven: \texttt{instructions.json}}
+The only per-opcode knowledge in \nn{} is a JSON table, embedded in the binary as a byte array (\texttt{instructions.h}, generated from the \texttt{.json}) and parsed once with nlohmann::json. For each operand position of the SASS instruction it says which floating-point format lives there and how many values:
+\begin{lstlisting}
+"HMMA.16816.F16": {"registers": [
+   {"type":"f16","count":4},   // operand 0  D
+   {"type":"f16","count":8},   // operand 1  A
+   {"type":"f16","count":4},   // operand 2  B
+   {"type":"f16","count":4} ]} // operand 3  C
+\end{lstlisting}
+Keys are tried as \emph{regular expressions} against the opcode string (\texttt{std::regex\_match}), the first match wins; so a single key such as \texttt{"(FFMA(?:\textbackslash\textbackslash.FTZ)?(?:\textbackslash\textbackslash.(RP|RM|RZ))?(?:\textbackslash\textbackslash.SAT)?)"} covers all modifier combinations.
+\begin{lstlisting}
+for (auto it = instructions.begin(); it != instructions.end(); ++it) {
+    std::regex re(it.key());
+    if (std::regex_match(inst_name, re)) { matched_key = it.key(); break; }
+}
+\end{lstlisting}
+\texttt{count} is the number of \emph{values} (not registers), converted by
+\begin{lstlisting}
+case FP16: case BF16: return (count + 1) / 2;   // packed pairs
+case FP32: return count;
+case FP64: return 2 * count;
+\end{lstlisting}
+Opcodes without an entry are silently ignored. I verified that \texttt{F2FP.PACK} is one of them (\texttt{grep -c F2FP instructions.json} gives 0), which explains why no FP32$\to$FP16 conversion is ever reported (see Part B).
+
+\slide{One 32-bit word per operand: \texttt{reginfo}}
+Each operand is described to the GPU by one packed 32-bit word:
+\begin{lstlisting}
+struct reginfo {
+    int count: 6;  int32_t type: 4;
+    bool half_h0: 1; bool half_h1: 1; bool div0: 1;
+    unsigned int operand: 2;  int num_regs: 4;  bool f64high: 1;
+private: int32_t reserved: 12;
+};
+static_assert(sizeof(reginfo) == sizeof(int32_t));
+\end{lstlisting}
+Because it is exactly 32 bits it is passed with \texttt{nvbit\_add\_call\_arg\_const\_val32(instr, tobits32(ri), true)} as one call argument. \texttt{type} codes (\texttt{common.cuh}): FP16=0, BF16=1, FP32=2, FP64=3. \texttt{OPERANDS=4} because \texttt{operand} has 2 bits. Observation: \texttt{num\_regs} is a \emph{signed} 4-bit field while \texttt{get\_reginfo} asserts only \texttt{get\_num\_regs<16}, so values $\ge 8$ would not round-trip (my reading; no instruction in the table needs more than 4).
+
+\slide{Turning an operand into register reads: \texttt{get\_regs}}
+\texttt{get\_regs} looks at the actual SASS operand and returns a vector of \emph{deferred lambdas} (\texttt{reginsertion}) which will each add one call argument:
+\begin{lstlisting}
+case OperandType::REG: case OperandType::UREG: {
+    size_t reg_start = op->u.reg.num - (f64high ? 1 : 0);
+    for (size_t i = 0; i < num_regs; i++)
+        reg_ops.push_back([instr, reg_start, i, type]() {
+            auto fn = type == OperandType::REG ? nvbit_add_call_arg_reg_val
+                                               : nvbit_add_call_arg_ureg_val;
+            fn(instr, clamp(reg_start+i), true); });
+    break; }
+case OperandType::CBANK: ... nvbit_add_call_arg_cbank_val(instr, cbank.id, offset, true);
+\end{lstlisting}
+Registers are consecutive: \texttt{R4} with \texttt{num\_regs}=4 means R4,R5,R6,R7. \texttt{clamp} caps the index at 255, which is \texttt{RZ} (the zero register); this is presumably how the \texttt{RZ} accumulator in the first HMMA of each chain (\texttt{HMMA.16816.F16 R8, R24.reuse, R8, RZ}) is read, as zero (my reading; not tested). Immediates are examined on the \emph{host}, once; a NaN, Inf or subnormal immediate produces a warning and no runtime argument.
+
+The lambdas are deferred because NVBit requires the call's arguments in order; the fixed arguments are pushed first, then the lambdas run (the \texttt{for (auto\& rfun : rfuns) rfun();} loop in \texttt{instrument\_function}).
+
+\slide{Book-keeping on the host: \texttt{recorder::mk\_entry}}
+Strings never go to the GPU. \texttt{mk\_entry} stores them host-side under a dense id:
+\begin{lstlisting}
+inst_info[current_entry].instr = instr;   // instr->getSass()
+inst_info[current_entry].path  = path;    // from nvbit_get_line_info
+inst_info[current_entry].line  = line;
+inst_info[current_entry].func  = func;    // cut_kernel_name(...)
+std::memcpy(inst_info[current_entry].opertypes, optypes, OPERANDS);
+return current_entry++;
+\end{lstlisting}
+Source locations are fetched only when \texttt{LINE\_INFO=1}, under a temporary \texttt{SIGSEGV} handler that prints ``A segmentation fault occurred in NVBit while trying to access debug information. Please try with the LINE\_INFO variable set to 0.'' and exits. Device counters: an array of $2^{17}\cdot 2^7$ \texttt{uint32} cleared at construction, indexed by
+\begin{lstlisting}
+index = id << SH_AMT | op << EXCEBITS | exce;     // SH_AMT = 5 + 2
+\end{lstlisting}
+so each (instruction, operand, flag-set) has its own counter, with the five exception bits \texttt{E\_NAN=1, E\_INF=2, E\_NINF=4, E\_SUB=8, E\_DIV0=16} as the low index bits.
+
+\section{Injection}
+\slide{Two injected calls per instruction}
+For each accepted instruction \nn{} adds \emph{two} calls to the same device function:
+\begin{lstlisting}
+nvbit_insert_call(instr, "nixnan_check_regs", IPOINT_AFTER);
+nvbit_add_call_arg_guard_pred_val(instr);
+nvbit_add_call_arg_const_val64(instr, tobits64(recorder->get_device_recorder()), false);
+nvbit_add_call_arg_const_val32(instr, inst_id, false);
+nvbit_add_call_arg_const_val64(instr, tobits64(&channel_dev), false);
+nvbit_add_call_arg_const_val32(instr, 1 + rfuns.size());     // arg_count
+nvbit_add_call_arg_const_val32(instr, tobits32(ri), true);   // operand 0
+for (auto& rfun : rfuns) rfun();
+\end{lstlisting}
+The AFTER call checks \textbf{operand 0, the destination}: the result the instruction just wrote. The BEFORE call checks \textbf{operands 1\ldots n, the sources}, with \texttt{arg\_count = sum(num\_regs) + (\#operands - 1)}, i.e.\ reginfo words plus register values. Reading sources before is essential when an operand is both source and destination, e.g.\ \texttt{HMMA R26, R4, R30, R26}: after execution R26 holds D, so only a BEFORE read sees the accumulator input C. The guard predicate (\texttt{@!P0}-style) is passed so predicated-off threads do nothing.
+
+\section{Device}
+\slide{\texttt{nixnan\_check\_regs} on the GPU}
+\begin{lstlisting}
+extern "C" __device__ __noinline__ void
+nixnan_check_regs(int pred, device_recorder recorder, uint32_t inst_id,
+                  ChannelDev* pchannel_dev, uint32_t arg_count, ...) {
+  if (!pred) return;
+  int active_mask = __ballot_sync(__activemask(), 1);
+  const int first_laneid = __ffs(active_mask) - 1;
+  ...
+  while (arg_count > 0) {
+    reginfo reg_info = va_arg(ap, reginfo); arg_count--;
+    for (int j = 0; j < reg_info.count; j++) {
+      switch (reg_info.type) {
+        case FP16: { uint32_t val = va_arg(ap, uint32_t);
+            exces[operand] |= half2_classify(val, h0, h1, div0);
+            arg_count--; j++; break; }
+        case FP32: ... float_classify(val, div0) ...
+        case FP64: low, high -> double_classify
+\end{lstlisting}
+Variadic arguments carry the register values. FP16 and BF16 registers hold two values each, so a register consumes two of \texttt{count} (hence \texttt{j++}). The classification helpers (\texttt{fp\_utils.cuh}) test the bit patterns directly, e.g.\ for single precision exponent 0xFF with mantissa $\neq 0$ is NaN, with mantissa 0 is Inf; exponent 0 with mantissa $\neq 0$ is subnormal. Each operand's result goes into \texttt{exces[operand]}. Then:
+\begin{lstlisting}
+for (int op = 0; op < OPERANDS; op++)
+  for (int tid = 0; tid < 32; tid++)
+    exces[op] |= __shfl_sync(active_mask, exces[op], tid);
+if (first_laneid == laneid)
+  for (int op = 0; op < OPERANDS; op++) {
+    uint32_t exce = exces[op];
+    if (exce != 0) {
+      uint32_t num_exceptions = recorder.record(inst_id, exce, op);  // atomicAdd
+      if (num_exceptions == 0) {                // first time only
+        for (int skip = 0; skip < 2; skip++) {
+          exception_info ei(get_ctaid(), get_warpid(), inst_id, exce, op, UNKNOWN, skip);
+          channel_dev->push(&ei, sizeof(exception_info)); } } } }
+\end{lstlisting}
+So a warp's 32 lanes are merged into one verdict, one lane does the bookkeeping, and only the \emph{first} sighting of an (instruction, operand, flag-set) triple crosses to the CPU, in two packets. Everything later is just an \texttt{atomicAdd}; that is the ``repeats'' count in the final report.
+
+\slide{The packet: \texttt{exception\_info}}
+\begin{lstlisting}
+struct exception_info {      // exception_info.cuh
+  int4 cta;                  // x,y,z of the block; .w = warp id
+  uint32_t inst_id, exce, oper, tp_override;
+  bool skip = false; };
+\end{lstlisting}
+(The constructor assigns \texttt{this->cta = cta; cta.w = warp\_id;} --- the second assignment writes to the \emph{parameter}, not the member, so the stored \texttt{.w} is whatever the caller's \texttt{cta.w} was. For a real packet \texttt{get\_ctaid()} supplies it; for the sentinel \texttt{int4\{-1,-1,-1,-1\}} gives \texttt{warp()==-1}. This is my reading of the code, not something I tested.) The receiver converts bit flags back into words and decodes the type from the recorder unless \texttt{tp\_override} is not \texttt{UNKNOWN}.
+
+\section{Channel}
+\slide{GPU $\to$ CPU channel (NVBit \texttt{channel.hpp})}
+The device-side \texttt{push}:
+\begin{lstlisting}
+curr_ptr = (uint8_t*)atomicAdd((ULL*)&buff_write_head_ptr, (ULL)nbytes);
+if (curr_ptr + nbytes > buff_end) {
+    if (curr_ptr <= buff_end) {                  // first to see "full"
+        while (buff_write_tail_ptr != curr_ptr) {}   // wait for writers
+        flush();
+    } else { while (buff_write_head_ptr > buff_end) {} }   // wait for the flush
+    curr_ptr = NULL; }
+memcpy(curr_ptr, packet, nbytes);
+atomicAdd((ULL*)&buff_write_tail_ptr, (ULL)nbytes);
+\end{lstlisting}
+and \texttt{flush}:
+\begin{lstlisting}
+uint32_t nbytes = (uint32_t)(buff_write_tail_ptr - buff);
+if (nbytes == 0) return;
+__threadfence_system();      // make the pinned-memory writes visible
+*doorbell = nbytes;          // notify the host
+while (*doorbell != 0) ;     // wait for the host to release
+buff_write_tail_ptr = buff; __threadfence(); buff_write_head_ptr = buff;
+\end{lstlisting}
+The buffer is pinned host memory (\texttt{cudaHostAlloc}), the doorbell a mapped host \texttt{int} which the GPU sees through \texttt{cudaHostGetDevicePointer}. \textbf{Capacity.} Since \nn{} passes \texttt{buff\_size = sizeof(exception\_info)}, the buffer holds exactly one packet: after any push the next push finds the buffer full and triggers a flush (my reading from \texttt{CHANNEL\_SIZE} and \texttt{init}; I did not instrument it). That is why the two-packet \texttt{skip} pair matters (see below).
+
+\slide{Receiver: \texttt{recv} and the thread loop}
+\begin{lstlisting}
+uint32_t buff_nbytes = *doorbell;  if (buff_nbytes == 0) return 0;
+int nbytes = min(buff_nbytes, max_buff_size);
+memcpy(buff, dev_buff_read_head, nbytes);
+int bytes_left = buff_nbytes - nbytes;
+if (bytes_left > 0) dev_buff_read_head += nbytes; else dev_buff_read_head = dev_buff;
+*doorbell = bytes_left;          // 0 releases the GPU
+\end{lstlisting}
+The doorbell therefore doubles as a byte counter: each call returns at most one packet and writes back the remainder; the spinning GPU is released only when it reaches 0. The loop (\texttt{recv\_thread\_fun}) is a busy poll:
+\begin{lstlisting}
+while (recv_thread_started) {
+  if (recv_thread_receiving &&
+      (num_recv_bytes = channel_host.recv(recv_buffer, CHANNEL_SIZE)) > 0) {
+     ... for each packet:
+       if (ei->to_skip()) { num_processed_bytes += sizeof(exception_info); continue; }
+       if (ei->warp() == -1) { recv_thread_receiving = false; break; }
+       ... build string; nnout_line(oss.str());
+\end{lstlisting}
+\texttt{nnout\_line} takes a mutex and flushes, so lines from the exception thread and the histogram thread do not interleave (commit \texttt{2054a32}). With \texttt{MAX\_ERRORS=n} the thread calls \texttt{nnterminate}.
+
+\slide{Receiver state machine}
+States: \emph{idle} (\texttt{recv\_thread\_receiving=false}) $\to$ \emph{polling} (set at kernel launch) $\to$ \emph{decode} on bytes $>0$; \texttt{skip} packets step over; a sentinel returns to idle. About \texttt{skip}: every first sighting is pushed twice, \texttt{skip=0} then \texttt{skip=1}, and the receiver acts on the first and steps over the second. The intent is not documented in the repository. A plausible reading is that the second packet forces a second flush, so the first packet is certainly drained before the kernel moves on; I did not verify this.
+
+\slide{The ``one last message'': sentinel flush}
+The design:
+\begin{lstlisting}
+__global__ void flush_channel() {
+  exception_info ei(int4{-1, -1, -1, -1}, 0, 0, 0, 0);   // warp() == -1
+  channel_dev.push(&ei, sizeof(exception_info));
+  channel_dev.flush();
+}
+\end{lstlisting}
+launched after each kernel with \texttt{skip\_flag} protecting against re-entering the launch callback, followed by \texttt{while (recv\_thread\_receiving) sched\_yield();}. In commit \texttt{ce35185} \emph{all of this is commented out} in \texttt{nvbit\_at\_cuda\_event}; only \texttt{cudaDeviceSynchronize()} and the error check remain. The receiver still honours \texttt{warp()==-1}, but nothing sends it, so \texttt{recv\_thread\_receiving} stays true from the first launch on. Section~\ref{sec:sentinel} reports what I could test.
+
+\slide{End of run}
+\begin{lstlisting}
+recv_thread_started = false;  recv_thread.join();
+recorder->end();             // cudaMemcpy device_errors -> host_errors
+\end{lstlisting}
+then for every (instr, op, flag-set) with $n>0$ hits it adds $n$ to the \emph{repeats+distinct} sum for each flag in the set, and 1 to the distinct-location count; the printed ``repeats'' is total minus distinct. A real report (Part B, fp16acc16):
+\begin{lstlisting}
+#nixnan: ------------ nixnan Report -----------
+#nixnan: --- FP16 Operations ---
+#nixnan: NaN:                   50 (722 repeats)
+#nixnan: Infinity:              20 (48 repeats)
+\end{lstlisting}
 
 \section{Part A: an ordinary SASS instruction}
-\texttt{rd\_step\_fp16} in \texttt{rd\_nixnan} contains (from \texttt{cuobjdump -sass}) \texttt{HFMA2 R0, R0.H0\_H0, c[0x0][0x170].H0\_H0, R9.H0\_H0}. The verbose log shows two injected calls: AFTER with 2 arguments after the fixed ones (one \texttt{reginfo}, one register: ``operand 0, regs: 1, count: 2'') and BEFORE with 6 (three \texttt{reginfo}, three registers: operands 1, 2, 3 with ``regs: 1''). Operand~2 is the constant bank word. The report printed an infinity in operand~1 (source) and in operand~0 (destination) for this instruction, with function \texttt{rd\_step\_fp16} and type \texttt{f16}. No source line appears because the scalar binary has no line information.
+\slide{\texttt{HFMA2} in \texttt{rd\_step\_fp16}}
+From the verbose log (\texttt{latex/data/partA-scalar.log}):
+\begin{lstlisting}
+#nixnan: Instrumenting instruction HFMA2 R0, R0.H0_H0, c[0x0] [0x170].H0_H0, R9.H0_H0 ;
+#nixnan: Instrumenting instruction with 2 registers
+#nixnan: Instrumenting operand 0. div0: 0, regs: 1, count: 2
+#nixnan: Instrumenting instruction with 6 registers
+#nixnan: Instrumenting operand 1. div0: 0, regs: 1
+#nixnan: Instrumenting operand 2. div0: 0, regs: 1
+#nixnan: Instrumenting operand 3. div0: 0, regs: 1
+\end{lstlisting}
+Operand 0 (D=\texttt{R0}) is one 32-bit register holding two halves; AFTER has \texttt{arg\_count}=2 (one reginfo + one value). The BEFORE call has three reginfo words and three values = 6. Operand 2 is a constant-bank operand \texttt{c[0x0][0x170]}, passed with \texttt{nvbit\_add\_call\_arg\_cbank\_val}. The ``\texttt{.H0\_H0}'' suffix on the SASS operand means the low half is replicated into both lanes; \nn{} ignores it and inspects both halves of the register (\texttt{half\_h0=half\_h1=true}), which is a conservative approximation (my reading).
+
+\slide{What came back}
+Real report lines for this instruction:
+\begin{lstlisting}
+#nixnan: error [infinity] detected in operand 1 of instruction HFMA2 R0, R0.H0_H0, c[0x0] [0x170].H0_H0, R9.H0_H0 ; in function rd_step_fp16 of type f16
+#nixnan: error [infinity] detected in operand 0 of instruction HFMA2 R0, R0.H0_H0, c[0x0] [0x170].H0_H0, R9.H0_H0 ; in function rd_step_fp16 of type f16
+\end{lstlisting}
+Operand 1 is checked BEFORE (the previous step's inf arrives as an input), operand 0 AFTER (the result). No \texttt{at file:line}: \texttt{rd\_nixnan} is built without \texttt{-lineinfo}. The type text \texttt{f16} is looked up from the recorder, because the packet's \texttt{tp\_override} is \texttt{UNKNOWN}.
 
 \section{Part B: HMMA}
-\texttt{HMMA.16816.F16 R26, R4, R30, R26} (SASS offset \texttt{0x840} in \texttt{rd\_tc}). The JSON entry has four groups: D f16$\times$4, A f16$\times$8, B f16$\times$4, C f16$\times$4, i.e.\ 2, 4, 2, 2 registers. Observed in the log: AFTER ``3 registers'' (one \texttt{reginfo}+2) and BEFORE ``11 registers'' (three \texttt{reginfo}+8). Registers picked up for this instruction \emph{(computed from the SASS operand text)}: D $=$ R26,R27 (after); A $=$ R4--R7, B $=$ R30,R31, C $=$ R26,R27 (before). \texttt{reginfo} words, verified by compiling the real \texttt{reginfo.cuh} with g++ (not dumped from the running tool): 0x00010C04, 0x00022C08, 0x00014C04, 0x00016C04.
+\slide{\texttt{HMMA.16816.F16}: one warp instruction, four register groups}
+SASS (\texttt{cuobjdump -sass rd\_tc}): \texttt{HMMA.16816.F16 R26, R4, R30, R26 ;}. Verbose log for HMMAs of this kernel (\texttt{latex/data/partB-hmma.log}):
+\begin{lstlisting}
+#nixnan: Instrumenting instruction HMMA.16816.F16 R22, R12.reuse, R30, R22 ;
+#nixnan: Instrumenting instruction with 3 registers
+#nixnan: Instrumenting operand 0. div0: 0, regs: 2, count: 4
+#nixnan: Instrumenting instruction with 11 registers
+#nixnan: Instrumenting operand 1. div0: 0, regs: 4
+#nixnan: Instrumenting operand 2. div0: 0, regs: 2
+#nixnan: Instrumenting operand 3. div0: 0, regs: 2
+\end{lstlisting}
+3 = 1 reginfo + 2 values (AFTER); 11 = 3 reginfo + 4 + 2 + 2 values (BEFORE).
 
-Observed reports (\texttt{fp16acc16}): infinity in operand~0 of HMMAs at step~230 (program's count: 120 inf), then NaN in operand~0 of HMMAs in the next step as inf operands meet zeros of $P$ ($0\times\infty$), and all 4096 entries NaN by step~232. For \texttt{fp16acc32} and \texttt{bf16acc32} no \texttt{F2FP} line appears in the logs, and \texttt{instructions.json} contains no \texttt{F2FP} key (grep count 0), so the conversion that creates the first inf is not instrumented; the inf is first seen as an operand of the next HMMA. \texttt{LINE\_INFO=1} did not yield \texttt{mma\_sync} source locations in these runs.
+\slide{Which registers are picked up}
+For \texttt{HMMA.16816.F16 R26, R4, R30, R26}: D (op 0, 4 halves) $\to$ R26,R27 read AFTER; A (op 1, 8 halves) $\to$ R4--R7; B (op 2, 4 halves) $\to$ R30,R31; C (op 3, 4 halves) $\to$ R26,R27, all BEFORE. Thus the old accumulator is seen even though R26 is overwritten. The $m16n8k16$ half-precision fragment layout per thread (A: 8 halves, B: 4, C/D: 4) is why the counts are 8/4/4/4. Each of the 32 lanes supplies its own registers; the device function ORs the 32 verdicts.
 
-\section{Not covered}
-The histogram path (\texttt{fp-histogram.cu}), memory-instruction instrumentation (\texttt{meminstrumentation.cu}), and \texttt{TIME\_KERNELS}/\texttt{SAMPLING} experiments were not studied here.
+\slide{reginfo words for this HMMA}
+Produced by compiling the real \texttt{reginfo.cuh} with g++ and filling the fields as \texttt{get\_reginfo} does:
+\begin{center}\begin{tabular}{cccl}\toprule operand & count & num\_regs & word\\\midrule
+0 (D) & 4 & 2 & \texttt{0x00010C04}\\ 1 (A) & 8 & 4 & \texttt{0x00022C08}\\ 2 (B) & 4 & 2 & \texttt{0x00014C04}\\ 3 (C) & 4 & 2 & \texttt{0x00016C04}\\\bottomrule\end{tabular}\end{center}
+They match my earlier hand computation. For the \texttt{.F32} variant (type=2): D $=$ \texttt{0x00020C84}, C $=$ \texttt{0x00026C84}. These words were \emph{not} dumped from the running tool (it leaves the 12 reserved bits uninitialised; the device code never reads them).
+
+\slide{What \nn{} reported (real output, fp16acc16)}
+\begin{lstlisting}
+#nixnan: error [infinity] detected in operand 0 of instruction HMMA.16816.F16 R26, R4, R30, R26 ; in function rd_tc_fp16acc16 of type f16
+#nixnan: error [infinity] detected in operand 0 of instruction HMMA.16816.F16 R4, R8.reuse, R4, R22 ; ...
+#nixnan: error [infinity] detected in operand 3 of instruction HMMA.16816.F16 R6, R8, R6, R26 ; ...
+\end{lstlisting}
+Operand 0: the tensor core produced the overflow in its f16 accumulator (step 230). The step after, inf inputs meet the zeros in $P$: $0\times\infty=\mathrm{NaN}$ inside the HMMA, and the NaN lines appear (operands 0--3 of the HMMAs). With \texttt{fp16acc32}/\texttt{bf16acc32} the first inf is born in \texttt{F2FP.PACK} / \texttt{F2FP.BF16.PACK}, which has no table entry, so \nn{} shows it first as an operand of the next HMMA. \texttt{LINE\_INFO=1} gave no \texttt{mma\_sync} source lines in these runs.
+
+\slide{Summary}
+The tool is a table (opcode $\to$ operand groups), one 32-bit \texttt{reginfo} per operand, two injected calls (destination AFTER, sources BEFORE), a warp-merged check with per-site atomic counters, a first-occurrence-only channel, and a single polling receiver. HMMA required no new code, only a table entry.
+
+\section{Sentinel / completeness check}\label{sec:sentinel}
+(to be filled)
+
+\section{Histogram pass}\label{sec:histo}
+(to be filled)
 \end{document}
