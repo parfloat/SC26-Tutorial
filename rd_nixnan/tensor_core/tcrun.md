@@ -183,3 +183,36 @@ Answers to the questions:
 | steps | first inf 230, first NaN 231 | same | first inf 1764, first NaN 1765 |
 
 `LINE_INFO=1` did not give `mma_sync` source lines in these runs. The histogram pass (to do 4) has not been run.
+
+## Histogram pass (run 2026-10-19, after the reboot)
+
+Run (note: no `timeout` wrapper, see below; `NIXNAN_TIMEOUT` is nixnan's own):
+
+    env -u LD_LIBRARY_PATH NIXNAN_TIMEOUT=500 HISTOGRAM=1 BIN_SPEC_FILE=bin_spec_tc.json \
+      LOGFILE=logs/nixnan-hist-$m.log LD_PRELOAD=~/repos/nixnan/nixnan.so ./rd_tc $m
+
+Two specs (unbiased exponents):
+
+* `bin_spec_tc.json`: count 256, f16 [8,15], bf16 and f32 [100,127] (one wide bin per format, the top 8 or 28 binades).
+* `bin_spec_tc_top.json`: count 64, f16 [15,15], bf16 and f32 [127,127] (only the very top binade, finite values only; f16 >= 32768, f32/bf16 >= 1.7e38).
+
+"bin reached threshold" lines (one per `count` occurrences) in the top-binade pass:
+
+| mode | f16 top binade | bf16 top binade | f32 top binade |
+|---|---|---|---|
+| fp16acc16 | 3743 lines (~240k occurrences) | - | - |
+| fp16acc32 | 2791 lines | - | **0** |
+| bf16acc32 | - | 2531 lines | 853 lines |
+
+Reading (the lines count operand values seen in HMMA operands before and after, so they overcount per value):
+
+* fp16acc16: HMMA operands live in the top f16 binade before the overflow at step 230.
+* fp16acc32: the f32 accumulator never reached the top f32 binade, so the overflow is created by the FP32 to FP16 conversion, confirming the earlier F2FP finding.
+* bf16acc32: f32 accumulators do reach [2^127, 2^128) before overflowing, matching the native max finite 3.3895e38 at step 1764.
+
+Observations about the tool in histogram mode:
+
+* Raw logs are large (wide bin: 4.2 MB, 2.4 MB, 23 MB; 138k lines for bf16acc32), so only gzipped copies are committed (`logs/nixnan-hist*.log.gz`).
+* The exception lines and the histogram lines interleave mid-line in the log (torn lines), despite the mutex in `nnout_line`; the histogram thread evidently writes without it. Counts in the table above were taken by `grep -o`, so torn lines may lose a handful.
+* Every histogram run ends with `terminate called without an active exception` and an abort (core dump) at process exit, after the program's own output is complete.
+* **Wrapping the program in `timeout` made nixnan silent** (banner only, no instrumentation, no error). Use `NIXNAN_TIMEOUT`. Cause not investigated.
