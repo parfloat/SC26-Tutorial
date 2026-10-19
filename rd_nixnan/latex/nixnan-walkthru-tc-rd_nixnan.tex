@@ -282,7 +282,7 @@ Repeats are therefore only \emph{counted}, never transmitted: that is the ``(N r
 \draw[arr](sent)--(idle);
 \end{tikzpicture}
 
-\small Why \texttt{skip}? Each first-occurrence is pushed twice: \texttt{skip=0}, then \texttt{skip=1}. A reader that stops after a partial/odd read thus never mistakes the second copy for a new event; the receiver steps over it. (My reading of the code; the repository has no comment stating the intent.)
+\small Why \texttt{skip}? The channel buffer is exactly one packet (\texttt{CHANNEL\_SIZE}), and \texttt{push} only flushes when the \emph{next} packet does not fit. So a lone real packet would sit unflushed. Each first occurrence is therefore pushed twice: the real one (\texttt{skip=0}) and a dummy (\texttt{skip=1}) whose arrival forces the real one out; the receiver steps over the dummy. (My reading of the code; no comment in the repository states the intent. It is consistent with all observed runs, see the sentinel slide.)
 \end{frame}
 
 \begin{frame}[fragile]{The ``one last message'': sentinel flush --- design vs.\ this commit}
@@ -297,7 +297,7 @@ __global__ void flush_channel() {
 \begin{itemize}
 \item \textbf{Design:} after each kernel, launch \texttt{flush\_channel<<<1,1>>>}, so (a) any partially filled buffer is flushed and (b) the receiver sees \texttt{warp==-1} and clears \texttt{recv\_thread\_receiving}; the exit callback then waits \texttt{while(recv\_thread\_receiving) sched\_yield();} so no report is lost and the doorbell spin cannot hang on a half-drained buffer.
 \item \textbf{Status in commit \texttt{ce35185}:} the launch of \texttt{flush\_channel}, the \texttt{skip\_flag} toggling and the wait loop in \texttt{nvbit\_at\_cuda\_event} are \textbf{commented out}. The receiver still understands the sentinel, but nothing sends it. The exit callback now only does \texttt{cudaDeviceSynchronize()} and an error check.
-\item Packets already pushed are drained by the always-polling thread; a final partial buffer is not forced out by a flush (I did not test whether this loses reports in any run).
+\item \textbf{Checked:} in the three \texttt{rd\_tc} runs the live \texttt{error [\ldots]} lines match the final report per flag (e.g.\ fp16acc32: NaN 50 live $=16$ f16 $+\,34$ f32; Inf 12 $=8+4$; bf16acc32: NaN $66=24+42$, Inf $36=16+20$). No first occurrence was lost in these runs. This does not prove the sentinel is unnecessary: the dummy \texttt{skip} packet may be what makes it work, and the last dummy always stays in the buffer.
 \end{itemize}
 \end{frame}
 

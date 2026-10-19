@@ -274,7 +274,7 @@ while (recv_thread_started) {
 \texttt{nnout\_line} takes a mutex and flushes, so lines from the exception thread and the histogram thread do not interleave (commit \texttt{2054a32}). With \texttt{MAX\_ERRORS=n} the thread calls \texttt{nnterminate}.
 
 \slide{Receiver state machine}
-States: \emph{idle} (\texttt{recv\_thread\_receiving=false}) $\to$ \emph{polling} (set at kernel launch) $\to$ \emph{decode} on bytes $>0$; \texttt{skip} packets step over; a sentinel returns to idle. About \texttt{skip}: every first sighting is pushed twice, \texttt{skip=0} then \texttt{skip=1}, and the receiver acts on the first and steps over the second. The intent is not documented in the repository. A plausible reading is that the second packet forces a second flush, so the first packet is certainly drained before the kernel moves on; I did not verify this.
+States: \emph{idle} (\texttt{recv\_thread\_receiving=false}) $\to$ \emph{polling} (set at kernel launch) $\to$ \emph{decode} on bytes $>0$; \texttt{skip} packets step over; a sentinel returns to idle. About \texttt{skip}: every first sighting is pushed twice, \texttt{skip=0} then \texttt{skip=1}, and the receiver acts on the first and steps over the second. The intent is not documented in the repository. Reading \texttt{channel.hpp} together with \texttt{CHANNEL\_SIZE = sizeof(exception\_info)} gives a concrete explanation (my reading): the buffer holds exactly one packet and \texttt{push} flushes only when the \emph{next} packet does not fit, so a lone packet would sit unflushed; the second, dummy packet (\texttt{skip=1}) forces the real one out and is ignored by the receiver. The last dummy always remains in the buffer. Section~\ref{sec:sentinel} shows the observed consistency.
 
 \slide{The ``one last message'': sentinel flush}
 The design:
@@ -357,7 +357,13 @@ Operand 0: the tensor core produced the overflow in its f16 accumulator (step 23
 The tool is a table (opcode $\to$ operand groups), one 32-bit \texttt{reginfo} per operand, two injected calls (destination AFTER, sources BEFORE), a warp-merged check with per-site atomic counters, a first-occurrence-only channel, and a single polling receiver. HMMA required no new code, only a table entry.
 
 \section{Sentinel / completeness check}\label{sec:sentinel}
-(to be filled)
+I could not and did not modify the \nn{} sources, so I did not run a variant with the sentinel re-enabled. What I did is a consistency check on the three \texttt{tensor\_core/logs/nixnan-*.log}: every first-occurrence packet that reached the receiver was printed live, and the final table is computed from the device counters (\texttt{device\_errors}), which do \emph{not} depend on the channel. If any packet had been lost, the table would count more distinct (instruction, operand, flag-set) triples than there are live lines. They agree:
+\begin{center}\begin{tabular}{lrrrrr}\toprule run & live lines & NaN live & NaN report & Inf live & Inf report\\\midrule
+fp16acc16 & 68 & 52 & 50 (f16) + 2 (mem) & 20 & 20 (f16)\\
+fp16acc32 & 58 & 50 & 16 (f16) + 34 (f32) & 12 & 8 + 4\\
+bf16acc32 & 82 & 66 & 24 (bf16) + 42 (f32) & 36 & 16 + 20\\\bottomrule\end{tabular}\end{center}
+A live line containing ``NaN,infinity'' counts toward both columns, as does the report. The 2 extra NaN lines in fp16acc16 are \texttt{STG.E} stores, reported in the memory section of the table.
+Conclusions, with their limits. (1) In these three runs no first-occurrence report was lost. (2) That is consistent with the dummy-packet reading of \texttt{skip}, but I did not test it directly. (3) What can still be lost: the trailing dummy packet (harmless), and nothing else under my reading; a variant where the last \emph{real} packet is not followed by a dummy cannot occur, because both are pushed together by the same lane. (4) The sentinel/wait loop being disabled means \texttt{recv\_thread\_receiving} is never cleared; the receiver simply polls until context teardown.
 
 \section{Histogram pass}\label{sec:histo}
 (to be filled)
