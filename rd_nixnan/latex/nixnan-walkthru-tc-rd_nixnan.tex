@@ -377,8 +377,8 @@ $m16n8k16$ half-precision: per thread the A fragment is 8 halves (4 registers), 
 Every active lane of the warp supplies its own copy (the device function runs per thread, then ORs across lanes).
 \end{frame}
 
-\begin{frame}[fragile]{Part B --- reginfo words for this HMMA (computed)}
-\small Using the layout above (count, type, h0, h1, operand, num\_regs) I compute:
+\begin{frame}[fragile]{Part B --- reginfo words for this HMMA (verified offline)}
+\small Using the layout above (count, type, h0, h1, operand, num\_regs):
 \begin{center}\begin{tabular}{@{}cccl@{}}
 operand & count & num\_regs & word\\\hline
 0 (D) & 4 & 2 & \texttt{0x00010C04}\\
@@ -386,7 +386,7 @@ operand & count & num\_regs & word\\\hline
 2 (B) & 4 & 2 & \texttt{0x00014C04}\\
 3 (C) & 4 & 2 & \texttt{0x00016C04}\\
 \end{tabular}\end{center}
-\textbf{Caveat:} computed by hand from the bit-field declaration with LSB-first allocation; I did not dump these words from the running tool.
+\textbf{Verification:} the words were produced by compiling the real \texttt{reginfo.cuh} with g++ and filling the fields as \texttt{get\_reginfo} does (all fields zeroed first). They match my hand computation. They were \emph{not} dumped from the running tool; the tool leaves the 12 reserved bits uninitialised, which the device code ignores. For \texttt{.F32}: D $=$ \texttt{0x00020C84}, C $=$ \texttt{0x00026C84}.
 
 \bigskip
 Limits worth knowing: \texttt{num\_regs} has 4 signed bits; \texttt{get\_reginfo} asserts \texttt{get\_num\_regs<16}. HMMA.1684 TF32 and \texttt{.F32}/\texttt{.F32.BF16} variants have their own entries (f32 count 4 for D and C).
