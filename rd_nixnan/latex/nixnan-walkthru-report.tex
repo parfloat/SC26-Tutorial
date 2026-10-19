@@ -363,7 +363,7 @@ fp16acc16 & 68 & 52 & 50 (f16) + 2 (mem) & 20 & 20 (f16)\\
 fp16acc32 & 58 & 50 & 16 (f16) + 34 (f32) & 12 & 8 + 4\\
 bf16acc32 & 82 & 66 & 24 (bf16) + 42 (f32) & 36 & 16 + 20\\\bottomrule\end{tabular}\end{center}
 A live line containing ``NaN,infinity'' counts toward both columns, as does the report. The 2 extra NaN lines in fp16acc16 are \texttt{STG.E} stores, reported in the memory section of the table.
-Conclusions, with their limits. (1) In these three runs no first-occurrence report was lost. (2) That is consistent with the dummy-packet reading of \texttt{skip}, but I did not test it directly. (3) What can still be lost: the trailing dummy packet (harmless), and nothing else under my reading; a variant where the last \emph{real} packet is not followed by a dummy cannot occur, because both are pushed together by the same lane. (4) The sentinel/wait loop being disabled means \texttt{recv\_thread\_receiving} is never cleared; the receiver simply polls until context teardown.
+Conclusions, with their limits. (1) In these three runs no first-occurrence report was lost. (2) That is consistent with the dummy-packet reading of \texttt{skip}, but I did not test it directly. (3) What can still be lost, under my reading: the trailing dummy packet (harmless). I did not test other loss paths. (4) The sentinel/wait loop being disabled means \texttt{recv\_thread\_receiving} is never cleared; the receiver simply polls until context teardown.
 
 \section{Histogram pass}\label{sec:histo}
 (to be filled)
