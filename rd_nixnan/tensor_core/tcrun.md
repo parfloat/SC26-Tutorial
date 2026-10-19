@@ -163,3 +163,23 @@ Fix: reboot, or reload the nvidia kernel module (this needs root). Afterwards,
    * Does it flag the NaN from 0 × inf inside the HMMA?
    * Does `LINE_INFO` resolve the `mma_sync` source lines?
 6. Write the results into this file, then make a README and slides, and commit.
+
+## Results after the reboot (2026-10-19, nixnan `print_histo_instrn`, `~/repos/nixnan/nixnan.so`)
+
+* The driver mismatch is fixed (`nvidia-smi` shows 595.99.02, same as the library).
+* nixnan was still silent until `LD_LIBRARY_PATH` was unset. Run it as
+  `env -u LD_LIBRARY_PATH LINE_INFO=1 PRINT_ILL_INSTR=1 LOGFILE=logs/nixnan-$m.log LD_PRELOAD=~/repos/nixnan/nixnan.so ./rd_tc $m`.
+  (I did not isolate which entry of `LD_LIBRARY_PATH` is the cause.)
+* instr_count (NVBit sample tool) also attaches with `LD_LIBRARY_PATH` cleared.
+* Logs: `logs/nixnan-{fp16acc16,fp16acc32,bf16acc32}.log`, `logs/stdout-*.txt`.
+
+Answers to the questions:
+
+| Question | fp16acc16 | fp16acc32 | bf16acc32 |
+|---|---|---|---|
+| inf flagged in the HMMA? | yes, operand 0 of `HMMA.16816.F16` | yes, but only as an input of the next `HMMA.16816.F32` | yes, only as an input of the next `HMMA.16816.F32.BF16` |
+| inf flagged at `F2FP`? | n/a | no (0 `F2FP` lines; `F2FP` has no entry in instructions.json) | no |
+| NaN (0 x inf) flagged in the HMMA? | yes | yes | yes |
+| steps | first inf 230, first NaN 231 | same | first inf 1764, first NaN 1765 |
+
+`LINE_INFO=1` did not give `mma_sync` source lines in these runs. The histogram pass (to do 4) has not been run.
