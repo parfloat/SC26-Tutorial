@@ -412,6 +412,22 @@ error [NaN] detected in operand 0 of instruction HMMA.16816.F16 R22, R16, R22, R
 \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{Part B --- histogram mode: how close do the HMMA operands get to overflow?}
+\small \texttt{HISTOGRAM=1 BIN\_SPEC\_FILE=spec.json}: the same injection machinery, but each operand's \emph{exponent} is binned and every \texttt{count}-th hit in a requested range is reported. Spec: top binade only (\texttt{count} 64, f16 [15,15], bf16/f32 [127,127]).
+\begin{center}\begin{tabular}{@{}lrrr@{}}
+mode & f16 top & bf16 top & f32 top\\\hline
+fp16acc16 & 3743 & -- & --\\
+fp16acc32 & 2791 & -- & \textbf{0}\\
+bf16acc32 & -- & 2531 & 853\\
+\end{tabular}\end{center}
+(``bin reached threshold'' lines.)
+\begin{itemize}\small
+\item fp16acc32: the f32 accumulator \emph{never} reaches the top f32 binade, so the overflow is made by the FP32$\to$FP16 conversion, matching the F2FP finding.
+\item bf16acc32: f32 accumulators do reach $[2^{127},2^{128})$, as the native max finite $3.39\!\times\!10^{38}$ at step 1764 suggests.
+\item \textbf{Tool caveats seen:} histogram and exception lines interleave mid-line in the log; the run ends with \texttt{terminate called without an active exception} (abort at exit); wrapping the program in \texttt{timeout} made \nn{} silent (use \texttt{NIXNAN\_TIMEOUT}).
+\end{itemize}
+\end{frame}
+
 \begin{frame}{Summary}
 \small
 \begin{itemize}

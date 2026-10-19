@@ -366,5 +366,21 @@ A live line containing ``NaN,infinity'' counts toward both columns, as does the 
 Conclusions, with their limits. (1) In these three runs no first-occurrence report was lost. (2) That is consistent with the dummy-packet reading of \texttt{skip}, but I did not test it directly. (3) What can still be lost, under my reading: the trailing dummy packet (harmless). I did not test other loss paths. (4) The sentinel/wait loop being disabled means \texttt{recv\_thread\_receiving} is never cleared; the receiver simply polls until context teardown.
 
 \section{Histogram pass}\label{sec:histo}
-(to be filled)
+Histogram mode reuses the same instrumentation (same injected calls and \texttt{reginfo} words) but classifies each value's exponent into user-defined bins and reports every \texttt{count}-th occurrence per bin. I ran it on \texttt{rd\_tc} with
+\begin{lstlisting}
+env -u LD_LIBRARY_PATH NIXNAN_TIMEOUT=500 HISTOGRAM=1 BIN_SPEC_FILE=bin_spec_tc_top.json \
+  LOGFILE=logs/nixnan-histtop-$m.log LD_PRELOAD=~/repos/nixnan/nixnan.so ./rd_tc $m
+\end{lstlisting}
+with two specs: \texttt{bin\_spec\_tc.json} (count 256; f16 [8,15]; bf16 and f32 [100,127]) and \texttt{bin\_spec\_tc\_top.json} (count 64; f16 [15,15]; bf16 and f32 [127,127]; unbiased exponents, finite values only). Counts of ``bin has reached threshold'' lines for the top-binade spec:
+\begin{center}\begin{tabular}{lrrr}\toprule mode & f16 top & bf16 top & f32 top\\\midrule
+fp16acc16 & 3743 & -- & --\\ fp16acc32 & 2791 & -- & 0\\ bf16acc32 & -- & 2531 & 853\\\bottomrule\end{tabular}\end{center}
+Interpretation (my reading of the numbers): in fp16acc32 the f32 accumulator never enters the top f32 binade, so the overflow happens in the FP32$\to$FP16 conversion (\texttt{F2FP.PACK}), consistent with that instruction being invisible to the exception checker. In bf16acc32 the f32 accumulators do enter $[2^{127},2^{128})$, consistent with the native max finite value $3.3895\times10^{38}$ at step 1764. The lines count operand values seen both before and after the instruction, so they over-count individual values.
+
+Tool behaviour worth knowing, all observed:
+\begin{itemize}
+\item Logs are large with a wide bin (4.2\,MB, 2.4\,MB and 23\,MB; 138k lines for bf16acc32). Only gzipped copies are in the repository.
+\item Exception lines and histogram lines interleave mid-line in the shared log; the histogram thread evidently does not take the \texttt{nnout\_line} mutex (inferred).
+\item Every histogram run ends with ``terminate called without an active exception'' and an abort at process exit, after the program's own output.
+\item Launching the program under \texttt{timeout} made \nn{} print only its banner; \texttt{NIXNAN\_TIMEOUT} is the supported alternative. I did not investigate the cause.
+\end{itemize}
 \end{document}
