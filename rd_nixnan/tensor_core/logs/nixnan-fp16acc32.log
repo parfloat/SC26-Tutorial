@@ -1,0 +1,102 @@
+#nixnan: ----------------------------------------------------------------------------------
+#nixnan: Initializing GPU context...
+#nixnan: Instrumenting all functions
+#nixnan: running kernel [void rd_tc_acc32] ...
+#nixnan: error [infinity] detected in operand 2 of instruction HMMA.16816.F32 R8, R8, R20, R12 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [infinity] detected in operand 2 of instruction HMMA.16816.F32 R16, R12.reuse, R28, R16 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R8, R8, R20, R12 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN,infinity] detected in operand 0 of instruction HMMA.16816.F32 R16, R8.reuse, R22, R16 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R20, R12, R16, R20 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [infinity] detected in operand 1 of instruction HMMA.16816.F32 R20, R12, R16, R20 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN,infinity] detected in operand 0 of instruction HMMA.16816.F32 R8, R8, R20, R12 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R16, R8.reuse, R22, R16 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [infinity] detected in operand 2 of instruction HMMA.16816.F32 R16, R8.reuse, R22, R16 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [infinity] detected in operand 1 of instruction HMMA.16816.F32 R8, R12.reuse, R18, R8 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [infinity] detected in operand 2 of instruction HMMA.16816.F32 R12, R12, R24, R8 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R12, R12, R24, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R16, R12.reuse, R28, R16 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN,infinity] detected in operand 3 of instruction HMMA.16816.F32 R16, R12.reuse, R28, R16 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R12, R12, R24, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R8, R20.reuse, R8, R16 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R8, R12.reuse, R18, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R20, R20, R26, R12 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R20, R20, R26, R12 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [infinity] detected in operand 1 of instruction HMMA.16816.F32 R20, R16.reuse, R30, R20 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R20, R16.reuse, R30, R20 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R8, R20.reuse, R8, R16 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R8, R16.reuse, R28, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R20, R16, R26, R20 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R16, R12.reuse, R28, R16 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R8, R16.reuse, R28, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN,infinity] detected in operand 3 of instruction HMMA.16816.F32 R12, R12, R24, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [infinity] detected in operand 1 of instruction HMMA.16816.F32 R8, R16, R28, R8 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R8, R16, R28, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R20, R16, R26, R20 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R20, R16.reuse, R30, R20 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R20, R12, R16, R20 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R8, R16, R28, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R8, R12.reuse, R18, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R8, R12.reuse, R28, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R8, R12.reuse, R28, R8 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R20, R12, R16, R20 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R20, R12, R16, R20 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.16816.F32 R16, R12.reuse, R16, RZ ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R16, R12.reuse, R16, RZ ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.16816.F32 R12, R12, R20, RZ ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R12, R12, R20, RZ ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R16, R8.reuse, R22, R16 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.16816.F32 R16, R8.reuse, R22, R16 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.16816.F32 R8, R8, R20, R12 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.16816.F32 R8, R8, R20, R12 ; in function void rd_tc_acc32 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.16816.F32 R16, R12.reuse, R28, R16 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.16816.F32 R12, R12, R24, R8 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.16816.F32 R8, R20.reuse, R8, R16 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.16816.F32 R20, R20, R26, R12 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R8, R16.reuse, R28, R8 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R20, R16, R26, R20 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R8, R12.reuse, R18, R8 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R20, R12, R16, R20 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R20, R16.reuse, R30, R20 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R8, R16, R28, R8 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R8, R12.reuse, R28, R8 ; in function void rd_tc_acc32 of type f16
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R20, R12, R16, R20 ; in function void rd_tc_acc32 of type f16
+#nixnan: Finalizing GPU context...
+
+#nixnan: ------------ nixnan Report -----------
+
+#nixnan: --- FP16 Operations ---
+#nixnan: NaN:                   16 (160 repeats)
+#nixnan: Infinity:               8 (40 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- BF16 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP32 Operations ---
+#nixnan: NaN:                   34 (562 repeats)
+#nixnan: Infinity:               4 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP64 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- BF16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- FP32 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- FP64 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)

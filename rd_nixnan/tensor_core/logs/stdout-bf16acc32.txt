@@ -1,0 +1,62 @@
+------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
+NVBit core environment variables (mostly for nvbit-devs):
+ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
+            NVDISASM = nvdisasm - override default nvdisasm found in PATH
+            NOBANNER = 0 - if set, does not print this banner
+       NO_EAGER_LOAD = 1 - lazy module loading is now turned on by default. If you see deadlocks in your tool, set NO_EAGER_LOAD to 0
+---------------------------------------------------------------------------------
+         INSTR_BEGIN = 0 - Beginning of the instruction interval where to apply instrumentation
+           INSTR_END = 4294967295 - End of the instruction interval where to apply instrumentation
+        TOOL_VERBOSE = 0 - Enable verbosity inside the tool
+   ENABLE_FUN_DETAIL = 0 - Enable detailed function information for kernel
+     PRINT_ILL_INSTR = 1 - Print the instruction which caused the exception
+            SAMPLING = 0 - Instrument a repeat kernel every SAMPLING times
+INSTRUMENT_EXCEPTIONS = 1 - Enable instrumentation of exceptions
+           INSTR_MEM = 0 - Instrument memory instructions for NaN/Inf detection
+           HISTOGRAM = 0 - Enable FP exponent histogramming
+       BIN_SPEC_FILE =  - Specification for which exponent ranges to report. If the file does not exist, a template specification will be created.
+For example:
+{
+    "count": 128,
+    "bf16": [],
+    "f16": [[0,5],[-4,-1]],
+    "f32": [],
+    "f64": []
+}
+will report every 128 occurrences of exponents in the ranges 0 to 5 and -4 to -1 for f16 numbers.
+      NIXNAN_TIMEOUT = 0 - Timeout for the nixnan instrumented process in seconds.
+             LOGFILE = logs/nixnan-bf16acc32.log - Path to the optional log file. Default is to print to stderr. This is useful for the case when an instrumented program is capturing stderr.
+           LINE_INFO = 1 - Disable debug information for source code locations. Having this enabled may cause crashes, so set this to 0 if you encounter issues.
+         LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
+          MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
+        TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
+  FUNCTION_WHITELIST =  - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
+WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
+r = 0.04225 (2D diffusion number, stable if <= 0.25)
+lambda*dt = 0.0500; mode (1,1) grows by 1.049803 per step
+
+===== bf16acc32 : 2D reaction-diffusion on tensor cores (N=64x64, M=2000) =====
+  P: diag 0.44050 (stored 0.44141), off-diag 0.04225 (stored 0.04224)
+  step   100 (t=0.100)  max|finite|=1.5300e+02  inf=    0  nan=    0
+  step   200 (t=0.200)  max|finite|=2.3552e+04  inf=    0  nan=    0
+  step   300 (t=0.300)  max|finite|=3.6045e+06  inf=    0  nan=    0
+  step   400 (t=0.400)  max|finite|=5.4945e+08  inf=    0  nan=    0
+  step   500 (t=0.500)  max|finite|=8.4289e+10  inf=    0  nan=    0
+  step   600 (t=0.600)  max|finite|=1.2919e+13  inf=    0  nan=    0
+  step   700 (t=0.700)  max|finite|=1.9791e+15  inf=    0  nan=    0
+  step   800 (t=0.800)  max|finite|=3.0399e+17  inf=    0  nan=    0
+  step   900 (t=0.900)  max|finite|=4.6405e+19  inf=    0  nan=    0
+  step  1000 (t=1.000)  max|finite|=7.0835e+21  inf=    0  nan=    0
+  step  1100 (t=1.100)  max|finite|=1.0861e+24  inf=    0  nan=    0
+  step  1200 (t=1.200)  max|finite|=1.6683e+26  inf=    0  nan=    0
+  step  1300 (t=1.300)  max|finite|=2.5533e+28  inf=    0  nan=    0
+  step  1400 (t=1.400)  max|finite|=3.9020e+30  inf=    0  nan=    0
+  step  1500 (t=1.500)  max|finite|=5.9326e+32  inf=    0  nan=    0
+  step  1600 (t=1.600)  max|finite|=9.1514e+34  inf=    0  nan=    0
+  step  1700 (t=1.700)  max|finite|=1.3957e+37  inf=    0  nan=    0
+  step  1764 (t=1.764)  max|finite|=3.3895e+38  inf=   76  nan=    0
+  step  1765 (t=1.765)  max|finite|=3.3629e+38  inf=    4  nan= 1180
+  step  1766 (t=1.766)  max|finite|=0.0000e+00  inf=    0  nan= 4096
+  every entry is NaN at step 1766; stopping
+  first inf at step 1764, first NaN at step 1765
