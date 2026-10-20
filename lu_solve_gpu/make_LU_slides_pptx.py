@@ -72,16 +72,14 @@ def textbox(slide, x, y, w, h, lines, size=18, color=INK, font=FONT, align=PP_AL
 
 
 def title_bar(slide, text, mono=False):
-    bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, Inches(0.95))
-    bar.fill.solid()
-    bar.fill.fore_color.rgb = DARK
-    bar.line.fill.background()
-    tf = bar.text_frame
-    tf.margin_left = Inches(0.5)
+    """Standard slide title: black text on the white slide background."""
+    tb = slide.shapes.add_textbox(Inches(0.5), Inches(0.15), Inches(12.3), Inches(0.8))
+    tf = tb.text_frame
+    tf.word_wrap = True
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     p = tf.paragraphs[0]
     p.alignment = PP_ALIGN.LEFT
-    add_runs(p, text, 28, RGBColor(0xFF, 0xFF, 0xFF), MONO if mono else FONT)
+    add_runs(p, text, 28, RGBColor(0, 0, 0), MONO if mono else FONT, bold=True)
 
 
 def box(slide, x, y, w, h, lines, fill=BLUE, size=11, shape=MSO_SHAPE.ROUNDED_RECTANGLE,
@@ -124,21 +122,11 @@ def arrow(slide, a, b, side_a="r", side_b="l"):
 # --------------------------------------------------------------------------
 def slide_cover():
     s = prs.slides.add_slide(BLANK)
-    bg = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)
-    bg.fill.solid()
-    bg.fill.fore_color.rgb = DARK
-    bg.line.fill.background()
-    textbox(s, 0.9, 2.3, 11.5, 1.2, ["LU Solver on the GPU"], size=48,
-            color=RGBColor(0xFF, 0xFF, 0xFF), bold=True)
+    black = RGBColor(0, 0, 0)
+    textbox(s, 0.9, 2.3, 11.5, 1.2, ["LU Solver on the GPU"], size=48, color=black, bold=True)
     textbox(s, 0.9, 3.5, 11.5, 0.8,
-            ["From FP64 kernels to tensor cores, watched by NixNan"], size=26,
-            color=RGBColor(0xDD, 0xDD, 0xDD))
-    rule = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.9), Inches(4.4), Inches(11.5), Inches(0.05))
-    rule.fill.solid()
-    rule.fill.fore_color.rgb = ACCENT
-    rule.line.fill.background()
-    textbox(s, 0.9, 4.7, 11.5, 1.0, ["Ganesh Gopalakrishnan", "SC26 tutorial"], size=18,
-            color=RGBColor(0xDD, 0xDD, 0xDD))
+            ["From FP64 kernels to tensor cores, watched by NixNan"], size=26, color=black)
+    textbox(s, 0.9, 4.7, 11.5, 1.0, ["Ganesh Gopalakrishnan", "SC26 tutorial"], size=18, color=black)
 
 
 # --------------------------------------------------------------------------
