@@ -397,8 +397,59 @@ def slide_tc_panel():
         prev = shp
 
 
+# --------------------------------------------------------------------------
+# Slide 8: where exceptions arise (report 7.5) + numerical behaviour (report 8.1)
+# --------------------------------------------------------------------------
+TC_NUM = [("matrix.csv residual", "1.1e-4", "2.0e-4", "4.4e-4", "9.7e-16"),
+          ("bad_matrix.csv", "NaN", "NaN", "NaN", "NaN"),
+          ("rand:64:100000", "NaN", "NaN", "0.17", "–")]
+
+
+def slide_tc_exceptions():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "Tensor-core LU: where exceptions arise, and what we saw")
+    ORANGE = RGBColor(0xFB, 0xD9, 0xA8)
+    seen = RGBColor(0xC9, 0xEB, 0xC9)
+    y, h, w, gap = 1.35, 1.1, 2.15, 0.45
+    xs = [0.6 + i * (w + gap) for i in range(5)]
+    n1 = box(s, xs[0], y, w, h, ["L₂₁, U₁₂", "FP64"], GRAY, size=14, shape=MSO_SHAPE.RECTANGLE)
+    n2 = box(s, xs[1], y, w, h, ["F2F.F16.F64", "double → half", "overflow → Inf"], ORANGE, size=13, mono_first=True)
+    n3 = box(s, xs[2], y, w, h, ["HMMA", "inputs and result"], seen, size=14, mono_first=True)
+    n4 = box(s, xs[3], y, w, h, ["STG", "tile store"], seen, size=14, mono_first=True)
+    n5 = box(s, xs[4], y, w, h, ["DFMA / DADD", "update, FP64"], GRAY, size=14, mono_first=True)
+    for a, b in ((n1, n2), (n2, n3), (n3, n4), (n4, n5)):
+        arrow(s, a, b)
+    textbox(s, xs[1] - 0.2, y + h + 0.05, w + 0.4, 0.5, ["no table entry: not checked"], size=11,
+            align=PP_ALIGN.CENTER, color=RGBColor(0x99, 0x55, 0x00))
+    textbox(s, xs[2] - 0.2, y + h + 0.05, w + 0.4, 0.5, ["Inf as input, NaN from 0 × ∞"], size=11,
+            align=PP_ALIGN.CENTER, color=RGBColor(0x2E, 0x6B, 0x2E))
+    textbox(s, 0.6, 3.15, 12.1, 0.8,
+            ["Not all instructions are documented upfront, so we had to discover, ad hoc and whenever possible, "
+             "which ones NixNan actually checks."], size=18)
+    hdr = ["Input", "fp16acc32", "fp16acc16", "bf16acc32", "FP64 original"]
+    shp = s.shapes.add_table(len(TC_NUM) + 1, 5, Inches(0.9), Inches(4.3), Inches(11.5), Inches(2.2))
+    tbl = shp.table
+    for i, wd in enumerate((3.5, 2.0, 2.0, 2.0, 2.0)):
+        tbl.columns[i].width = Inches(wd)
+    for c, t in enumerate(hdr):
+        cell = tbl.cell(0, c)
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = DARK
+        cell.text_frame.paragraphs[0].alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.RIGHT
+        add_runs(cell.text_frame.paragraphs[0], t, 16, RGBColor(0xFF, 0xFF, 0xFF), FONT, bold=True)
+    for r, row in enumerate(TC_NUM, start=1):
+        for c, t in enumerate(row):
+            cell = tbl.cell(r, c)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = GRAY if r % 2 else RGBColor(0xFF, 0xFF, 0xFF)
+            p = cell.text_frame.paragraphs[0]
+            p.alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.RIGHT
+            add_runs(p, t, 16, INK, MONO if c == 0 else FONT)
+
+
 SLIDES = [slide_cover, slide_algorithm, slide_envvars, slide_time_kernels,
-          slide_stage1_results, slide_fp32_artifact, slide_tc_panel]
+          slide_stage1_results, slide_fp32_artifact, slide_tc_panel,
+          slide_tc_exceptions]
 
 if __name__ == "__main__":
     for f in SLIDES:
