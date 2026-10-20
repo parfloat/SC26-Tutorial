@@ -9,6 +9,73 @@
 \author{Ganesh Gopalakrishnan}
 \date{SC26 tutorial}
 
+
+\tikzset{
+  matbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm,
+                 align=center, font=\scriptsize, fill=gray!8},
+  outbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm,
+                 align=center, font=\scriptsize, fill=green!12},
+  kernbox/.style={draw, thick, rounded corners=2pt, minimum width=2.5cm,
+                  minimum height=1.5cm, align=center, font=\scriptsize,
+                  fill=blue!7, text width=2.3cm},
+  flowarrow/.style={-{Stealth[length=2.2mm, width=1.6mm]}, thick},
+  contnode/.style={draw, circle, thick, minimum size=5mm, inner sep=0pt,
+                   font=\scriptsize\bfseries},
+}
+
 \begin{document}
 \maketitle
+
+\begin{frame}{Algorithm: LU with partial pivoting, solve $Ax=b$}
+\small
+\[
+PA=LU,\qquad
+\underbrace{p=\arg\max_{i\ge k}|U_{ik}|}_{\text{pivot}},\quad
+\underbrace{L_{jk}=\tfrac{U_{jk}}{U_{kk}}}_{\text{multiplier}},\quad
+\underbrace{U_{jl}\mathrel{-}=L_{jk}U_{kl}}_{\text{eliminate},\ j>k,\ l\ge k}
+\]
+\[
+Ly=Pb\ \ (\text{forward}),\qquad Ux=y\ \ (\text{backward})
+\]
+\centering
+\begin{tikzpicture}[scale=0.74,transform shape,node distance=5mm and 6mm]
+  % Row 1
+  \node[matbox] (A) {$A$\\$m{\times}m$};
+  \node[matbox, right=4mm of A] (b) {$b$\\$m$};
+  \node[kernbox, right=of b] (init) {\texttt{init\_identity\_\allowbreak kernel}\\$\times 2$:\\$L{=}I$, $P{=}I$};
+  \node[matbox, right=of init, minimum width=1.9cm, text width=1.7cm] (state0) {$U_0{=}A$\\$L{=}I$\\$P{=}I$};
+  \node[kernbox, right=of state0] (pivot) {\texttt{find\_pivot\_\allowbreak kernel}\\reduction over\\column $k$};
+  \node[contnode, right=6mm of pivot] (contA) {A};
+
+  \draw[flowarrow] (A) -- (init);
+  \draw[flowarrow] (b) -- (init);
+  \draw[flowarrow] (init) -- (state0);
+  \draw[flowarrow] (state0) -- (pivot);
+  \draw[flowarrow] (pivot) -- (contA);
+
+  % Row 2
+  \node[contnode, below=13mm of A] (contA2) {A};
+  \node[kernbox, right=6mm of contA2] (swap) {\texttt{swap\_rows\_\allowbreak kernel}\\row swap in\\$U,L,P$};
+  \node[kernbox, right=of swap] (mult) {\texttt{compute\_\allowbreak multipliers\_\allowbreak kernel}\\$L_{jk}{=}U_{jk}/U_{kk}$};
+  \node[kernbox, right=of mult] (elim) {\texttt{eliminate\_\allowbreak kernel}\\$U_{jl}\mathrel{-}{=}L_{jk}U_{kl}$\\($\epsilon$-clamp)};
+  \node[contnode, right=6mm of elim] (contB) {B};
+
+  \draw[flowarrow] (contA2) -- (swap);
+  \draw[flowarrow] (swap) -- (mult);
+  \draw[flowarrow] (mult) -- (elim);
+  \draw[flowarrow] (elim) -- (contB);
+
+  % Row 3
+  \node[contnode, below=13mm of contA2] (contB2) {B};
+  \node[kernbox, right=6mm of contB2] (perm) {\texttt{apply\_\allowbreak permutation\_\allowbreak kernel}\\$b'{=}Pb$};
+  \node[kernbox, right=of perm] (fwd) {\texttt{forward\_\allowbreak substitution\_\allowbreak kernel}\\solve $Ly{=}b'$};
+  \node[kernbox, right=of fwd] (bwd) {\texttt{backward\_\allowbreak substitution\_\allowbreak kernel}\\solve $Ux{=}y$};
+  \node[outbox, right=of bwd] (x) {$x$\\$m$};
+
+  \draw[flowarrow] (contB2) -- (perm);
+  \draw[flowarrow] (perm) -- (fwd);
+  \draw[flowarrow] (fwd) -- (bwd);
+  \draw[flowarrow] (bwd) -- (x);
+\end{tikzpicture}
+\end{frame}
 \end{document}
