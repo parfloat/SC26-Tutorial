@@ -60,9 +60,10 @@ def bench(f):
     return s.elapsed_time(e) / iters, torch.cuda.max_memory_allocated() / 2**20
 
 
-print("torch", torch.__version__, torch.cuda.get_device_name(0), f"N={N}")
-base_t, base_m = bench(baseline)
-for name, f in [("baseline where", baseline), ("double where", double_where),
-                ("custom Function fix", custom_function), ("mask check + .item() sync", sync_mask_check)]:
-    t, m = bench(f)
-    print(f"{name:28s} {t:8.3f} ms/iter  x{t/base_t:5.2f}   peak mem {m:8.1f} MiB  (+{m-base_m:6.1f})")
+if __name__ == "__main__":
+    print("torch", torch.__version__, torch.cuda.get_device_name(0), f"N={N}")
+    base_t, base_m = bench(baseline)
+    for name, f in [("baseline where", baseline), ("double where", double_where),
+                    ("custom Function fix", custom_function), ("mask check + .item() sync", sync_mask_check)]:
+        t, m = bench(f)
+        print(f"{name:28s} {t:8.3f} ms/iter  x{t/base_t:5.2f}   peak mem {m:8.1f} MiB  (+{m-base_m:6.1f})")

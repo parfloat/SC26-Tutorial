@@ -1,0 +1,52 @@
+torch 2.3.1+cu121 NVIDIA GeForce RTX 3090 N=2^24; float tensor = 64 MiB, bool = 16 MiB
+baseline where             saved-for-backward    80.0 MiB {'float32': 64, 'bool': 16} | live after fwd    80.0 | peak in bwd   256.0 (MiB above input a)
+double where               saved-for-backward    80.0 MiB {'bool': 16, 'float32': 64} | live after fwd    80.0 | peak in bwd   272.0 (MiB above input a)
+custom Function fix        saved-for-backward    80.0 MiB {'float32': 64, 'bool': 16} | live after fwd    80.0 | peak in bwd   400.0 (MiB above input a)
+mask check + .item() sync  saved-for-backward    80.0 MiB {'float32': 64, 'bool': 16} | live after fwd    80.0 | peak in bwd   256.0 (MiB above input a)
+-- backward allocations >= 16 MiB: baseline where
+   autograd::engine::evaluate_function: WhereBackward0   +112.0 MiB
+   WhereBackward0                             +128.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::resize_                               +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::resize_                               +64.0 MiB
+   autograd::engine::evaluate_function: ExpBackward0   -128.0 MiB
+   ExpBackward0                                +64.0 MiB
+   aten::mul                                   +64.0 MiB
+-- backward allocations >= 16 MiB: double where
+   autograd::engine::evaluate_function: WhereBackward0   +128.0 MiB
+   WhereBackward0                             +128.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::resize_                               +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::resize_                               +64.0 MiB
+   autograd::engine::evaluate_function: ExpBackward0    -64.0 MiB
+   ExpBackward0                                +64.0 MiB
+   aten::mul                                   +64.0 MiB
+   autograd::engine::evaluate_function: WhereBackward0    -80.0 MiB
+   WhereBackward0                              +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::resize_                               +64.0 MiB
+-- backward allocations >= 16 MiB: custom Function fix
+   autograd::engine::evaluate_function: WhereBackward0   +112.0 MiB
+   WhereBackward0                             +128.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::resize_                               +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::resize_                               +64.0 MiB
+   autograd::engine::evaluate_function: SafeExpBackward   -128.0 MiB
+   SafeExpBackward                             +64.0 MiB
+   aten::eq                                    +16.0 MiB
+   aten::zeros_like                            +64.0 MiB
+   aten::empty_like                            +64.0 MiB
+   aten::empty_strided                         +64.0 MiB
+   aten::mul                                   +64.0 MiB
+   aten::where                                 +64.0 MiB
+   aten::resize_                               +64.0 MiB

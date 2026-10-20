@@ -68,3 +68,18 @@ The sync variant's cost also depends on how much work is queued behind it, so it
 | 5 (saved log) | 1.469 | 1.988 | 1.902 | 1.574 |
 
 ms per iteration. Only the sync variant moves (1.574-1.685, ratio 1.07-1.15); the others vary by under 0.5%.
+
+## Where the extra memory comes from (fix_cost_memory.py, Logs/fix-cost-memory.log)
+N = 2^24: a float32 tensor is 64 MiB, a bool mask 16 MiB.
+- **Retained for backward is identical in all four variants: 80 MiB** (64 MiB float32 = exp's result, 16 MiB bool = the mask
+  `m = (a <= 0)`), measured with `saved_tensors_hooks`. So the extra memory is *transient* backward temporaries.
+- Peak during backward, above the input: baseline 256 MiB, double where 272 (+16), custom Function 400 (+144), sync 256 (+0).
+- **Custom Function, +144 MiB = 16 + 64 + 64.** Its backward `where(g == 0, zeros_like(g), g * y)` allocates the bool
+  `g == 0` (16 MiB, profiler op `aten::eq`), a zeros tensor (64 MiB, `aten::zeros_like`) and the full-size select output
+  (64 MiB, `aten::where`); the `g * y` product exists in the baseline too.
+- **Double where, +16 MiB.** It adds a second `where` pass in backward, but that pass runs after `exp`'s backward buffers
+  are freed, so most of its float temporaries reuse freed memory and the peak rises by only 16 MiB (a mask-sized buffer).
+  I did not identify which exact 16 MiB buffer; this is the attribution least backed by the profiler output.
+- **Sync variant, +0 MiB:** it creates no new tensors; its cost is the stall, not memory.
+- Caveat: the profiler lists nested parent/child events, so its per-op rows are read qualitatively except where they add up
+  exactly (the 144 MiB case).

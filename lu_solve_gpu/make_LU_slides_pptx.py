@@ -555,7 +555,7 @@ FIXCOST = [("baseline where", "1.47", "1.00×", "0"),
 def slide_where_history():
     s = prs.slides.add_slide(BLANK)
     title_bar(s, "torch.where: a decade of “won’t fix”, and what a fix costs")
-    w, gap, y, h = 1.95, 0.22, 1.25, 1.55
+    w, gap, y, h = 1.95, 0.22, 1.2, 1.35
     prev = None
     for i, (d, head, txt) in enumerate(TIMELINE):
         x = 0.35 + i * (w + gap)
@@ -567,12 +567,17 @@ def slide_where_history():
             arrow(s, prev, shp)
         prev = shp
     # why a fix is hard
-    textbox(s, 0.6, 3.0, 6.0, 0.35, ["Why a fix is hard"], size=15, bold=True)
+    textbox(s, 0.6, 2.6, 6.0, 0.35, ["Why a fix is hard"], size=15, bold=True)
     why = ["Needs per-element “unused” vs “zero” metadata (MaskedTensor-style)",
            "NaN is made by the op before where: fix is per op, or fused",
-           "A forward mask is data dependent: CPU-GPU sync"]
+           "A forward mask m must be read on the CPU: a sync"]
     for i, t in enumerate(why):
-        box(s, 0.6 + i * 4.1, 3.4, 3.9, 0.85, [t], GRAY, size=13)
+        box(s, 0.6 + i * 4.1, 2.95, 3.9, 0.7, [t], GRAY, size=12)
+    textbox(s, 0.6, 3.7, 12.1, 0.7,
+            ["m = (a ≤ 0): where’s own boolean condition, 1 byte per element, computed from the data on the GPU. "
+             "Its values are data dependent; the sync comes only when the CPU reads it, e.g. (~m).any().item(), to decide "
+             "what to do. Double where uses m to zero the unselected input; the custom Function tests the incoming "
+             "gradient (g == 0) instead of m."], size=12)
     # measured costs
     textbox(s, 0.6, 4.4, 8.0, 0.35, ["Measured cost of fix strategies (RTX 3090, N = 2^24, fwd+bwd)"], size=15, bold=True)
     shp = s.shapes.add_table(len(FIXCOST) + 1, 4, Inches(0.8), Inches(4.8), Inches(11.7), Inches(1.9))
@@ -600,10 +605,62 @@ def slide_where_history():
             size=11, color=RGBColor(0x55, 0x55, 0x55))
 
 
+# --------------------------------------------------------------------------
+# Slide 12: where the extra memory of the fixes comes from
+# --------------------------------------------------------------------------
+def slide_fix_memory():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "Why the fixes need extra memory")
+    sc = 0.034          # inches per MiB
+    x0 = 3.3
+    FL = RGBColor(0xB9, 0xC2, 0xF2)
+    BO = RGBColor(0xFB, 0xD9, 0xA8)
+    TE = RGBColor(0xF6, 0xC3, 0xC3)
+
+    def seg(x, y, mib, label, col):
+        return box(s, x, y, mib * sc, 0.55, [label], col, size=11, shape=MSO_SHAPE.RECTANGLE)
+
+    textbox(s, 0.6, 1.1, 12.2, 0.4,
+            ["N = 2^24 floats: one float32 tensor = 64 MiB, one bool mask = 16 MiB"], size=15)
+    # retained, same for all
+    textbox(s, 0.6, 1.75, 2.6, 0.6, ["retained for backward (all variants)"], size=13, bold=True)
+    seg(x0, 1.8, 64, "exp result, 64 MiB", FL)
+    seg(x0 + 64 * sc, 1.8, 16, "m", BO)
+    textbox(s, x0 + 80 * sc + 0.1, 1.82, 5.5, 0.5, ["= 80 MiB, identical in all four (measured)"], size=13)
+    # extra transient in backward
+    textbox(s, 0.6, 2.75, 12.0, 0.4, ["extra transient memory at the backward peak"], size=15, bold=True)
+    rows = [("baseline / sync check", []),
+            ("double where", [(16, "16", BO)]),
+            ("custom Function", [(16, "16", BO), (64, "zeros_like, 64 MiB", TE), (64, "where output, 64 MiB", FL)])]
+    for i, (name, segs) in enumerate(rows):
+        yy = 3.35 + i * 0.85
+        textbox(s, 0.6, yy + 0.05, 2.6, 0.5, [name], size=14)
+        x = x0
+        for mib, lab, col in segs:
+            seg(x, yy, mib, lab, col)
+            x += mib * sc
+        tot = sum(m for m, _, _ in segs)
+        textbox(s, x + 0.1, yy + 0.05, 3.0, 0.5, [f"+{tot} MiB"], size=14, bold=True)
+    notes = [
+        "Custom Function: its backward builds a bool g == 0 (16), a zeros tensor (64) and a full-size select (64); "
+        "the baseline exp backward is just g × y (16 + 64 + 64 = 144 MiB, matches the profiler).",
+        "Double where: a second where pass in backward reuses most freed buffers; peak rises 16 MiB "
+        "(buffer not identified exactly).",
+        "Sync check: no new tensors; it costs a stall, not memory.",
+    ]
+    tb = s.shapes.add_textbox(Inches(0.6), Inches(5.95), Inches(12.2), Inches(1.4))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    for i, t in enumerate(notes):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(2)
+        add_runs(p, "•  " + t, 12)
+
+
 SLIDES = [slide_cover, slide_algorithm, slide_envvars, slide_time_kernels,
           slide_stage1_results, slide_fp32_artifact, slide_tc_panel,
           slide_tc_exceptions, slide_where_backward, slide_where_why,
-          slide_where_history]
+          slide_where_history, slide_fix_memory]
 
 if __name__ == "__main__":
     for f in SLIDES:
