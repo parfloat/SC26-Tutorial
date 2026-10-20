@@ -80,7 +80,8 @@ Ly=Pb\ \ (\text{forward}),\qquad Ux=y\ \ (\text{backward})
 \end{frame}
 
 \begin{frame}{NixNan knobs: environment variables}
-\centering\footnotesize
+\footnotesize
+\begin{columns}[T]\begin{column}{0.52\textwidth}
 \begin{tabular}{@{}ll@{}}
 \texttt{INSTR\_BEGIN / END} & instr. index window\\[1.5mm]
 \texttt{TOOL\_VERBOSE} & setup diagnostics\\[1.5mm]
@@ -91,7 +92,9 @@ Ly=Pb\ \ (\text{forward}),\qquad Ux=y\ \ (\text{backward})
 \texttt{INSTR\_MEM} & also check STG (excn $\to$ mem)\\[1.5mm]
 \texttt{HISTOGRAM} & exponent histogram\\[1.5mm]
 \texttt{BIN\_SPEC\_FILE} & ranges to watch\\[1.5mm]
-\end{tabular}\hspace{8mm}\vrule\hspace{8mm}\begin{tabular}{@{}ll@{}}
+\end{tabular}
+\end{column}\begin{column}{0.46\textwidth}
+\begin{tabular}{@{}ll@{}}
 \texttt{NIXNAN\_TIMEOUT} & self-terminate, secs\\[1.5mm]
 \texttt{LOGFILE} & redirect output\\[1.5mm]
 \texttt{LINE\_INFO} & source file:line (YMMV)\\[1.5mm]
@@ -101,6 +104,7 @@ Ly=Pb\ \ (\text{forward}),\qquad Ux=y\ \ (\text{backward})
 \texttt{FUNCTION\_WHITELIST} & only these kernels\\[1.5mm]
 \texttt{FUNCTION\_BLACKLIST} & all but these\\[1.5mm]
 \end{tabular}
+\end{column}\end{columns}
 \end{frame}
 
 \end{document}
