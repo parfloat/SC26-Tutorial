@@ -11,7 +11,7 @@
 \usepackage{listings}
 \usepackage{hyperref}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, fit, shapes.geometric}
+\usetikzlibrary{arrows.meta, positioning, fit, shapes.geometric, decorations.pathreplacing}
 
 \geometry{margin=1in}
 
@@ -397,6 +397,255 @@ no-op. This is why Stage 2's exponential schedule was implemented at the
 shell-script level (Section~\ref{sec:sampling}) rather than relying on
 \texttt{BIN\_SPEC\_FILE}.
 
+\section{Tensor-Core Adaptation: \texttt{lu\_solve\_gpu\_tc.cu}}
+\label{sec:tc}
+
+\texttt{lu\_solve\_gpu.cu} updates the trailing matrix with a rank-1
+update per pivot (\texttt{eliminate\_kernel}), which is a scalar FP64
+operation and cannot use tensor cores. To obtain an instruction stream that
+contains \texttt{HMMA}, the factorization was restructured as a standard
+\emph{blocked, right-looking} LU with block size $NB=16$ (equal to the WMMA tile
+edge). The rank-1 updates of a block of 16 pivots are accumulated into one
+matrix--matrix product, and that product is computed on the tensor cores.
+Everything else (pivoting, the panel, the triangular solve,
+the substitutions, the residual) stays in FP64; this is a mixed-precision LU
+without iterative refinement. The RTX~3090 (sm\_86) has no FP64 tensor cores,
+so the WMMA inputs are FP16 or BF16.
+
+\subsection{What changes in the algorithm}
+
+\begin{center}
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \def\w{6.0}
+  \draw[thick] (0,0) rectangle (\w,\w);
+  \fill[blue!25] (0,\w-1.5) rectangle (1.5,\w);
+  \fill[blue!12] (0,0) rectangle (1.5,\w-1.5);
+  \fill[orange!25] (1.5,\w-1.5) rectangle (\w,\w);
+  \fill[green!15] (1.5,0) rectangle (\w,\w-1.5);
+  \draw[thick] (1.5,0) -- (1.5,\w);
+  \draw[thick] (0,\w-1.5) -- (\w,\w-1.5);
+  \node[font=\tiny,align=center] at (0.75,\w-0.75) {panel\\$L_{11}\backslash U_{11}$};
+  \node[font=\tiny,align=center] at (0.75,2.2) {$L_{21}$};
+  \node[font=\tiny,align=center] at (3.75,\w-0.75) {$U_{12}$};
+  \node[font=\tiny,align=center] at (3.75,2.2) {$A_{22}\leftarrow A_{22}-L_{21}U_{12}$\\\textbf{tensor cores}};
+  \draw[decorate,decoration={brace,amplitude=4pt}] (0,\w+0.1) -- (1.5,\w+0.1)
+        node[midway,above=3pt,font=\scriptsize]{16 columns at $kb$};
+  \node[font=\scriptsize,anchor=west,align=left,text width=7.6cm] at (6.4,5.0)
+     {\textbf{1.} panel (FP64): \texttt{find\_pivot}, \texttt{swap\_rows}, \texttt{compute\_multipliers}, \texttt{eliminate\_panel} for each of the 16 columns};
+  \node[font=\scriptsize,anchor=west,align=left,text width=7.6cm] at (6.4,3.6)
+     {\textbf{2.} $U_{12}=L_{11}^{-1}A_{12}$ (FP64): \texttt{u12\_trsm\_kernel}};
+  \node[font=\scriptsize,anchor=west,align=left,text width=7.6cm] at (6.4,2.4)
+     {\textbf{3.} $A_{22}\mathrel{-}=L_{21}U_{12}$: \texttt{pack\_tc\_operands} $\to$ \texttt{tc\_gemm\_tile} (WMMA) $\to$ \texttt{apply\_update\_kernel}};
+  \node[font=\scriptsize,anchor=west,align=left,text width=7.6cm] at (6.4,0.8)
+     {Repeat for $kb=0,16,32,\dots$. A last block narrower than 16 columns has no trailing matrix and is panel-only (for the $20\times20$ inputs, $kb{=}0$ gives one WMMA tile and $kb{=}16$ is panel-only).};
+\end{tikzpicture}
+\end{center}
+
+Row swaps still act on the full row of $U$ (and on $P$, and on the already
+computed columns of $L$), so the right-hand blocks $A_{12}$ and $A_{22}$ stay
+consistent with the pivoting done in the panel. The $\epsilon$-clamp of the
+original (\texttt{|val| < 10*DBL\_EPSILON} $\to 0$) is kept in both the panel
+elimination and the trailing update.
+
+\subsection{Kernel pipeline for one block step}
+
+\begin{center}
+\begin{tikzpicture}[node distance=4mm and 4mm,
+    k64/.style={kernbox, fill=blue!7, text width=2.3cm, minimum width=2.5cm, minimum height=1.5cm},
+    ktc/.style={kernbox, fill=red!12, text width=2.3cm, minimum width=2.5cm, minimum height=1.5cm}]
+  \node[k64] (piv) {\texttt{find\_pivot} \texttt{swap\_rows} \texttt{multipliers} \texttt{eliminate\_\allowbreak panel}\\($\times16$ columns)};
+  \node[k64, right=of piv] (trsm) {\texttt{u12\_trsm\_\allowbreak kernel}\\$U_{12}=L_{11}^{-1}A_{12}$};
+  \node[k64, right=of trsm] (pack) {\texttt{pack\_tc\_\allowbreak operands}\\double $\to$ FP16/BF16, zero padding};
+  \node[ktc, right=of pack] (gemm) {\texttt{tc\_gemm\_tile}\\\texttt{mma\_sync}\\$\to$ \texttt{HMMA.16816}};
+  \node[k64, right=of gemm] (upd) {\texttt{apply\_update\_\allowbreak kernel}\\$A_{22}-=P$,\\$\epsilon$-clamp};
+  \draw[flowarrow] (piv) -- (trsm);
+  \draw[flowarrow] (trsm) -- (pack);
+  \draw[flowarrow] (pack) -- (gemm);
+  \draw[flowarrow] (gemm) -- (upd);
+  \node[font=\tiny, below=1mm of piv] {FP64};
+  \node[font=\tiny, below=1mm of trsm] {FP64};
+  \node[font=\tiny, below=1mm of pack] {FP64$\to$FP16/BF16};
+  \node[font=\tiny, below=1mm of gemm] {FP16/BF16$\to$FP32/16};
+  \node[font=\tiny, below=1mm of upd] {FP64};
+\end{tikzpicture}
+\end{center}
+
+\noindent Blue boxes are FP64; the red box is the only tensor-core kernel. The
+\texttt{pack} and \texttt{update} kernels bracket it and perform the
+precision conversions: they are where values enter and leave reduced
+precision.
+
+\subsection{Data path of the trailing update}
+
+\begin{center}
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \draw[thick,fill=gray!8] (0,0) rectangle (1.4,4);
+  \foreach \y in {1,2,3} {\draw (0,\y) -- (1.4,\y);}
+  \node[font=\scriptsize,align=center] at (0.7,4.55) {\texttt{Lh}\\$pad\times16$};
+  \draw[thick,fill=gray!8] (2.3,4.4) rectangle (6.3,5.8);
+  \foreach \x in {3.3,4.3,5.3} {\draw (\x,4.4) -- (\x,5.8);}
+  \node[font=\scriptsize] at (7.4,5.1) {\texttt{Uh}\ $16\times pad$};
+  \draw[thick,fill=green!10] (2.3,0) rectangle (6.3,4.0);
+  \foreach \x in {3.3,4.3,5.3} {\draw (\x,0) -- (\x,4.0);}
+  \foreach \y in {1,2,3} {\draw (2.3,\y) -- (6.3,\y);}
+  \node[font=\scriptsize] at (7.7,2.0) {\texttt{Pt}\ $pad\times pad$};
+  \fill[red!30,opacity=.7] (3.3,1) rectangle (4.3,2);
+  \draw[red,thick] (3.3,1) rectangle (4.3,2);
+  \fill[red!30,opacity=.7] (0,1) rectangle (1.4,2);
+  \draw[red,thick] (0,1) rectangle (1.4,2);
+  \fill[red!30,opacity=.7] (3.3,4.4) rectangle (4.3,5.8);
+  \draw[red,thick] (3.3,4.4) rectangle (4.3,5.8);
+  \node[font=\tiny,red!70!black] at (-0.5,1.5) {$t_i$};
+  \node[font=\tiny,red!70!black] at (3.8,6.1) {$t_j$};
+  \node[font=\scriptsize,align=left,anchor=west] at (8.1,4.3) {grid $(nt,nt)$,\\$nt=\lceil rem/16\rceil$,\\one warp per tile};
+  \node[font=\tiny,align=left,anchor=west,text width=5cm] at (8.1,0.8) {\texttt{load\_matrix\_sync}(a, \texttt{Lh}$+16t_i{\cdot}16$, 16)\\ \texttt{load\_matrix\_sync}(b, \texttt{Uh}$+16t_j$, $pad$)\\ \texttt{mma\_sync}(c,a,b,c), $c{=}0$\\ \texttt{store\_matrix\_sync}(\texttt{Pt}$+\dots$)};
+\end{tikzpicture}
+\end{center}
+
+\noindent Padding rows and columns (beyond $m$) are exact zeros, so a tile
+that straddles the matrix edge computes the right values. The accumulator
+starts at zero (\texttt{fill\_fragment}); this is why the compiled
+\texttt{HMMA} has \texttt{RZ} as its C operand in the first instruction.
+\texttt{apply\_update\_kernel} then reads \texttt{Pt}, widens to double, and
+subtracts from $A_{22}$.
+
+\subsection{From WMMA to SASS}
+
+\begin{center}
+\begin{tikzpicture}[node distance=4mm and 8mm,
+    fr/.style={draw,thick,rounded corners=2pt,font=\scriptsize,align=center,minimum height=0.9cm,minimum width=2.6cm,fill=gray!8}]
+  \node[fr] (a) {\texttt{matrix\_a} $16{\times}16$\\FP16 or BF16};
+  \node[fr, below=of a] (b) {\texttt{matrix\_b} $16{\times}16$\\FP16 or BF16};
+  \node[fr, below=of b] (c) {\texttt{accumulator}\\FP32 or FP16, $=0$};
+  \node[fr, right=10mm of b, fill=red!12, minimum width=3.0cm] (mma) {\texttt{mma\_sync(c,a,b,c)}\\one $m16n16k16$ step};
+  \node[fr, right=10mm of mma, fill=red!6, minimum width=4.6cm] (s)
+     {2 $\times$ \texttt{HMMA.16816.*}\\operand order $D,A,B,C$\\first instruction: $C=\texttt{RZ}$};
+  \draw[flowarrow] (a) -- (mma);
+  \draw[flowarrow] (b) -- (mma);
+  \draw[flowarrow] (c) -- (mma);
+  \draw[flowarrow] (mma) -- (s);
+\end{tikzpicture}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabular}{llll}
+\toprule
+Mode & WMMA types & SASS & Count in binary\\
+\midrule
+\texttt{fp16acc32} & \texttt{half}$\times$\texttt{half}$\to$\texttt{float} & \texttt{HMMA.16816.F32} & 2\\
+\texttt{fp16acc16} & \texttt{half}$\times$\texttt{half}$\to$\texttt{half} & \texttt{HMMA.16816.F16} & 2\\
+\texttt{bf16acc32} & \texttt{bf16}$\times$\texttt{bf16}$\to$\texttt{float} & \texttt{HMMA.16816.F32.BF16} & 2\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The count (checked with \texttt{cuobjdump -sass}) is 2 per mode:
+one \texttt{mma\_sync} lowers to two \texttt{HMMA.16816} instructions. That
+they cover the two 8-column halves of the $16\times16$ output is the
+standard decomposition and was not separately verified.
+
+\subsection{Where reduced-precision exceptions can arise}
+
+\begin{center}
+\begin{tikzpicture}[node distance=3mm and 4mm,
+   st/.style={draw,thick,rounded corners=2pt,font=\scriptsize,align=center,minimum height=1.0cm,minimum width=2.2cm},
+   seen/.style={st,fill=green!14}, unseen/.style={st,fill=orange!20}]
+  \node[st] (d) {$L_{21}, U_{12}$\\FP64};
+  \node[unseen, right=of d] (f2f) {\texttt{F2F.F16.F64}\\double$\to$half\\\textbf{overflow $\to$ Inf}};
+  \node[seen, right=of f2f] (h) {\texttt{HMMA}\\inputs and result};
+  \node[seen, right=of h] (stg) {\texttt{STG}\\tile store};
+  \node[st, right=of stg] (fp64) {\texttt{DFMA}/\texttt{DADD}\\update, FP64};
+  \draw[flowarrow] (d) -- (f2f);
+  \draw[flowarrow] (f2f) -- (h);
+  \draw[flowarrow] (h) -- (stg);
+  \draw[flowarrow] (stg) -- (fp64);
+  \node[font=\tiny, below=2mm of f2f, text width=2.4cm, align=center] {no entry in \texttt{instructions.json}: not checked};
+  \node[font=\tiny, below=2mm of h, text width=2.4cm, align=center] {Inf as input, NaN from $0\times\infty$};
+\end{tikzpicture}
+\end{center}
+
+\noindent Green boxes are instructions nixnan checks in this build; orange is
+an instruction it does not. The findings below match this picture.
+
+\section{Findings from the Tensor-Core Version}
+\label{sec:tcfindings}
+
+All runs: RTX~3090, CUDA~12.4, nixnan branch \texttt{print\_histo\_instrn}
+(commit \texttt{ce35185}), launched with \texttt{env -u LD\_LIBRARY\_PATH}
+(with the stale \texttt{LD\_LIBRARY\_PATH} nixnan printed only its banner;
+the individual entry causing this was not isolated). Logs are in
+\texttt{logs/tc/}.
+
+\subsection{Numerical behaviour}
+
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Input & \texttt{fp16acc32} & \texttt{fp16acc16} & \texttt{bf16acc32} & FP64 original\\
+\midrule
+\texttt{matrix.csv} residual & $1.1\!\times\!10^{-4}$ & $2.0\!\times\!10^{-4}$ & $4.4\!\times\!10^{-4}$ & $9.7\!\times\!10^{-16}$\\
+\texttt{bad\_matrix.csv} & NaN & NaN & NaN & NaN\\
+\texttt{rand:64:100000} & NaN & NaN & 0.17 & --\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+  \item On the well-conditioned input the tensor-core product costs about
+    twelve orders of magnitude of residual (reduced-precision $L_{21}U_{12}$,
+    no refinement). BF16 is the least accurate and the FP16 accumulator is
+    slightly worse than the FP32 one.
+  \item The ill-conditioned input fails exactly as in the FP64 code, so the
+    failure originates in the FP64 near-zero pivot, not in the tensor cores.
+  \item Residuals grow with $n$ (\texttt{rand:256:1}: 0.75 FP16, 5.4 BF16).
+    The random matrices' conditioning was not examined, so this is reported
+    as observed, not explained.
+  \item With entries scaled by $10^5$, FP16 conversion overflows (65504 max)
+    and the solve returns NaN, whereas BF16 (FP32-like range) completes.
+\end{itemize}
+
+\subsection{What nixnan reports}
+
+\begin{itemize}
+  \item \textbf{No exceptions} for \texttt{matrix.csv} (all three modes) and
+    for \texttt{rand:64:100000} in \texttt{bf16acc32}.
+  \item \textbf{FP16 modes with overflow} (\texttt{rand:64:100000}, 435 error
+    lines in each log): the first report is \texttt{[infinity]} in
+    \emph{operand 2} (B, the $U_{12}$ fragment, type f16) of
+    \texttt{HMMA.16816.F32} (or \texttt{.F16}). NaN follows in operand 0 (the
+    HMMA result), then on the \texttt{STG} that stores the tile, then as FP64
+    NaN/Inf in \texttt{DFMA}/\texttt{DADD} of the update. The
+    \texttt{fp16acc32} summary shows FP32 NaN 14 (376 repeats), Infinity 4
+    (6), $-$Infinity 4 (6) and FP64 NaN 406 (18642 repeats), Infinity 19
+    (70), $-$Infinity 12 (56).
+  \item \textbf{Why NaN so quickly:} the padding of \texttt{Lh}/\texttt{Uh} is
+    exact zeros and the tensor core computes every product, so
+    $0\times\infty=\mathrm{NaN}$ spreads the Inf across its tile row and
+    column (the same effect seen in the 2D reaction--diffusion kernel).
+  \item \textbf{The origin of the Inf is not reported.} It is created by
+    \texttt{F2F.F16.F64} (double$\to$half in \texttt{pack\_tc\_operands}),
+    which has no entry in \texttt{instructions.json}, so nixnan sees it only
+    as an input of the next HMMA. The first Inf reported is in operand 2
+    ($U_{12}$), not operand 1 ($L_{21}$, bounded by 1 in magnitude under
+    partial pivoting).
+  \item \textbf{Source lines:} \texttt{LINE\_INFO=1} resolved no source
+    location for these kernels (no match for \texttt{lu\_solve\_\allowbreak gpu\_tc.cu}
+    in any log), although the binary is built with \texttt{-lineinfo}.
+\end{itemize}
+
+\subsection{Limits of these results}
+
+\begin{itemize}
+  \item Only the $20\times20$ inputs and \texttt{rand:} matrices were run; the
+    $20\times20$ case exercises a single WMMA tile.
+  \item No iterative refinement: the residuals are those of a single
+    mixed-precision factorization.
+  \item The per-HMMA register walkthrough (\texttt{TOOL\_VERBOSE=1}) was done
+    for the reaction--diffusion kernel, not repeated for this program.
+\end{itemize}
+
 \section{Conclusions}
 
 \begin{enumerate}
@@ -416,6 +665,11 @@ shell-script level (Section~\ref{sec:sampling}) rather than relying on
     register-move idiom as a genuine narrow-format computation
     (Section~\ref{sec:fp32-artifact}); per-format counts should be read
     alongside the source's actual precision usage, not in isolation.
+  \item A tensor-core variant (blocked LU, WMMA trailing update;
+    Sections~\ref{sec:tc}--\ref{sec:tcfindings}) shows nixnan flagging
+    \texttt{HMMA.16816.\{F16,F32\}} inputs and results when FP16
+    conversion overflows, but not the \texttt{F2F.F16.F64} conversion that
+    creates the Inf.
 \end{enumerate}
 
 \section*{Reproduction}
@@ -424,6 +678,8 @@ shell-script level (Section~\ref{sec:sampling}) rather than relying on
 cd ~/repos/nixnan/SC26-expts/lu_solve_gpu
 ./run_nixnan_experiment.sh
 \end{lstlisting}
+
+\noindent Tensor-core version: \texttt{make lu\_solve\_gpu\_tc}, then \texttt{env -u LD\_LIBRARY\_PATH LD\_PRELOAD=../../nixnan.so ./lu\_solve\_gpu\_tc rand:64:100000 fp16acc32}.
 
 \noindent Requires a built \texttt{../../nixnan.so} (\texttt{cd ../.. \&\& make}).
 See \texttt{README.md} in this directory for file-by-file documentation and
