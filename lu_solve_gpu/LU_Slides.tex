@@ -78,4 +78,29 @@ Ly=Pb\ \ (\text{forward}),\qquad Ux=y\ \ (\text{backward})
   \draw[flowarrow] (bwd) -- (x);
 \end{tikzpicture}
 \end{frame}
+
+\begin{frame}{NixNan knobs: environment variables}
+\centering\footnotesize
+\begin{tabular}{@{}ll@{}}
+\texttt{INSTR\_BEGIN / END} & instr. index window\\[1.5mm]
+\texttt{TOOL\_VERBOSE} & setup diagnostics\\[1.5mm]
+\texttt{ENABLE\_FUN\_DETAIL} & name on every rerun\\[1.5mm]
+\texttt{PRINT\_ILL\_INSTR} & print culprit SASS\\[1.5mm]
+\texttt{SAMPLING} & every $N$th launch\\[1.5mm]
+\texttt{INSTRUMENT\_EXCEPTIONS} & master switch\\[1.5mm]
+\texttt{INSTR\_MEM} & also check STG\\[1.5mm]
+\texttt{HISTOGRAM} & exponent histogram\\[1.5mm]
+\texttt{BIN\_SPEC\_FILE} & ranges to watch\\[1.5mm]
+\end{tabular}\hspace{8mm}\vrule\hspace{8mm}\begin{tabular}{@{}ll@{}}
+\texttt{NIXNAN\_TIMEOUT} & self-terminate, secs\\[1.5mm]
+\texttt{LOGFILE} & redirect output\\[1.5mm]
+\texttt{LINE\_INFO} & source file:line\\[1.5mm]
+\texttt{LOG\_KERNELS} & log launches only\\[1.5mm]
+\texttt{MAX\_ERRORS} & stop after $N$ reports\\[1.5mm]
+\texttt{TIME\_KERNELS} & per-kernel time\\[1.5mm]
+\texttt{FUNCTION\_WHITELIST} & only these kernels\\[1.5mm]
+\texttt{FUNCTION\_BLACKLIST} & all but these\\[1.5mm]
+\end{tabular}
+\end{frame}
+
 \end{document}
