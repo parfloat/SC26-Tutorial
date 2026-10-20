@@ -10,12 +10,15 @@ NVCCFLAGS = -std=c++17 -g -O2 -lineinfo -arch=$(ARCH)
 SRC = lu_solve_gpu.cu
 EXECUTABLE_NAME = lu_solve_gpu
 
-all: $(EXECUTABLE_NAME)
+all: $(EXECUTABLE_NAME) lu_solve_gpu_tc
+
+lu_solve_gpu_tc: lu_solve_gpu_tc.cu
+	$(NVCC) $(NVCCFLAGS) -o $@ $<
 
 $(EXECUTABLE_NAME): $(SRC)
 	$(NVCC) $(NVCCFLAGS) -o $@ $<
 
 clean:
-	rm -f $(EXECUTABLE_NAME)
+	rm -f $(EXECUTABLE_NAME) lu_solve_gpu_tc
 
 .PHONY: all clean
