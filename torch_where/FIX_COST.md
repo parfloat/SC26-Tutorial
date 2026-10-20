@@ -31,7 +31,7 @@ No maintainer says the issue is left unfixed *for speed*. The performance ration
 TensorFlow's `tf.where` documentation, not PyTorch's.
 
 ## Measured overhead of fix strategies (fix_cost_bench.py, Logs/fix-cost-bench.log)
-Stable over four runs (baseline 1.468 ms/iter every time).
+Stable over five full runs (baseline 1.468-1.469 ms/iter every time); see "Measurement method" below.
 | strategy | ms/iter | vs baseline | extra peak memory |
 |---|---|---|---|
 | baseline `where` | 1.468 | 1.00x | 0 |
@@ -42,3 +42,29 @@ Stable over four runs (baseline 1.468 ms/iter every time).
 These are my own measurements of plausible fixes on one machine and one op, not PyTorch's numbers. An N = 1024
 variant was dropped: its baseline differed from itself by 19% between measurements (launch-bound noise).
 The sync variant's cost also depends on how much work is queued behind it, so it is not a stable ratio.
+
+## Measurement method (what was measured, and how many runs)
+- **Script:** `fix_cost_bench.py`; GPU RTX 3090, torch 2.3.1+cu121, one process per run, no clock locking, no other
+  GPU job deliberately running (not otherwise checked).
+- **Workload:** `b = where(a<=0, exp(a), 1+a).sum()` then `b.backward()`, N = 2^24 float32 elements,
+  `a` uniform in [-10, 10] (finite, so no NaN/inf occurs and every variant does the same useful work).
+- **Per strategy, per run:** 5 untimed warm-up iterations, then 50 timed forward+backward iterations;
+  reported value = total CUDA-event time / 50 (mean ms per iteration). The baseline is timed twice per run
+  (once as the reference, once as the first table row).
+- **Memory:** `torch.cuda.max_memory_allocated()` (allocated, not reserved) after `reset_peak_memory_stats()`
+  before the timed loop; "extra" = peak minus the baseline's peak (384 MiB).
+- **Runs:** 5 full invocations of the script at N = 2^24 (4 strategies each, so 5 x 50 = 250 timed iterations per
+  strategy). The first four also contained an N = 1024 block that was later dropped as noise. Only the
+  last invocation's output is saved in `Logs/fix-cost-bench.log`; the other four are quoted below from the console.
+- **Not done:** no standard deviation across runs, no repeated trials inside a process, one operator (`exp`),
+  one GPU, one problem size; the "custom Function" variant only repairs `exp`'s backward.
+
+| run | baseline | double where | custom Function | mask check + sync |
+|---|---|---|---|---|
+| 1 | 1.468 | 1.987 | 1.897 | 1.577 |
+| 2 | 1.468 | 1.989 | 1.901 | 1.590 |
+| 3 | 1.468 | 1.987 | 1.901 | 1.630 |
+| 4 | 1.468 | 1.985 | 1.896 | 1.685 |
+| 5 (saved log) | 1.469 | 1.988 | 1.902 | 1.574 |
+
+ms per iteration. Only the sync variant moves (1.574-1.685, ratio 1.07-1.15); the others vary by under 0.5%.

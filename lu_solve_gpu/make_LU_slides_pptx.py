@@ -593,9 +593,11 @@ def slide_where_history():
             p = cell.text_frame.paragraphs[0]
             p.alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.RIGHT
             add_runs(p, t, 14, INK, FONT)
-    textbox(s, 0.8, 6.85, 11.7, 0.4,
-            ["No maintainer cites speed as the reason. Sources: pytorch/pytorch issues; torch_where/FIX_COST.md; "
-             "numbers are our own measurements, one op, one GPU."], size=11, color=RGBColor(0x55, 0x55, 0x55))
+    textbox(s, 0.8, 6.8, 11.7, 0.5,
+            ["Method: 5 runs; each strategy 5 warm-up + 50 timed fwd+bwd iterations, mean ms via CUDA events; "
+             "extra memory = peak allocated vs baseline. One op (exp), one GPU, no std. dev. "
+             "No maintainer cites speed as the reason. Details: torch_where/FIX_COST.md."],
+            size=11, color=RGBColor(0x55, 0x55, 0x55))
 
 
 SLIDES = [slide_cover, slide_algorithm, slide_envvars, slide_time_kernels,
