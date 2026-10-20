@@ -21,6 +21,8 @@ BLUE = RGBColor(0xE6, 0xE9, 0xFA)
 GRAY = RGBColor(0xEE, 0xEE, 0xEE)
 GREEN = RGBColor(0xD9, 0xF2, 0xD9)
 FONT = "Calibri"
+TITLE_FONT = "Arial"
+TITLE_SIZE = 25
 MONO = "Consolas"
 
 prs = Presentation()
@@ -79,7 +81,7 @@ def title_bar(slide, text, mono=False):
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     p = tf.paragraphs[0]
     p.alignment = PP_ALIGN.LEFT
-    add_runs(p, text, 28, RGBColor(0, 0, 0), MONO if mono else FONT, bold=True)
+    add_runs(p, text, TITLE_SIZE, RGBColor(0, 0, 0), TITLE_FONT, bold=True)
 
 
 def box(slide, x, y, w, h, lines, fill=BLUE, size=11, shape=MSO_SHAPE.ROUNDED_RECTANGLE,
@@ -123,7 +125,8 @@ def arrow(slide, a, b, side_a="r", side_b="l"):
 def slide_cover():
     s = prs.slides.add_slide(BLANK)
     black = RGBColor(0, 0, 0)
-    textbox(s, 0.9, 2.3, 11.5, 1.2, ["LU Solver on the GPU"], size=48, color=black, bold=True)
+    textbox(s, 0.9, 2.3, 11.5, 1.2, ["LU Solver on the GPU"], size=TITLE_SIZE, color=black, bold=True,
+            font=TITLE_FONT)
     textbox(s, 0.9, 3.5, 11.5, 0.8,
             ["From FP64 kernels to tensor cores, watched by NixNan"], size=26, color=black)
     textbox(s, 0.9, 4.7, 11.5, 1.0, ["Ganesh Gopalakrishnan", "SC26 tutorial"], size=18, color=black)
