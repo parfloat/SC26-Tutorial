@@ -535,9 +535,71 @@ def slide_where_why():
             size=11, color=RGBColor(0x55, 0x55, 0x55))
 
 
+# --------------------------------------------------------------------------
+# Slide 11: history of the torch.where issue and the measured cost of fixes
+# --------------------------------------------------------------------------
+TIMELINE = [("2017-12", "#4132 opened", "x.grad NaN after masking; still open, “needs design”"),
+            ("2019-07", "#23156", "“no gradient” vs “zero gradient” not distinguished"),
+            ("2021-01", "#31829", "logsumexp fixed op by op, closed completed"),
+            ("2021-08", "triage review", "“expected behavior (for now)”; needs first-class masking"),
+            ("2022-07", "#68425 closed", "“not planned”, duplicate of #4132"),
+            ("2025-06", "#156212 closed", "“won’t be fixed, no reasonable way”")]
+FIXCOST = [("baseline where", "1.47", "1.00×", "0"),
+           ("double where", "1.99", "1.35×", "+16 MiB"),
+           ("custom Function (masked exp backward)", "1.90", "1.29×", "+144 MiB"),
+           ("mask check + .item() (CPU-GPU sync)", "1.57–1.69", "1.07–1.15×", "0")]
+
+
+def slide_where_history():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "torch.where: a decade of “won’t fix”, and what a fix costs")
+    w, gap, y, h = 1.95, 0.22, 1.25, 1.55
+    prev = None
+    for i, (d, head, txt) in enumerate(TIMELINE):
+        x = 0.35 + i * (w + gap)
+        textbox(s, x, y - 0.05, w, 0.3, [d], size=12, color=RGBColor(0x55, 0x55, 0x55), bold=True,
+                align=PP_ALIGN.CENTER)
+        shp = box(s, x, y + 0.3, w, h - 0.3, [head, txt], BLUE if i < 4 else RGBColor(0xF9, 0xD9, 0xD9), size=11,
+                  mono_first=True)
+        if prev is not None:
+            arrow(s, prev, shp)
+        prev = shp
+    # why a fix is hard
+    textbox(s, 0.6, 3.0, 6.0, 0.35, ["Why a fix is hard"], size=15, bold=True)
+    why = ["Needs per-element “unused” vs “zero” metadata (MaskedTensor-style)",
+           "NaN is made by the op before where: fix is per op, or fused",
+           "A forward mask is data dependent: CPU-GPU sync"]
+    for i, t in enumerate(why):
+        box(s, 0.6 + i * 4.1, 3.4, 3.9, 0.85, [t], GRAY, size=13)
+    # measured costs
+    textbox(s, 0.6, 4.4, 8.0, 0.35, ["Measured cost of fix strategies (RTX 3090, N = 2^24, fwd+bwd)"], size=15, bold=True)
+    shp = s.shapes.add_table(len(FIXCOST) + 1, 4, Inches(0.8), Inches(4.8), Inches(11.7), Inches(1.9))
+    tbl = shp.table
+    for i, wd in enumerate((6.0, 1.9, 1.9, 1.9)):
+        tbl.columns[i].width = Inches(wd)
+    for c, t in enumerate(["strategy", "ms / iter", "vs baseline", "extra memory"]):
+        cell = tbl.cell(0, c)
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = DARK
+        cell.text_frame.paragraphs[0].alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.RIGHT
+        add_runs(cell.text_frame.paragraphs[0], t, 14, RGBColor(0xFF, 0xFF, 0xFF), FONT, bold=True)
+    for r, row in enumerate(FIXCOST, start=1):
+        for c, t in enumerate(row):
+            cell = tbl.cell(r, c)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = GRAY if r % 2 else RGBColor(0xFF, 0xFF, 0xFF)
+            p = cell.text_frame.paragraphs[0]
+            p.alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.RIGHT
+            add_runs(p, t, 14, INK, FONT)
+    textbox(s, 0.8, 6.85, 11.7, 0.4,
+            ["No maintainer cites speed as the reason. Sources: pytorch/pytorch issues; torch_where/FIX_COST.md; "
+             "numbers are our own measurements, one op, one GPU."], size=11, color=RGBColor(0x55, 0x55, 0x55))
+
+
 SLIDES = [slide_cover, slide_algorithm, slide_envvars, slide_time_kernels,
           slide_stage1_results, slide_fp32_artifact, slide_tc_panel,
-          slide_tc_exceptions, slide_where_backward, slide_where_why]
+          slide_tc_exceptions, slide_where_backward, slide_where_why,
+          slide_where_history]
 
 if __name__ == "__main__":
     for f in SLIDES:
