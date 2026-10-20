@@ -1,0 +1,156 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{metropolis}
+\usepackage{array,booktabs}
+\usepackage[T1]{fontenc}
+\newcommand{\nn}{\textsc{NixNan}}
+\newcommand{\tx}[1]{\texttt{\small #1}}
+\title{Instrumenting tensor-core instructions step by step}
+\subtitle{\tx{HMMA.16816.F16}, \tx{HMMA.16816.F32}, \tx{HMMA.16816.F32.BF16}}
+\author{Ganesh Gopalakrishnan}
+\date{SC26 tutorial --- data from \tx{TOOL\_VERBOSE=1} runs of \tx{rd\_tc}}
+\begin{document}
+\maketitle
+
+\begin{frame}[fragile]{1. What the GPU runs: three HMMA flavours}
+\footnotesize
+\tx{rd\_tc} (2D reaction--diffusion, one step = two GEMMs) compiles to these SASS instructions (\tx{cuobjdump -sass}):
+\begin{semiverbatim}\scriptsize
+fp16acc16  HMMA.16816.F16      R22, R16, R22, R8      \textit{// D, A, B, C}
+fp16acc32  HMMA.16816.F32      R16, R8.reuse, R22, R16
+bf16acc32  HMMA.16816.F32.BF16 R16, R8.reuse, R22, R16
+\end{semiverbatim}
+\begin{itemize}
+\item Operand order is always \textbf{D, A, B, C}: $D = A\times B + C$ for one 16$\times$8$\times$16 tile per warp.
+\item Each kernel holds 16 HMMAs (verified: 16 ``Instrumenting instruction HMMA'' lines per run).
+\item The first HMMA of every chain has \tx{RZ} as its C operand: the accumulator starts at zero.
+\item \nn{} sees only SASS text and operand structure --- it does not know about \tx{mma\_sync}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{2. The table that describes an HMMA: \tx{instructions.json}}
+\footnotesize
+The opcode string (with modifiers) is the key; each operand slot gets a \{type, count\}:
+\medskip
+\centering
+\begin{tabular}{@{}l l l l l@{}}
+\toprule
+ & D (op 0) & A (op 1) & B (op 2) & C (op 3)\\
+\midrule
+\tx{HMMA.16816.F16} & f16 $\times$4 & f16 $\times$8 & f16 $\times$4 & f16 $\times$4\\
+\tx{HMMA.16816.F32} & f32 $\times$4 & f16 $\times$8 & f16 $\times$4 & f32 $\times$4\\
+\tx{HMMA.16816.F32.BF16} & f32 $\times$4 & bf16 $\times$8 & bf16 $\times$4 & f32 $\times$4\\
+\bottomrule
+\end{tabular}
+\medskip
+
+\raggedright
+\begin{itemize}
+\item \texttt{count} = number of \emph{values}, not registers. f16/bf16 are packed two per 32-bit register.
+\item \tx{get\_num\_regs}: f16/bf16 $\to\lceil c/2\rceil$, f32 $\to c$, f64 $\to 2c$.
+\item Hence F16: D=2, A=4, B=2, C=2 registers. F32 and F32.BF16: D=4, A=4, B=2, C=4.
+\item An opcode with no table entry (e.g.\ \tx{F2FP.PACK}) is skipped: nothing is inserted.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{3. Verbose log: what \nn{} decided (first launch only)}
+\scriptsize
+\begin{semiverbatim}
+Instrumenting instruction HMMA.16816.F16 R22, R16, R22, R8 ;
+Instrumenting instruction with 3 registers          \textit{// AFTER call}
+Instrumenting operand 0. div0: 0, regs: 2, count: 4
+Instrumenting instruction with 11 registers         \textit{// BEFORE call}
+Instrumenting operand 1. div0: 0, regs: 4
+Instrumenting operand 2. div0: 0, regs: 2
+Instrumenting operand 3. div0: 0, regs: 2
+\end{semiverbatim}
+\vspace{-1mm}
+\footnotesize
+\begin{tabular}{@{}l c c c@{}}
+\toprule
+ & AFTER (op 0) & BEFORE (ops 1--3) & log lines identical for\\
+\midrule
+\tx{HMMA.16816.F16} & 3 & 11 & all 16 HMMAs\\
+\tx{HMMA.16816.F32} & 5 & 13 & all 16 HMMAs\\
+\tx{HMMA.16816.F32.BF16} & 5 & 13 & all 16 HMMAs\\
+\bottomrule
+\end{tabular}
+
+\smallskip
+The number is the device function's \tx{arg\_count}: $\;$ AFTER $=1+\mathrm{regs}(D)$; BEFORE $=3$ reginfo words $+\ \mathrm{regs}(A,B,C)$.\\
+F16: $1+2=3$, $3+4+2+2=11$. $\;$F32: $1+4=5$, $3+4+2+4=13$.
+\end{frame}
+
+\begin{frame}[fragile]{4. Compact encoding: one 32-bit \tx{reginfo} per operand}
+\footnotesize
+Bitfield (real struct from \tx{reginfo.cuh}): count:6, type:4, half\_h0, half\_h1, div0, operand:2, num\_regs:4, f64high, reserved.
+Type codes: f16=0, bf16=1, f32=2, f64=3. Words below were printed by a g++ program using that struct, filled in as \nn{} fills it (not dumped from the running tool).
+\medskip
+\centering\scriptsize
+\begin{tabular}{@{}l l l l l@{}}
+\toprule
+ & D & A & B & C\\
+\midrule
+\tx{F16} & 0x00010C04 & 0x00022C08 & 0x00014C04 & 0x00016C04\\
+\tx{F32} & 0x00020C84 & 0x00022C08 & 0x00014C04 & 0x00026C84\\
+\tx{F32.BF16} & 0x00020C84 & 0x00022C48 & 0x00014C44 & 0x00026C84\\
+\bottomrule
+\end{tabular}
+\medskip
+
+\raggedright\footnotesize
+Decoding \tx{0x00022C48} (A of F32.BF16): count=8, type=1 (bf16), h0=h1=1, operand=1, num\_regs=4.\\
+Why compact: the words travel as \emph{call arguments} on the GPU, one per operand, so the device function can classify with no table lookup.
+\end{frame}
+
+\begin{frame}[fragile]{5. Which physical registers are picked up}
+\footnotesize
+\tx{get\_regs} turns each \texttt{REG} operand into \texttt{num\_regs} consecutive \tx{nvbit\_add\_call\_arg\_reg\_val} calls (R$n$, R$n{+}1$, \dots).
+\medskip
+\centering
+\begin{tabular}{@{}l l l l l l@{}}
+\toprule
+instruction & D (AFTER) & A & B & C (BEFORE)\\
+\midrule
+\tx{F16 R22,R16,R22,R8} & R22--R23 & R16--R19 & R22--R23 & R8--R9\\
+\tx{F32 R16,R8,R22,R16} & R16--R19 & R8--R11 & R22--R23 & R16--R19\\
+\tx{BF16 R16,R8,R22,R16} & R16--R19 & R8--R11 & R22--R23 & R16--R19\\
+\bottomrule
+\end{tabular}
+\medskip
+
+\raggedright
+\begin{itemize}
+\item \textbf{Why two call sites:} D overlaps B (R22) and, for F32, C (R16). \tx{IPOINT\_BEFORE} reads the inputs before HMMA overwrites them; \tx{IPOINT\_AFTER} reads the result D.
+\item First HMMA in each chain has C=\tx{RZ}: \nn{} sends \tx{RZ} (index clamped to 255) in every C slot; it reads as 0 (inferred from the code, not separately tested).
+\item \tx{.reuse} on A is an operand-cache hint; it does not change the register read.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{6. On the GPU: \tx{nixnan\_check\_regs} classifies the fragments}
+\footnotesize
+Every thread of the warp passes its own fragment registers (a tile is spread over 32 lanes).
+\begin{enumerate}
+\item Walk the args: read a \tx{reginfo}, then \texttt{num\_regs} values with \tx{va\_arg}.
+\item Classify per type: f16 $\to$ \tx{half2\_classify} (two halves per register), bf16 $\to$ \tx{bf162\_classify}, f32 $\to$ \tx{float\_classify}. Each yields NaN / Inf / $-$Inf / subnormal bits.
+\item OR into \tx{exces[operand]}, then shuffle-OR across the warp (the 4 operand slots are why \tx{OPERANDS=4}).
+\item Lowest active lane only: \tx{recorder.record(inst\_id, flags, op)} does an \tx{atomicAdd} on a counter indexed by \tx{id<<7 | op<<5 | flags}.
+\item If the old count was 0 (first time this instruction/operand/flag-set is seen), push an \tx{exception\_info} to the channel. Repeats are only counted.
+\end{enumerate}
+This is why the report says ``detected in operand $k$ of instruction \dots of type f16'': the operand slot and the type from the table travel with the record.
+\end{frame}
+
+\begin{frame}[fragile]{7. Result: what the instrumented HMMAs reported}
+\scriptsize
+\begin{semiverbatim}
+[infinity] operand 0  HMMA.16816.F16 R26, R4, R30, R26   f16  \textit{// born in D}
+[infinity] operand 3  HMMA.16816.F16 R4, R16.reuse, R8, R4    \textit{// reused as C}
+[NaN]      operand 0  HMMA.16816.F16 R22, R16, R22, R8        \textit{// 0 x inf}
+\end{semiverbatim}
+\footnotesize
+\begin{itemize}
+\item fp16acc16: the Inf appears in operand 0 (D) of \tx{HMMA.16816.F16} at step 230; NaN follows at step 231 (a single Inf spreads along a whole row and column of $U'$ because $P$ is dense).
+\item fp16acc32 / bf16acc32: the Inf is only seen as an \emph{input} (operands 1--3) of the next \tx{HMMA.16816.F32[.BF16]}: it is created by \tx{F2FP.PACK}, which has no table entry.
+\item Not visible: tile-internal products. \nn{} inspects the register file around the instruction, not the inside of the tensor core.
+\end{itemize}
+\end{frame}
+\end{document}
