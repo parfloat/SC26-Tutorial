@@ -264,7 +264,7 @@ Repeats are therefore only \emph{counted}, never transmitted: that is the ``(N r
 
 \small\raggedright
 \textbf{push:} reserve space with \texttt{atomicAdd} on the head; if it runs past \texttt{buff\_end}, the first warp to notice waits for tail==its pointer and calls \texttt{flush()}; others spin until head is reset.\\
-\textbf{flush:} \texttt{\_\_threadfence\_system()}; \texttt{*doorbell = nbytes}; \textbf{spin until host sets doorbell to 0}; reset tail then head.
+\textbf{flush:} \texttt{\_\_threadfence\_system()}; \texttt{*doorbell = nbytes}; \textbf{spin until host sets doorbell to 0}; reset tail then head. Corner-cases to avoid deadlocks are incorporated.
 \end{frame}
 
 \begin{frame}{Receiver: \texttt{recv} and the thread loop}
