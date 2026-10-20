@@ -79,7 +79,7 @@ env -u LD_LIBRARY_PATH \
 
 \begin{frame}{First launch of a kernel: what happens}
 \centering
-\begin{tikzpicture}[scale=0.8,transform shape,node distance=3.5mm,every node/.style={font=\scriptsize}]
+\begin{tikzpicture}[node distance=5mm,every node/.style={font=\scriptsize}]
 \node[box] (a) {\texttt{cuLaunchKernel} entry};
 \node[box,right=of a] (b) {\texttt{instrument\_function(ctx,f)}};
 \node[box,right=of b] (c) {related functions\\+ the kernel};
@@ -94,23 +94,22 @@ env -u LD_LIBRARY_PATH \
 \draw[arr](f)--(g);\draw[arr](g)--(h);\draw[arr](h)--(i);\draw[arr](i)--(j);
 \end{tikzpicture}
 
-\vspace{-1mm}
+\vspace{0mm}
 \begin{columns}[T]
-\begin{column}{0.32\textwidth}\tiny
+\begin{column}{0.32\textwidth}\scriptsize
 \textbf{\texttt{mk\_entry} $\to$ \texttt{inst\_id}}\\
-Host table of $2^{17}$ entries; each instrumented instruction takes the next free index (0, 1, 2, \dots across all functions). The entry keeps SASS text, file:line, function name, 4 operand types.
-The index goes to the GPU as a \texttt{const32} argument and is the \emph{only} identity the device has: it selects the counter slot \texttt{id<<7 | op<<5 | flags} and travels in every \texttt{exception\_info}; the host maps it back to text when printing.
+Host table, one row per instrumented instruction: SASS text, file:line, function, operand types. \texttt{inst\_id} = row number (0, 1, 2, \dots), passed to the GPU as the instruction's only identity; the host looks the row up when printing.
 \end{column}
-\begin{column}{0.34\textwidth}\tiny
-\textbf{2$\times$ insert\_call, HMMA example}\\
-\texttt{HMMA.16816.F16 R22, R16, R22, R8} (D,A,B,C)\\
-\textbf{AFTER} (D): 3 args = reginfo \texttt{0x00010C04} + R22, R23\\
-\textbf{BEFORE} (A,B,C): 11 args = 3 reginfo + R16--R19, R22--R23, R8--R9\\
-R22 is both D and B: BEFORE sees input B, AFTER sees result D. (Counts from the \texttt{TOOL\_VERBOSE=1} log; reginfo word computed from the struct.)
+\begin{column}{0.35\textwidth}\scriptsize
+\textbf{2$\times$ call, HMMA example}\\
+\texttt{HMMA.16816.F16 R22, R16, R22, R8}\\
+\textbf{BEFORE} reads in: A R16--R19, B R22--R23, C R8--R9\\
+\textbf{AFTER} reads out: D R22--R23\\
+(R22 is both B and D)
 \end{column}
-\begin{column}{0.32\textwidth}\tiny
-\textbf{\texttt{nvbit\_enable\_instrumented(ctx, f, flag)}}\\
-The injected calls are inserted once, into an instrumented copy of the function that NVBit keeps beside the original. This call, made at \emph{every} launch, picks the copy to run: \texttt{true} = instrumented, \texttt{false} = original at full speed. nixnan passes \texttt{true}, or \texttt{kernel\_count \% SAMPLING == 0} when \texttt{SAMPLING} $>0$.
+\begin{column}{0.30\textwidth}\scriptsize
+\textbf{\texttt{nvbit\_enable\_instrumented}}\\
+NVBit keeps two copies of each function: the \emph{original} and the \emph{instrumented} one (with the injected calls). Each launch selects which runs: \texttt{true} $\to$ instrumented, \texttt{false} $\to$ original.
 \end{column}
 \end{columns}
 \end{frame}
