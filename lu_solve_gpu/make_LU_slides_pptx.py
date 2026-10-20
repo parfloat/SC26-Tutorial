@@ -343,8 +343,62 @@ def slide_fp32_artifact():
     arrow(s, ff, fl)
 
 
+# --------------------------------------------------------------------------
+# Slide 7: TC adaptation = blocked LU with panel factorization (report 7.1 + 7.2)
+# --------------------------------------------------------------------------
+def slide_tc_panel():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "LU Adaptation to Tensor Cores Involves Panel Factorization")
+    PANEL = RGBColor(0xB9, 0xC2, 0xF2)
+    L21C = RGBColor(0xDD, 0xE2, 0xFA)
+    U12C = RGBColor(0xFB, 0xD9, 0xA8)
+    A22C = RGBColor(0xC9, 0xEB, 0xC9)
+    TCRED = RGBColor(0xF6, 0xC3, 0xC3)
+    x0, y0, side, pw = 0.8, 1.55, 3.8, 1.2      # square origin, size, panel width
+    # partition of the matrix at block column kb
+    box(s, x0, y0, pw, pw, ["panel", "L_{11}\\U_{11}"], PANEL, size=12, shape=MSO_SHAPE.RECTANGLE)
+    box(s, x0 + pw, y0, side - pw, pw, ["U_{12}", "16 × (m−kb−16)"], U12C, size=12, shape=MSO_SHAPE.RECTANGLE)
+    box(s, x0, y0 + pw, pw, side - pw, ["L_{21}"], L21C, size=12, shape=MSO_SHAPE.RECTANGLE)
+    box(s, x0 + pw, y0 + pw, side - pw, side - pw,
+        ["A_{22} ← A_{22} − L_{21} U_{12}", "tensor cores"], A22C, size=13, shape=MSO_SHAPE.RECTANGLE)
+    textbox(s, x0, y0 - 0.4, 2.6, 0.35, ["16 columns at *kb*"], size=11)
+    # numbered tags on regions
+    for n, (tx, ty) in enumerate([(x0 + 0.05, y0 + 0.05), (x0 + pw + 0.05, y0 + 0.05),
+                                   (x0 + pw + 0.05, y0 + pw + 0.05)], start=1):
+        box(s, tx, ty, 0.28, 0.28, [str(n)], RGBColor(0xFF, 0xFF, 0xFF), size=11, shape=MSO_SHAPE.OVAL)
+    # annotations (right)
+    notes = [("1", "panel, FP64: pivot search, row swap, multipliers, elimination on the 16 panel columns"),
+             ("2", "U_{12} = L_{11}^{-1} A_{12}, FP64 triangular solve"),
+             ("3", "A_{22} −= L_{21} U_{12}: round to FP16/BF16, WMMA on tensor cores, subtract in FP64")]
+    for i, (n, t) in enumerate(notes):
+        yy = 1.6 + 1.1 * i
+        box(s, 5.3, yy, 0.4, 0.4, [n], RGBColor(0xFF, 0xFF, 0xFF), size=13, shape=MSO_SHAPE.OVAL)
+        textbox(s, 5.85, yy - 0.08, 7.0, 0.9, [t], size=16)
+    textbox(s, 5.3, 4.95, 7.6, 0.4, ["Repeat for kb = 0, 16, 32, …; a last block narrower than 16 columns is panel-only."],
+            size=13, color=RGBColor(0x55, 0x55, 0x55))
+    # kernel pipeline for one block step
+    names = [("find_pivot, swap_rows,\ncompute_multipliers,\neliminate_panel", "(×16 columns)", "FP64", BLUE),
+             ("u12_trsm_kernel", "U_{12} = L_{11}^{-1} A_{12}", "FP64", BLUE),
+             ("pack_tc_operands", "double → FP16/BF16, zero padding", "FP64 → FP16/BF16", BLUE),
+             ("tc_gemm_tile", "mma_sync → HMMA.16816", "FP16/BF16 → FP32/16", TCRED),
+             ("apply_update_kernel", "A_{22} −= P, ε-clamp", "FP64", BLUE)]
+    bw, gap, by, bh = 2.3, 0.28, 5.55, 1.1
+    bx = 0.45
+    prev = None
+    for k, (nm, sub, prec, col) in enumerate(names):
+        multi = "\n" in nm
+        lines = nm.split("\n") + [sub] if multi else [nm, sub]
+        shp = box(s, bx + k * (bw + gap), by, bw, bh, lines, col, size=10 if multi else 11,
+                  mono_first=not multi)
+        textbox(s, bx + k * (bw + gap), by + bh + 0.02, bw, 0.3, [prec], size=10, align=PP_ALIGN.CENTER,
+                color=RGBColor(0x55, 0x55, 0x55))
+        if prev is not None:
+            arrow(s, prev, shp)
+        prev = shp
+
+
 SLIDES = [slide_cover, slide_algorithm, slide_envvars, slide_time_kernels,
-          slide_stage1_results, slide_fp32_artifact]
+          slide_stage1_results, slide_fp32_artifact, slide_tc_panel]
 
 if __name__ == "__main__":
     for f in SLIDES:
