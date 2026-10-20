@@ -504,14 +504,16 @@ def slide_where_why():
         "Efficiency came up only as the cost of a fix: tracking a mask in forward “will require the CPU-GPU sync”. "
         "No maintainer says it is left for speed.",
         "The fix is the user’s: keep the unselected branch finite (“double where”). Thread: the same applies to log.",
+        "Mask multiply does not help: m × exp(a) still computes 0 × inf = NaN, now in the forward value too "
+        "(b = nan), so the gradient is NaN as well.",
     ]
-    tb = s.shapes.add_textbox(Inches(0.6), Inches(1.15), Inches(12.1), Inches(2.9))
+    tb = s.shapes.add_textbox(Inches(0.6), Inches(1.05), Inches(12.1), Inches(3.4))
     tf = tb.text_frame
     tf.word_wrap = True
     for i, t in enumerate(bullets):
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-        p.space_after = Pt(6)
-        add_runs(p, "•  " + t, 16)
+        p.space_after = Pt(4)
+        add_runs(p, "•  " + t, 15)
     shp = s.shapes.add_table(len(WORKAROUNDS) + 1, 3, Inches(1.0), Inches(4.45), Inches(11.3), Inches(2.1))
     tbl = shp.table
     for i, wd in enumerate((6.8, 2.0, 2.5)):
