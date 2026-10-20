@@ -1,0 +1,7 @@
+torch 2.3.1+cu121
+issue: where(a<=0, exp(a), 1+a)    b=101      a.grad=nan
+mask mult: m*exp(a)+(1+a)*~m       b=nan      a.grad=nan
+double where: exp(clamp_max(a,0))  b=101      a.grad=1.0
+double where: exp(where(m,a,0))    b=101      a.grad=1.0
+forward only, no grad needed: 101.0
+exp(100) in fp32 = inf ; 0 * inf = nan

@@ -447,9 +447,97 @@ def slide_tc_exceptions():
             add_runs(p, t, 16, INK, MONO if c == 0 else FONT)
 
 
+# --------------------------------------------------------------------------
+# Slide 9: torch.where, forward fine, backward NaN (pytorch/pytorch#68425)
+# --------------------------------------------------------------------------
+def slide_where_backward():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "torch.where: a well-defined forward, a NaN gradient")
+    RED = RGBColor(0xF9, 0xD9, 0xD9)
+    textbox(s, 0.6, 1.0, 12.1, 0.4, ["b = torch.where(a <= 0, torch.exp(a), 1 + a),   a = 100 (float32, on GPU)"],
+            size=15, font=MONO)
+    # forward
+    textbox(s, 0.6, 1.5, 2.0, 0.3, ["forward"], size=13, color=RGBColor(0x55, 0x55, 0x55), bold=True)
+    fa = box(s, 0.6, 2.0, 1.5, 0.8, ["a", "100"], GRAY, size=14, shape=MSO_SHAPE.RECTANGLE)
+    fe = box(s, 3.2, 1.7, 2.4, 0.8, ["exp(a)", "= inf  (overflows)"], RED, size=13)
+    fp = box(s, 3.2, 2.6, 2.4, 0.8, ["1 + a", "= 101"], BLUE, size=13)
+    fw = box(s, 6.4, 2.15, 2.4, 0.8, ["where(a ≤ 0, ·, ·)", "picks 1 + a"], BLUE, size=13)
+    fb = box(s, 9.6, 2.15, 1.7, 0.8, ["b", "101  (fine)"], GREEN, size=13, shape=MSO_SHAPE.RECTANGLE)
+    for p, q in ((fa, fe), (fa, fp), (fe, fw), (fp, fw), (fw, fb)):
+        arrow(s, p, q)
+    # backward
+    textbox(s, 0.6, 3.75, 2.0, 0.3, ["backward"], size=13, color=RGBColor(0x55, 0x55, 0x55), bold=True)
+    bg = box(s, 0.6, 4.35, 1.5, 0.8, ["grad", "1"], GRAY, size=14, shape=MSO_SHAPE.RECTANGLE)
+    bw = box(s, 2.9, 4.35, 2.3, 0.8, ["where backward", "masks the grad"], BLUE, size=13)
+    be = box(s, 6.2, 3.95, 2.6, 0.8, ["exp backward", "0 × exp(a) = 0 × inf = NaN"], RED, size=13)
+    bp = box(s, 6.2, 4.85, 2.6, 0.8, ["(1 + a) backward", "1 × 1 = 1"], BLUE, size=13)
+    ba = box(s, 9.6, 4.35, 2.4, 0.8, ["a.grad", "NaN + 1 = NaN"], RED, size=14, shape=MSO_SHAPE.RECTANGLE)
+    for p, q in ((bg, bw), (bw, be), (bw, bp), (be, ba), (bp, ba)):
+        arrow(s, p, q)
+    textbox(s, 5.0, 3.85, 1.0, 0.3, ["grad 0"], size=11, color=RGBColor(0x55, 0x55, 0x55))
+    textbox(s, 5.0, 5.35, 1.0, 0.3, ["grad 1"], size=11, color=RGBColor(0x55, 0x55, 0x55))
+    # evidence
+    textbox(s, 0.6, 6.0, 12.1, 1.2,
+            ["NixNan on the GPU kernels: inf in an FMUL of the exp kernel; then NaN in an FMUL (0 × inf) and its STG; "
+             "then NaN in an FFMA (accumulation) and its STG.",
+             "Report: FP32 NaN at 5 sites, Infinity at 2 sites, FP32 memory NaN at 3 sites; all of it inside "
+             "PyTorch's elementwise kernels, none in user code."], size=14)
+
+
+# --------------------------------------------------------------------------
+# Slide 10: why it stays, and the workaround
+# --------------------------------------------------------------------------
+WORKAROUNDS = [("issue: where(a<=0, exp(a), 1+a)", "101", "nan"),
+               ("mask multiply: m × exp(a) + (1+a) × ~m", "nan", "nan"),
+               ("double where: exp(a.clamp_max(0))", "101", "1.0"),
+               ("double where: exp(where(m, a, 0))", "101", "1.0")]
+
+
+def slide_where_why():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "torch.where: why it stays, and the workaround")
+    bullets = [
+        "Issue #68425: closed “not planned” (2022-07-25), as a duplicate of the still-open #4132. Reproduces "
+        "unchanged on torch 2.3.1.",
+        "Stated reason, from a maintainer: “it’ll stay like it is and nans propagate … It breaks IEEE754 simply "
+        "because we don’t have the metadata available to track invalid elements.” Autograd has no “undefined grad”.",
+        "Efficiency came up only as the cost of a fix: tracking a mask in forward “will require the CPU-GPU sync”. "
+        "No maintainer says it is left for speed.",
+        "The fix is the user’s: keep the unselected branch finite (“double where”). Thread: the same applies to log.",
+    ]
+    tb = s.shapes.add_textbox(Inches(0.6), Inches(1.15), Inches(12.1), Inches(2.9))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    for i, t in enumerate(bullets):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(6)
+        add_runs(p, "•  " + t, 16)
+    shp = s.shapes.add_table(len(WORKAROUNDS) + 1, 3, Inches(1.0), Inches(4.45), Inches(11.3), Inches(2.1))
+    tbl = shp.table
+    for i, wd in enumerate((6.8, 2.0, 2.5)):
+        tbl.columns[i].width = Inches(wd)
+    for c, t in enumerate(["form (a = 100, float32, CUDA)", "b", "a.grad"]):
+        cell = tbl.cell(0, c)
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = DARK
+        cell.text_frame.paragraphs[0].alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.RIGHT
+        add_runs(cell.text_frame.paragraphs[0], t, 15, RGBColor(0xFF, 0xFF, 0xFF), FONT, bold=True)
+    for r, row in enumerate(WORKAROUNDS, start=1):
+        for c, t in enumerate(row):
+            cell = tbl.cell(r, c)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = GRAY if r % 2 else RGBColor(0xFF, 0xFF, 0xFF)
+            p = cell.text_frame.paragraphs[0]
+            p.alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.RIGHT
+            add_runs(p, t, 15, INK, MONO if c == 0 else FONT)
+    textbox(s, 1.0, 6.65, 11.3, 0.5,
+            ["Sources: github.com/pytorch/pytorch/issues/68425; native runs, torch_where/workarounds.py."],
+            size=11, color=RGBColor(0x55, 0x55, 0x55))
+
+
 SLIDES = [slide_cover, slide_algorithm, slide_envvars, slide_time_kernels,
           slide_stage1_results, slide_fp32_artifact, slide_tc_panel,
-          slide_tc_exceptions]
+          slide_tc_exceptions, slide_where_backward, slide_where_why]
 
 if __name__ == "__main__":
     for f in SLIDES:

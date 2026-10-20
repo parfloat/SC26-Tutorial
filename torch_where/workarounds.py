@@ -1,0 +1,15 @@
+import torch
+print("torch", torch.__version__)
+dev = torch.device("cuda")
+def run(name, f):
+    a = torch.tensor(100., requires_grad=True, device=dev)
+    b = f(a)
+    b.backward()
+    print(f"{name:34s} b={b.item():<8g} a.grad={a.grad.item()}")
+run("issue: where(a<=0, exp(a), 1+a)", lambda a: torch.where(a <= 0, torch.exp(a), 1 + a))
+run("mask mult: m*exp(a)+(1+a)*~m", lambda a: (a <= 0) * torch.exp(a) + (1 + a) * (~(a <= 0)))
+run("double where: exp(clamp_max(a,0))", lambda a: torch.where(a <= 0, a.clamp_max(0).exp(), 1 + a))
+run("double where: exp(where(m,a,0))", lambda a: torch.where(a <= 0, torch.where(a <= 0, a, torch.zeros_like(a)).exp(), 1 + a))
+a = torch.tensor(100., device=dev)
+print("forward only, no grad needed:", torch.where(a <= 0, torch.exp(a), 1 + a).item())
+print("exp(100) in fp32 =", torch.exp(a).item(), "; 0 * inf =", (torch.zeros(()) * torch.exp(a).cpu()).item())
