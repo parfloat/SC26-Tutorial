@@ -79,7 +79,7 @@ env -u LD_LIBRARY_PATH \
 
 \begin{frame}{First launch of a kernel: what happens}
 \centering
-\begin{tikzpicture}[node distance=5mm,every node/.style={font=\scriptsize}]
+\begin{tikzpicture}[scale=0.8,transform shape,node distance=3.5mm,every node/.style={font=\scriptsize}]
 \node[box] (a) {\texttt{cuLaunchKernel} entry};
 \node[box,right=of a] (b) {\texttt{instrument\_function(ctx,f)}};
 \node[box,right=of b] (c) {related functions\\+ the kernel};
@@ -88,13 +88,31 @@ env -u LD_LIBRARY_PATH \
 \node[box,left=of e] (f) {for each instr in\\\texttt{nvbit\_get\_instrs}};
 \node[box,below=of f] (g) {\texttt{get\_reginfo}: any FP\\operands? else skip};
 \node[box,right=of g] (h) {\texttt{mk\_entry} $\to$ inst\_id};
-\node[box,right=of h] (i) {2$\times$ \texttt{nvbit\_insert\_call}\\+ args};
+\node[box,right=of h] (i) {2$\times$ \texttt{nvbit\_insert\_call}\\AFTER: dest, BEFORE: srcs};
 \node[gbox,right=of i] (j) {\texttt{nvbit\_enable\_instrumented}\\kernel runs};
 \draw[arr](a)--(b);\draw[arr](b)--(c);\draw[arr](c)--(d);\draw[arr](d)--(e);\draw[arr](e)--(f);
 \draw[arr](f)--(g);\draw[arr](g)--(h);\draw[arr](h)--(i);\draw[arr](i)--(j);
 \end{tikzpicture}
 
-\vspace{2mm}\small Instrumentation happens once per function; later launches only toggle \texttt{nvbit\_enable\_instrumented} (SAMPLING).
+\vspace{-1mm}
+\begin{columns}[T]
+\begin{column}{0.32\textwidth}\tiny
+\textbf{\texttt{mk\_entry} $\to$ \texttt{inst\_id}}\\
+Host table of $2^{17}$ entries; each instrumented instruction takes the next free index (0, 1, 2, \dots across all functions). The entry keeps SASS text, file:line, function name, 4 operand types.
+The index goes to the GPU as a \texttt{const32} argument and is the \emph{only} identity the device has: it selects the counter slot \texttt{id<<7 | op<<5 | flags} and travels in every \texttt{exception\_info}; the host maps it back to text when printing.
+\end{column}
+\begin{column}{0.34\textwidth}\tiny
+\textbf{2$\times$ insert\_call, HMMA example}\\
+\texttt{HMMA.16816.F16 R22, R16, R22, R8} (D,A,B,C)\\
+\textbf{AFTER} (D): 3 args = reginfo \texttt{0x00010C04} + R22, R23\\
+\textbf{BEFORE} (A,B,C): 11 args = 3 reginfo + R16--R19, R22--R23, R8--R9\\
+R22 is both D and B: BEFORE sees input B, AFTER sees result D. (Counts from the \texttt{TOOL\_VERBOSE=1} log; reginfo word computed from the struct.)
+\end{column}
+\begin{column}{0.32\textwidth}\tiny
+\textbf{\texttt{nvbit\_enable\_instrumented(ctx, f, flag)}}\\
+The injected calls are inserted once, into an instrumented copy of the function that NVBit keeps beside the original. This call, made at \emph{every} launch, picks the copy to run: \texttt{true} = instrumented, \texttt{false} = original at full speed. nixnan passes \texttt{true}, or \texttt{kernel\_count \% SAMPLING == 0} when \texttt{SAMPLING} $>0$.
+\end{column}
+\end{columns}
 \end{frame}
 
 \section{Encoding}
