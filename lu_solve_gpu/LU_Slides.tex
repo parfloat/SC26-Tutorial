@@ -1,7 +1,7 @@
 \documentclass[aspectratio=169,10pt]{beamer}
 \usetheme{metropolis}
 \usepackage[T1]{fontenc}
-\usepackage{tikz}
+\usepackage{tikz,booktabs}
 \usetikzlibrary{arrows.meta, positioning, fit, shapes.geometric, decorations.pathreplacing}
 
 \title{LU Solver on the GPU}
@@ -108,6 +108,32 @@ Ly=Pb\ \ (\text{forward}),\qquad Ux=y\ \ (\text{backward})
 \vfill
 {\small For example, \texttt{ksel-autonixnan} scripts (using the above env vars) the collection of kernel names\\
 and execution times, so users can then white- or black-list exactly what to observe in detail.}
+\end{frame}
+
+\begin{frame}{\texttt{TIME\_KERNELS}: the first-launch cost}
+\centering\scriptsize
+\begin{tabular}{lrrrr}
+\toprule
+Kernel & Launches & First launch (\textmu s) & Median later (\textmu s) & Ratio\\
+\midrule
+\texttt{init\_identity\_kernel} & 2 & 312{,}451 & 21 & $\approx\!14{,}900\times$\\
+\texttt{find\_pivot\_kernel} & 19 & 298{,}100 & 20 & $\approx\!14{,}900\times$\\
+\texttt{swap\_rows\_kernel} & 19 & 290{,}205 & 25 & $\approx\!11{,}600\times$\\
+\texttt{compute\_multipliers\_kernel} & 19 & 295{,}432 & 20 & $\approx\!14{,}800\times$\\
+\texttt{eliminate\_kernel} & 19 & 278{,}808 & 20 & $\approx\!13{,}900\times$\\
+\texttt{apply\_permutation\_kernel} & 1 & 300{,}320 & --- & ---\\
+\texttt{forward\_substitution\_kernel} & 1 & 326{,}736 & --- & ---\\
+\texttt{backward\_substitution\_kernel} & 1 & 324{,}597 & --- & ---\\
+\bottomrule
+\end{tabular}
+
+\vspace{3mm}
+\begin{itemize}\small
+\item First launch of every kernel: $\approx$280--330~ms. Later launches: $\approx$20--25~\textmu s, four to five orders of magnitude less.
+\item The timer starts \emph{before} NVBit rewrites the kernel's SASS (once per function) and stops after, so the first number is instrumentation cost, not kernel time.
+\item Kernels launched once (last three rows) only ever show this one-time cost.
+\item Library-heavy binaries pay far more: the cuSOLVER-based \texttt{pytorch\_slogdet} run was killed at 120~s during instrumentation.
+\end{itemize}
 \end{frame}
 
 \end{document}
