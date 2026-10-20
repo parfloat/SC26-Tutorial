@@ -274,7 +274,77 @@ def slide_time_kernels():
         add_runs(p, "•  " + t, 16)
 
 
-SLIDES = [slide_cover, slide_algorithm, slide_envvars, slide_time_kernels]
+# --------------------------------------------------------------------------
+# Slide 5: Stage 1 results (report sec 4.2)
+# --------------------------------------------------------------------------
+STAGE1 = [("Residual ‖Ax − b‖₂ (uninstrumented)", "9.68e-16", "nan"),
+          ("Binade-threshold reports", "99", "63"),
+          ("FP64 NaN (repeats)", "0 (0)", "316 (2171)"),
+          ("FP64 Infinity (repeats)", "0 (0)", "4 (0)"),
+          ("FP64 Division-by-zero (repeats)", "0 (0)", "4 (4)")]
+
+
+def slide_stage1_results():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "Stage 1 results: well-conditioned vs ill-conditioned input")
+    shp = s.shapes.add_table(len(STAGE1) + 1, 3, Inches(1.2), Inches(1.4), Inches(10.9), Inches(3.3))
+    tbl = shp.table
+    for i, wd in enumerate((5.5, 2.6, 2.8)):
+        tbl.columns[i].width = Inches(wd)
+    for c, t in enumerate(["", "matrix.csv", "bad_matrix.csv"]):
+        cell = tbl.cell(0, c)
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = DARK
+        add_runs(cell.text_frame.paragraphs[0], t, 16, RGBColor(0xFF, 0xFF, 0xFF), MONO, bold=True)
+        cell.text_frame.paragraphs[0].alignment = PP_ALIGN.RIGHT if c else PP_ALIGN.LEFT
+    for r, row in enumerate(STAGE1, start=1):
+        for c, t in enumerate(row):
+            cell = tbl.cell(r, c)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = GRAY if r % 2 else RGBColor(0xFF, 0xFF, 0xFF)
+            p = cell.text_frame.paragraphs[0]
+            p.alignment = PP_ALIGN.RIGHT if c else PP_ALIGN.LEFT
+            add_runs(p, t, 16, INK, FONT)
+    ok = box(s, 1.2, 5.2, 5.2, 1.3, ["matrix.csv", "clean solution, no exceptions"], GREEN, size=16)
+    bad = box(s, 6.9, 5.2, 5.2, 1.3, ["bad_matrix.csv",
+                                      "near-zero pivot → division by zero → NaN through the whole solve"],
+              RGBColor(0xF9, 0xD9, 0xD9), size=16)
+
+
+# --------------------------------------------------------------------------
+# Slide 6: FP32 artifact of binary instrumentation (report sec 4.3)
+# --------------------------------------------------------------------------
+def slide_fp32_artifact():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "Binary instrumentation reveals exceptions you did not expect")
+    bullets = [
+        "The source computes only in double, yet bad_matrix.csv also reports 6 FP32 NaN detections (93 repeats).",
+        "Cause: ptxas uses the idiom FFMA R8, RZ, R5, R3 (0 × R5 + R3 = R3) as a register move, shuffling the "
+        "32-bit halves of a double. nixnan sees an f32 FFMA whose operand R5 decodes as NaN.",
+        "Lesson: a SASS-level detector reports what the compiled code does, not what the source says. A nonzero "
+        "count in a format the source never uses is not necessarily that format's arithmetic.",
+    ]
+    tb = s.shapes.add_textbox(Inches(0.7), Inches(1.3), Inches(11.9), Inches(3.0))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    for i, t in enumerate(bullets):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(10)
+        add_runs(p, "•  " + t, 18)
+    # small diagram: double -> two 32-bit halves -> FFMA move idiom
+    d = box(s, 0.9, 5.0, 2.6, 1.1, ["double", "64 bits = hi | lo"], GRAY, size=15, shape=MSO_SHAPE.RECTANGLE)
+    r5 = box(s, 4.3, 5.0, 2.4, 1.1, ["R5", "one 32-bit half"], GRAY, size=15, shape=MSO_SHAPE.RECTANGLE)
+    ff = box(s, 7.5, 5.0, 3.2, 1.1, ["FFMA R8, RZ, R5, R3", "0 × R5 + R3: a register move"], BLUE,
+             size=15, mono_first=True)
+    fl = box(s, 11.3, 5.0, 1.5, 1.1, ["flagged", "f32 NaN"], RGBColor(0xF9, 0xD9, 0xD9), size=15,
+             shape=MSO_SHAPE.RECTANGLE)
+    arrow(s, d, r5)
+    arrow(s, r5, ff)
+    arrow(s, ff, fl)
+
+
+SLIDES = [slide_cover, slide_algorithm, slide_envvars, slide_time_kernels,
+          slide_stage1_results, slide_fp32_artifact]
 
 if __name__ == "__main__":
     for f in SLIDES:
