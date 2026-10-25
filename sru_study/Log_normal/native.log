@@ -1,0 +1,6 @@
+/home/ganesh/.local/lib/python3.10/site-packages/torch/utils/cpp_extension.py:1967: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
+If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
+  warnings.warn(
+input has NaN: False  Inf: False
+output NaN: False
+c_states NaN: False

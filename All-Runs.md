@@ -650,7 +650,7 @@ mechanism.
 ```bash
 cd sru_study
 ../external/nixnan/bin/iter-autonixnan -s 0 -t 600 -- python3 reproducer.py \
-  > Logs/iter-autonixnan-nosampling.log 2>&1
+  > Logs_uninit_bug/iter-autonixnan-nosampling.log 2>&1
 ```
 Fast: Phase 1 (4 unique kernels, 10 total launches) took 3.876s baseline;
 each of Phase 2's 4 per-kernel whitelisted runs took ~4.3-4.4s -- SRU's
@@ -690,7 +690,7 @@ GPU-FPX's comment didn't detail.
 ```bash
 cd sru_study
 LD_PRELOAD=../external/nixnan/nixnan.so python3 -u reproducer.py \
-  > Logs/straight-nixnan.log 2>&1
+  > Logs_uninit_bug/straight-nixnan.log 2>&1
 ```
 Took 78.8s wall time (no per-kernel enumeration cost here, since all 4
 kernels are instrumented together in a single process rather than
@@ -727,7 +727,7 @@ file by hand:
 
 - `run_all_examples.sh` (repo root) -- one function per case study,
   builds what it needs and reproduces that study's documented run to the
-  same `Logs/`/`logs/` paths used throughout this file. `./run_all_examples.sh
+  same `Logs_uninit_bug/`/`logs/` paths used throughout this file. `./run_all_examples.sh
   list` lists study names; `./run_all_examples.sh <name> [<name> ...]`
   runs a subset; no arguments runs everything (~30+ minutes, dominated by
   `karpathy_ngram`'s one-time CUDA fatbinary enumeration cost).
