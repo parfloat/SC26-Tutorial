@@ -1,12 +1,12 @@
 run 1 (native)
-x: NaN = 360  Inf = 0  of 81920
+x: NaN = 371  Inf = 0  of 81920
 output NaN: True  c_states NaN: True
 run 2 (native)
-x: NaN = 344  Inf = 0  of 81920
+x: NaN = 355  Inf = 0  of 81920
 output NaN: True  c_states NaN: True
 run 3 (native)
-x: NaN = 348  Inf = 0  of 81920
+x: NaN = 356  Inf = 0  of 81920
 output NaN: True  c_states NaN: True
 run under nixnan (LD_PRELOAD, straight)
-x: NaN, Inf = 349 0
+x: NaN = 365  Inf = 0  of 81920
 output NaN: True  c_states NaN: True

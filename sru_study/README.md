@@ -112,12 +112,13 @@ So with the same network, weights and nixnan settings, initializing the input re
 exception nixnan reports, including the thousands of FP32 NaN, Inf, -Inf and subnormal sites, and the
 NaNs in the output and state. All six nixnan logs reached "Finalizing GPU context".
 
-`check_uninit_input.py` looks at the uninitialized input directly (`Logs_uninit_bug/native-input-check.log`):
-`x` contains 344-360 NaN and no Inf in three native runs, and 349 NaN under nixnan, and the output and
-state are NaN each time. The count is not constant, because the content is whatever the allocator
+`check_uninit_input.py` looks at the uninitialized input directly; `./run_variants.sh` (or just
+`./run_variants.sh check`) runs it three times natively and once under nixnan and writes
+`Logs_uninit_bug/native-input-check.log`. In that log `x` contains 355-371 NaN and no Inf in every run
+(an earlier manual run gave 344-360 and 349), and the output and state are NaN each time. The count is not constant, because the content is whatever the allocator
 happened to hand back. It also depends on what the process did before: a bare script that imported only
 `torch` and allocated `x` saw **0** NaN (only zeros and about 400 subnormals), while the same allocation
-after `from sru import SRU` sees ~350. So "uninitialized" really means "whatever is left in reused GPU
+after `from sru import SRU` sees ~350-370. So "uninitialized" really means "whatever is left in reused GPU
 memory", which is why the bug is intermittent across environments.
 
 Caveats: one run per configuration (no repeats of the nixnan runs); the zero/normal control runs
