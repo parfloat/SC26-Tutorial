@@ -16,6 +16,28 @@ Tool locations referenced throughout:
 
 ---
 
+## hello_nixnan/
+
+A 58-line demo for the tutorial (copied from `nixnan/test/first_test/`). It
+raises exceptions in FP64, FP32, FP16 and BF16, stores the NaN results to
+global memory (STG), and runs one 16x16x16 FP16 tensor-core multiply with an
+Inf input. Needs sm_80+.
+
+```bash
+cd hello_nixnan
+nvcc -lineinfo -arch=native -o hello_nixnan hello_nixnan.cu
+LD_PRELOAD=../external/nixnan/nixnan.so ./hello_nixnan          # report on exit
+python3 collect_exceptions.py ../external/nixnan/nixnan.so      # PRINT_ILL_INSTR=1 ENABLE_FUN_DETAIL=1
+# or: ./run_all_examples.sh hello_nixnan
+```
+Result on the RTX 3090 (sm_86): FP16 NaN 1 / Inf 4; BF16 NaN 1 / Inf 3;
+FP32 NaN 3 / Inf 3 / Subnormal 1 / Div0 1; FP64 NaN 17 / Inf 2 / Div0 1;
+memory NaN 1 (FP16), 1 (BF16), 3 (FP32), 1 (FP64). Most of the FP64 NaN
+count comes from the `DFMA` expansion of `1.0/0.0`. The per-instruction
+breakdown is in `hello_nixnan/exceptions.md`.
+
+---
+
 ## tc_matmult/
 
 Benchmark kernels from Lei Mao's Tensor Core blog post (`leimao-mm.cu`) plus
