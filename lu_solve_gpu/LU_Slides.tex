@@ -1,8 +1,16 @@
-\documentclass[aspectratio=169,10pt]{beamer}
+\documentclass[aspectratio=169,10pt,xcolor=table]{beamer}
 \usetheme{metropolis}
 \usepackage[T1]{fontenc}
-\usepackage{tikz,booktabs}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{tikz,booktabs,colortbl}
 \usetikzlibrary{arrows.meta, positioning, fit, shapes.geometric, decorations.pathreplacing}
+
+% Slide titles: Arial-like (Helvetica) 20 pt, regular weight, black on white
+\setbeamercolor{frametitle}{fg=black,bg=white}
+\setbeamerfont{frametitle}{size=\fontsize{20}{24}\selectfont,series=\mdseries,family=\sffamily}
+\setbeamercolor{title}{fg=black}
+\setbeamerfont{title}{size=\fontsize{20}{24}\selectfont,series=\mdseries}
 
 \title{LU Solver on the GPU}
 \subtitle{From FP64 kernels to tensor cores, watched by \textsc{NixNan}}
@@ -19,6 +27,11 @@
                   minimum height=1.5cm, align=center, font=\scriptsize,
                   fill=blue!7, text width=2.3cm},
   flowarrow/.style={-{Stealth[length=2.2mm, width=1.6mm]}, thick},
+  redbox/.style={draw, thick, rounded corners=2pt, align=center, font=\scriptsize, fill=red!12, minimum height=1.1cm},
+  graybox/.style={draw, thick, align=center, font=\scriptsize, fill=gray!10, minimum height=1.1cm},
+  bluebox/.style={draw, thick, rounded corners=2pt, align=center, font=\scriptsize, fill=blue!7, minimum height=1.1cm},
+  greenbox/.style={draw, thick, rounded corners=2pt, align=center, font=\scriptsize, fill=green!12, minimum height=1.1cm},
+  orangebox/.style={draw, thick, rounded corners=2pt, align=center, font=\scriptsize, fill=orange!20, minimum height=1.1cm},
   contnode/.style={draw, circle, thick, minimum size=5mm, inner sep=0pt,
                    font=\scriptsize\bfseries},
 }
@@ -129,10 +142,182 @@ Kernel & Launches & First launch (\textmu s) & Median later (\textmu s) & Ratio\
 
 \vspace{3mm}
 \begin{itemize}\small
-\item First launch of every kernel: $\approx$280--330~ms. Later launches: $\approx$20--25~\textmu s, four to five orders of magnitude less.
+\item First launch of every kernel: $\approx$280--330~ms. Later launches: $\approx$20--25~\textmu s.
 \item The timer starts \emph{before} NVBit rewrites the kernel's SASS (once per function) and stops after, so the first number is instrumentation cost, not kernel time.
-\item Kernels launched once (last three rows) only ever show this one-time cost.
-\item Library-heavy binaries pay far more: the cuSOLVER-based \texttt{pytorch\_slogdet} run was killed at 120~s during instrumentation.
+\item The last three rows contain kernels that launched only once.
+\item Library-heavy binaries take more to instrument: the cuSOLVER-based \texttt{pytorch\_slogdet} run was killed at 120~s during instrumentation.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Before the clamp: a silent failure}
+\centering
+\begin{tikzpicture}[node distance=5mm, scale=0.9, transform shape]
+  \node[graybox, text width=2.2cm] (a) {\texttt{bad\_matrix.csv}\\FP64, $20{\times}20$};
+  \node[bluebox, right=of a, text width=3.0cm] (e) {\texttt{eliminate\_kernel}\\no $\epsilon$-clamp};
+  \node[graybox, right=of e, text width=3.0cm] (p) {pivot $|U_{kk}|$\\6.9e-17 (tiny, not 0)};
+  \node[bluebox, right=of p, text width=3.4cm] (b) {\texttt{backward\_substitution}\\$\div$ 6.9e-17: huge, finite};
+  \node[redbox, right=of b, text width=1.9cm] (x) {$x\approx 10^{17}$\\finite, wrong};
+  \foreach \u/\v in {a/e,e/p,p/b,b/x} \draw[flowarrow] (\u) -- (\v);
+\end{tikzpicture}
+
+\vspace{4mm}\small
+\begin{tabular}{lcc}
+\toprule
+ & \texttt{matrix.csv} & \texttt{bad\_matrix.csv}\\
+\midrule
+Smallest pivot $|U_{kk}|$ (read back from the GPU) & 1.445 & 6.9e-17\\
+Residual $\|Ax-b\|_2$ & 9.7e-16 & \cellcolor{red!12}33.9\\
+Solution $x$ & $\approx 1$, finite & up to 1.7e17, finite\\
+nixnan exceptions (all precisions, memory) & none & \cellcolor{red!12}none\\
+\bottomrule
+\end{tabular}
+
+\vspace{4mm}
+\fcolorbox{black}{red!12}{\parbox{0.85\textwidth}{\centering
+The program exits 0 and prints numbers. Only the residual shows that something is wrong.\\
+nixnan has nothing to report: no instruction produced a NaN, an Inf or a division by zero.}}
+
+\vfill{\tiny Runs under FP64, no clamp, plain \texttt{LD\_PRELOAD} run; \texttt{logs/clamp\_story/fp64\_clampoff\_*}}
+\end{frame}
+
+\begin{frame}[fragile]{The defensive fix: snap tiny values to zero}
+\begin{semiverbatim}\footnotesize
+val = U[j][l] - L[j][k] * U[k][l];
+if (fabs(val) < 10.0 * DBL_EPSILON)   // 2.2e-15
+    val = 0.0;     // set to zero if close to machine epsilon
+U[j][l] = val;
+\end{semiverbatim}
+{\tiny in \texttt{eliminate\_kernel} (\texttt{lu\_solve\_gpu.cu}, lines 210--211)}
+
+\vspace{3mm}\centering
+\begin{tikzpicture}[node distance=5mm]
+  \node[graybox, text width=2.2cm] (b1) {pivot candidate\\6.9e-17};
+  \node[bluebox, right=of b1, text width=2.4cm] (b2) {$|val| < 2.2\text{e-}15$\\$\Rightarrow val = 0.0$};
+  \node[graybox, right=of b2, text width=2.2cm] (b3) {pivot is exactly\\0.0};
+  \node[bluebox, right=of b3, text width=3.6cm] (b4) {\texttt{compute\_multipliers}\\$L = U / 0.0 \Rightarrow \pm$Inf};
+  \node[redbox, right=of b4, text width=2.2cm] (b5) {Inf, then NaN\\through the solve};
+  \foreach \u/\v in {b1/b2,b2/b3,b3/b4,b4/b5} \draw[flowarrow] (\u) -- (\v);
+\end{tikzpicture}
+
+\vspace{3mm}\raggedright\small
+\begin{itemize}
+\item Intent: remove round-off noise, keep zeros exact, make a singular matrix visible.
+\item Effect here: ``inaccurate'' (residual 33.9) becomes ``divide by zero'', and the failure is now apparent.
+\item The clamp's threshold is absolute (2.2e-15), whatever the scale of the matrix.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Stage 1 results: well-conditioned vs ill-conditioned input}
+\centering\small
+\begin{tabular}{lrr}
+ & \texttt{matrix.csv} & \texttt{bad\_matrix.csv}\\
+\midrule
+Residual $\|Ax-b\|_2$ (uninstrumented) & 9.68e-16 & nan\\
+Binade-threshold reports & 99 & 63\\
+FP64 NaN (repeats) & 0 (0) & 316 (2171)\\
+FP64 Infinity (repeats) & 0 (0) & 4 (0)\\
+FP64 Division-by-zero (repeats) & 0 (0) & 4 (4)\\
+\bottomrule
+\end{tabular}
+
+\vspace{6mm}
+\fcolorbox{black}{green!12}{\parbox{0.38\textwidth}{\centering\texttt{matrix.csv}\\clean solution, no exceptions}}\hfill
+\fcolorbox{black}{red!12}{\parbox{0.38\textwidth}{\centering\texttt{bad\_matrix.csv}\\near-zero pivot $\to$ division by zero $\to$ NaN through the whole solve}}
+\end{frame}
+
+\begin{frame}[fragile]{Following the first exception back to the clamp}
+{\small \texttt{PRINT\_ILL\_INSTR=1 ENABLE\_FUN\_DETAIL=1} (FP64, clamp on, \texttt{bad\_matrix.csv}); the first report:}
+
+\vspace{1mm}
+\fcolorbox{black}{gray!10}{\parbox{0.95\textwidth}{\scriptsize\ttfamily
+error [div0] detected in operand 1 of instruction MUFU.RCP64H R3, R5\\
+in function compute\_multipliers\_kernel at lu\_solve\_gpu\_clamp\_study.cu:216\ \ of type f64}}
+
+\vspace{2mm}{\small Line 216 is the division $L_{jk}=U_{jk}/U_{kk}$: the reciprocal of the zeroed pivot is the first thing that goes wrong.}
+
+\vspace{3mm}\centering
+\begin{tikzpicture}[node distance=3mm]
+  \node[orangebox, text width=2.1cm] (k1) {\texttt{\tiny compute\_multipliers}\\62 exceptions\\div0, Inf, NaN};
+  \node[redbox, right=of k1, text width=2.1cm] (k2) {\texttt{\scriptsize eliminate}\\4 exceptions\\NaN into $U$};
+  \node[redbox, right=of k2, text width=2.1cm] (k3) {\texttt{\scriptsize find\_pivot}\\2 exceptions\\NaN in column};
+  \node[redbox, right=of k3, text width=2.1cm] (k4) {\texttt{\scriptsize forward\_subst.}\\91 exceptions\\NaN in $y$};
+  \node[redbox, right=of k4, text width=2.1cm] (k5) {\texttt{\scriptsize backward\_subst.}\\172 exceptions\\NaN in $x$};
+  \foreach \u/\v in {k1/k2,k2/k3,k3/k4,k4/k5} \draw[flowarrow] (\u) -- (\v);
+\end{tikzpicture}
+
+\vspace{3mm}\raggedright\small
+\begin{itemize}
+\item The first report names the kernel, the instruction and the source line; the rest is propagation.
+\item The cause is upstream of it: the clamp wrote 0.0 into the pivot. nixnan shows where the zero is divided by, not why it is zero.
+\item Counts are per kernel, from 331 detail lines (\texttt{run\_clamp\_story.sh step2}).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Binary instrumentation reveals exceptions you did not expect}
+\small
+\begin{itemize}
+\item The source computes only in double, yet \texttt{bad\_matrix.csv} also reports 6 FP32 NaN detections (93 repeats).
+\item Cause: \texttt{ptxas} uses the idiom \texttt{FFMA R8, RZ, R5, R3} ($0\times$R5$+$R3 $=$ R3) as a register move, shuffling the 32-bit halves of a double. nixnan sees an f32 \texttt{FFMA} whose operand R5 decodes as NaN.
+\item Lesson: a SASS-level detector reports what the compiled code does, not what the source says. A nonzero count in a format the source never uses is not necessarily that format's arithmetic.
+\end{itemize}
+\vspace{4mm}\centering
+\begin{tikzpicture}[node distance=6mm]
+  \node[graybox, text width=2.4cm] (d) {double\\64 bits = hi $|$ lo};
+  \node[graybox, right=of d, text width=2.2cm] (r) {R5\\one 32-bit half};
+  \node[bluebox, right=of r, text width=3.6cm] (f) {\texttt{FFMA R8, RZ, R5, R3}\\$0\times$R5$+$R3: a register move};
+  \node[redbox, right=of f, text width=1.8cm] (g) {flagged\\f32 NaN};
+  \foreach \u/\v in {d/r,r/f,f/g} \draw[flowarrow] (\u) -- (\v);
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}{The same two steps in FP32, and at $128{\times}128$}
+\centering\scriptsize
+\begin{tabular}{lcccccl}
+\toprule
+bad matrix & no clamp: pivot & residual & nixnan & clamp: pivot & residual & clamp: nixnan\\
+\midrule
+FP64 $20{\times}20$ & 6.9e-17 & \cellcolor{red!12}33.9 & \cellcolor{red!12}none & 0.0 & \cellcolor{red!12}NaN & NaN 316, Inf 4, Div0 4\\
+FP32 $20{\times}20$ & 3.0e-8 & \cellcolor{red!12}26.2 & \cellcolor{red!12}none & 0.0 & \cellcolor{red!12}NaN & NaN 253, Inf 8, Div0 2\\
+FP64 $128{\times}128$ & 1.1e-15 & \cellcolor{red!12}219 & \cellcolor{red!12}none & 0.0 & \cellcolor{red!12}NaN & NaN 142, Inf 19, $-$Inf 2, Div0 2\\
+FP32 $128{\times}128$ & 1.0e-6 & \cellcolor{red!12}92.8 & \cellcolor{red!12}none & 0.0 & \cellcolor{red!12}NaN & NaN 107, Inf 21, $-$Inf 2, Div0 1\\
+\bottomrule
+\end{tabular}
+
+\vspace{3mm}\raggedright\footnotesize
+\begin{itemize}
+\item Without the clamp: finite wrong answers (residual 26--219) and nothing for nixnan to report, in both precisions and both sizes. With it: exact zero pivot, NaN, and nixnan counts the NaN, Inf and division by zero.
+\item The well-conditioned matrices stay clean in every configuration (residual 1e-15 in FP64, 5e-7 in FP32; no exceptions).
+\item $128{\times}128$ matrix: product of two perturbed tridiagonal bands, cond $\approx 3\times10^{17}$ (80-digit arithmetic; \texttt{gen\_matrix\_n.py}); \texttt{bad\_matrix.csv}: $\approx 2\times10^{17}$.
+\item FP32 solves a rounded copy of the matrix. Its pivot at $128{\times}128$ (1.03e-6) sits just under the FP32 clamp threshold (1.19e-6): one seed, no claim about other matrices.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{What each check can see: nixnan, the residual, a pivot check}
+\centering\small
+\begin{tabular}{lcc}
+\toprule
+ & v1: no clamp & v2: clamp\\
+\midrule
+nixnan (NaN / Inf / div-by-zero) & \cellcolor{red!12}blind & \cellcolor{green!12}finds it: kernel, instruction, line\\
+Residual $\|Ax-b\|$ (one matrix-vector product) & \cellcolor{green!12}33.9: finds it & \cellcolor{green!12}NaN: finds it\\
+Pivot / condition check before dividing & \cellcolor{green!12}finds it, before the solve & \cellcolor{green!12}finds it, before the solve\\
+\bottomrule
+\end{tabular}
+
+\vspace{4mm}
+\begin{tikzpicture}[node distance=10mm]
+  \node[redbox, text width=3.4cm] (v1) {v1: no clamp\\residual 33.9, nothing else};
+  \node[orangebox, right=of v1, text width=3.8cm] (v2) {v2: add $\epsilon$-clamp\\NaN; nixnan points at line 216};
+  \node[greenbox, right=of v2, text width=3.8cm] (v3) {v3 (proposed, not run)\\check pivots / rcond, stop with an error};
+  \draw[flowarrow] (v1) -- (v2);
+  \draw[flowarrow] (v2) -- (v3);
+\end{tikzpicture}
+
+\vspace{3mm}\raggedright\footnotesize
+\begin{itemize}
+\item nixnan finds exceptions, not ill-conditioning: v1 is invisible to it. A residual or pivot check covers that gap.
+\item The clamp did not fix the problem; it moved it from ``silently wrong'' to ``divide by 0.0''.
+\item A sound check is relative (pivot against the matrix norm) and reports an error (cf.\ LAPACK's \texttt{info} and \texttt{rcond}).
 \end{itemize}
 \end{frame}
 

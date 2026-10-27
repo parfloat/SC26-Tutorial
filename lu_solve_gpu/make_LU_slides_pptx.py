@@ -22,7 +22,7 @@ GRAY = RGBColor(0xEE, 0xEE, 0xEE)
 GREEN = RGBColor(0xD9, 0xF2, 0xD9)
 FONT = "Calibri"
 TITLE_FONT = "Arial"
-TITLE_SIZE = 25
+TITLE_SIZE = 20
 MONO = "Consolas"
 
 prs = Presentation()
@@ -81,7 +81,7 @@ def title_bar(slide, text, mono=False):
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     p = tf.paragraphs[0]
     p.alignment = PP_ALIGN.LEFT
-    add_runs(p, text, TITLE_SIZE, RGBColor(0, 0, 0), TITLE_FONT, bold=True)
+    add_runs(p, text, TITLE_SIZE, RGBColor(0, 0, 0), TITLE_FONT, bold=False)
 
 
 def box(slide, x, y, w, h, lines, fill=BLUE, size=11, shape=MSO_SHAPE.ROUNDED_RECTANGLE,
@@ -125,7 +125,7 @@ def arrow(slide, a, b, side_a="r", side_b="l"):
 def slide_cover():
     s = prs.slides.add_slide(BLANK)
     black = RGBColor(0, 0, 0)
-    textbox(s, 0.9, 2.3, 11.5, 1.2, ["LU Solver on the GPU"], size=TITLE_SIZE, color=black, bold=True,
+    textbox(s, 0.9, 2.3, 11.5, 1.2, ["LU Solver on the GPU"], size=TITLE_SIZE, color=black, bold=False,
             font=TITLE_FONT)
     textbox(s, 0.9, 3.5, 11.5, 0.8,
             ["From FP64 kernels to tensor cores, watched by NixNan"], size=26, color=black)
@@ -258,11 +258,11 @@ def slide_time_kernels():
             p.alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.RIGHT
             add_runs(p, t, 13, INK, MONO if c == 0 else FONT)
     bullets = [
-        "First launch of every kernel: ≈280–330 ms. Later launches: ≈20–25 µs, four to five orders of magnitude less.",
+        "First launch of every kernel: ≈280–330 ms. Later launches: ≈20–25 µs.",
         "The timer starts before NVBit rewrites the kernel’s SASS (once per function) and stops after, so the "
         "first number is instrumentation cost, not kernel time.",
-        "Kernels launched once (last three rows) only ever show this one-time cost.",
-        "Library-heavy binaries pay far more: the cuSOLVER-based pytorch_slogdet run was killed at 120 s "
+        "The last three rows contain kernels that launched only once.",
+        "Library-heavy binaries take more to instrument: the cuSOLVER-based pytorch_slogdet run was killed at 120 s "
         "during instrumentation.",
     ]
     tb = s.shapes.add_textbox(Inches(0.7), Inches(4.95), Inches(11.9), Inches(2.3))
@@ -294,8 +294,8 @@ def slide_stage1_results():
     for c, t in enumerate(["", "matrix.csv", "bad_matrix.csv"]):
         cell = tbl.cell(0, c)
         cell.fill.solid()
-        cell.fill.fore_color.rgb = DARK
-        add_runs(cell.text_frame.paragraphs[0], t, 16, RGBColor(0xFF, 0xFF, 0xFF), MONO, bold=True)
+        cell.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        add_runs(cell.text_frame.paragraphs[0], t, 16, INK, MONO, bold=True)
         cell.text_frame.paragraphs[0].alignment = PP_ALIGN.RIGHT if c else PP_ALIGN.LEFT
     for r, row in enumerate(STAGE1, start=1):
         for c, t in enumerate(row):
@@ -714,7 +714,7 @@ def slide_story_silent():
         ["The program exits 0 and prints numbers. Only the residual shows that something is wrong.",
          "nixnan has nothing to report: no instruction produced a NaN, an Inf or a division by zero."],
         RED, size=16)
-    textbox(s, 1.2, 6.8, 10.9, 0.4, ["FP64, no clamp, plain LD_PRELOAD run; logs/clamp_story/fp64_clampoff_*"], size=11,
+    textbox(s, 1.2, 6.8, 10.9, 0.4, ["Runs under FP64, no clamp, plain LD_PRELOAD run; logs/clamp_story/fp64_clampoff_*"], size=11,
             color=RGBColor(0x55, 0x55, 0x55))
 
 
@@ -744,7 +744,7 @@ def slide_story_clamp():
     for a, b in ((b1, b2), (b2, b3), (b3, b4), (b4, b5)):
         arrow(s, a, b)
     bl = ["Intent: remove round-off noise, keep zeros exact, make a singular matrix visible.",
-          "Effect here: “inaccurate” (residual 33.9) becomes “divide by zero”, and the failure is now loud.",
+          "Effect here: “inaccurate” (residual 33.9) becomes “divide by zero”, and the failure is now apparent.",
           "The clamp’s threshold is absolute (2.2e-15), whatever the scale of the matrix."]
     tb = s.shapes.add_textbox(Inches(0.7), Inches(5.0), Inches(11.9), Inches(2.0))
     tf = tb.text_frame; tf.word_wrap = True
@@ -838,7 +838,7 @@ def slide_story_lesson():
     arrow(s, v2, v3)
     bl = ["nixnan finds exceptions, not ill-conditioning: v1 is invisible to it. A residual or pivot check covers that gap.",
           "The clamp did not fix the problem; it moved it from “silently wrong” to “divide by 0.0”.",
-          "A sound check is relative (pivot against the matrix norm) and reports an error, as LAPACK’s info and rcond do."]
+          "A sound check is relative (pivot against the matrix norm) and reports an error (cf. LAPACK’s info and rcond)."]
     tb = s.shapes.add_textbox(Inches(0.7), Inches(5.45), Inches(12.0), Inches(1.9))
     tf = tb.text_frame; tf.word_wrap = True
     for i, t in enumerate(bl):
