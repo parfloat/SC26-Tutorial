@@ -244,8 +244,18 @@ run_hello_nixnan() {
 }
 
 # ----------------------------------------------------------------------
+# lu_solve_gpu/ clamp story -- silent failure, epsilon clamp, loud failure (FP64/FP32, 20x20 and 128x128)
+# ----------------------------------------------------------------------
+run_lu_clamp_story() {
+    section "lu_solve_gpu/ clamp story"
+    cd "$SCRIPT_DIR/lu_solve_gpu"
+    NIXNAN_LIB="$NIXNAN_LIB" ./run_clamp_story.sh all
+    cd "$SCRIPT_DIR"
+}
 
-ALL_STUDIES=(hello_nixnan tc_matmult rd_nixnan lu_solve_gpu mpir_gpu hec_atan2 hec_fluidSim pytorch_slogdet karpathy_ngram sru_study)
+# ----------------------------------------------------------------------
+
+ALL_STUDIES=(hello_nixnan tc_matmult rd_nixnan lu_solve_gpu lu_clamp_story mpir_gpu hec_atan2 hec_fluidSim pytorch_slogdet karpathy_ngram sru_study)
 
 usage() {
     echo "Usage: $0 [list | <study> [<study> ...]]"
@@ -259,6 +269,7 @@ run_study() {
         tc_matmult)       run_tc_matmult ;;
         rd_nixnan)        run_rd_nixnan ;;
         lu_solve_gpu)     run_lu_solve_gpu ;;
+        lu_clamp_story)   run_lu_clamp_story ;;
         mpir_gpu)         run_mpir_gpu ;;
         hec_atan2)        run_hec_atan2 ;;
         hec_fluidSim)     run_hec_fluidSim ;;

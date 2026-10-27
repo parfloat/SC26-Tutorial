@@ -657,8 +657,200 @@ def slide_fix_memory():
         add_runs(p, "•  " + t, 12)
 
 
+# --------------------------------------------------------------------------
+# Clamp story (data: logs/clamp_story/, reproduced by run_clamp_story.sh)
+# --------------------------------------------------------------------------
+RED = RGBColor(0xF9, 0xD9, 0xD9)
+WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+
+
+def data_table(slide, x, y, colw, header, rows, size=15, rowh=0.42, mono_header=False, fills=None):
+    shp = slide.shapes.add_table(len(rows) + 1, len(colw), Inches(x), Inches(y), Inches(sum(colw)),
+                                 Inches(rowh * (len(rows) + 1)))
+    tbl = shp.table
+    for i, wd in enumerate(colw):
+        tbl.columns[i].width = Inches(wd)
+    for c, t in enumerate(header):
+        cell = tbl.cell(0, c)
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = DARK
+        cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+        p = cell.text_frame.paragraphs[0]
+        p.alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.CENTER
+        add_runs(p, t, size, WHITE, MONO if mono_header else FONT, bold=True)
+    for r, row in enumerate(rows, start=1):
+        for c, t in enumerate(row):
+            cell = tbl.cell(r, c)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = (fills or {}).get((r, c)) or (GRAY if r % 2 else WHITE)
+            cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+            cell.margin_top = cell.margin_bottom = Inches(0.03)
+            p = cell.text_frame.paragraphs[0]
+            p.alignment = PP_ALIGN.LEFT if c == 0 else PP_ALIGN.CENTER
+            add_runs(p, t, size, INK, FONT)
+    return tbl
+
+
+def slide_story_silent():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "Before the clamp: a silent failure")
+    y, h = 1.25, 1.0
+    a = box(s, 0.5, y, 1.6, h, ["bad_matrix.csv", "FP64, 20×20"], GRAY, size=14, shape=MSO_SHAPE.RECTANGLE)
+    e = box(s, 2.5, y, 2.5, h, ["eliminate_kernel", "no ε-clamp"], BLUE, size=14, mono_first=True)
+    pv = box(s, 5.4, y, 2.5, h, ["pivot |U_{kk}|", "6.9e-17 (tiny, not 0)"], GRAY, size=14, shape=MSO_SHAPE.RECTANGLE)
+    bw = box(s, 8.3, y, 2.7, h, ["backward_substitution", "÷ 6.9e-17: huge, finite"], BLUE, size=14, mono_first=True)
+    x = box(s, 11.4, y, 1.45, h, ["*x* ≈ 10^{17}", "finite, wrong"], RED, size=14, shape=MSO_SHAPE.RECTANGLE)
+    arrow(s, a, e)
+    arrow(s, e, pv)
+    arrow(s, pv, bw)
+    arrow(s, bw, x)
+    data_table(s, 1.2, 2.85, [4.9, 2.6, 3.4], ["", "matrix.csv", "bad_matrix.csv"], [
+        ["Smallest pivot |U_{kk}| (read back from the GPU)", "1.445", "6.9e-17"],
+        ["Residual ‖*Ax − b*‖₂", "9.7e-16", "33.9"],
+        ["Solution *x*", "≈ 1, finite", "up to 1.7e17, finite"],
+        ["nixnan exceptions (all precisions, memory)", "none", "none"],
+    ], size=15, rowh=0.45, fills={(2, 2): RED, (4, 2): RED})
+    box(s, 1.2, 5.45, 10.9, 1.2,
+        ["The program exits 0 and prints numbers. Only the residual shows that something is wrong.",
+         "nixnan has nothing to report: no instruction produced a NaN, an Inf or a division by zero."],
+        RED, size=16)
+    textbox(s, 1.2, 6.8, 10.9, 0.4, ["FP64, no clamp, plain LD_PRELOAD run; logs/clamp_story/fp64_clampoff_*"], size=11,
+            color=RGBColor(0x55, 0x55, 0x55))
+
+
+def slide_story_clamp():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "The defensive fix: snap tiny values to zero")
+    code = ["val = U[j][l] - L[j][k] * U[k][l];",
+            "if (fabs(val) < 10.0 * DBL_EPSILON)   // 2.2e-15",
+            "    val = 0.0;                        // set to zero if close to machine epsilon",
+            "U[j][l] = val;"]
+    c = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.7), Inches(1.2), Inches(11.9), Inches(1.5))
+    c.fill.solid(); c.fill.fore_color.rgb = GRAY; c.line.color.rgb = INK; c.shadow.inherit = False
+    tf = c.text_frame; tf.word_wrap = True; tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    tf.margin_left = Inches(0.25)
+    for i, t in enumerate(code):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        add_runs(p, t, 16, INK, MONO)
+    textbox(s, 0.7, 2.75, 11.9, 0.4, ["in eliminate_kernel (lu_solve_gpu.cu, lines 210–211)"], size=12,
+            color=RGBColor(0x55, 0x55, 0x55))
+    y, h = 3.4, 1.15
+    b1 = box(s, 0.4, y, 2.0, h, ["pivot candidate", "6.9e-17"], GRAY, size=14, shape=MSO_SHAPE.RECTANGLE)
+    b2 = box(s, 2.75, y, 2.1, h, ["|val| < 2.2e-15", "⇒ val = 0.0"], BLUE, size=14)
+    b3 = box(s, 5.2, y, 1.9, h, ["pivot is exactly", "0.0"], GRAY, size=14, shape=MSO_SHAPE.RECTANGLE)
+    b4 = box(s, 7.45, y, 3.1, h, ["compute_multipliers", "*L* = *U* / 0.0 ⇒ ±Inf"], BLUE, size=14, mono_first=True)
+    b5 = box(s, 10.9, y, 2.0, h, ["Inf, then NaN", "through the solve"], RED, size=14, shape=MSO_SHAPE.RECTANGLE)
+    for a, b in ((b1, b2), (b2, b3), (b3, b4), (b4, b5)):
+        arrow(s, a, b)
+    bl = ["Intent: remove round-off noise, keep zeros exact, make a singular matrix visible.",
+          "Effect here: “inaccurate” (residual 33.9) becomes “divide by zero”, and the failure is now loud.",
+          "The clamp’s threshold is absolute (2.2e-15), whatever the scale of the matrix."]
+    tb = s.shapes.add_textbox(Inches(0.7), Inches(5.0), Inches(11.9), Inches(2.0))
+    tf = tb.text_frame; tf.word_wrap = True
+    for i, t in enumerate(bl):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(8)
+        add_runs(p, "•  " + t, 18)
+
+
+def slide_story_pinpoint():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "Following the first exception back to the clamp")
+    textbox(s, 0.6, 1.05, 12.1, 0.4,
+            ["PRINT_ILL_INSTR=1  ENABLE_FUN_DETAIL=1  (FP64, clamp on, bad_matrix.csv); the first report:"], size=15)
+    c = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.6), Inches(1.55), Inches(12.1), Inches(1.15))
+    c.fill.solid(); c.fill.fore_color.rgb = GRAY; c.line.color.rgb = INK; c.shadow.inherit = False
+    tf = c.text_frame; tf.word_wrap = True; tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    for i, t in enumerate(["error [div0] detected in operand 1 of instruction MUFU.RCP64H R3, R5",
+                           "in function compute_multipliers_kernel at lu_solve_gpu_clamp_study.cu:216  of type f64"]):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        add_runs(p, t, 14, INK, MONO)
+    textbox(s, 0.6, 2.8, 12.1, 0.5, ["Line 216 is the division *L_{jk} = U_{jk} / U_{kk}*: the reciprocal of the zeroed pivot "
+                                   "is the first thing that goes wrong."], size=16)
+    y, h = 3.75, 1.2
+    ks = [("compute_multipliers", "62", "div0, Inf, NaN"), ("eliminate", "4", "NaN into U"),
+          ("find_pivot", "2", "NaN in column"), ("forward_subst.", "91", "NaN in y"), ("backward_subst.", "172", "NaN in x")]
+    xs, w, gap = 0.6, 2.3, 0.15
+    prev = None
+    for i, (k, n, what) in enumerate(ks):
+        b = box(s, xs + i * (w + gap), y, w, h, [k, "%s exceptions" % n, what],
+                RED if i else RGBColor(0xFC, 0xE4, 0xC8), size=12, mono_first=True)
+        if prev is not None:
+            arrow(s, prev, b)
+        prev = b
+    bl = ["The first report names the kernel, the instruction and the source line; the rest is propagation.",
+          "The cause is upstream of it: the clamp wrote 0.0 into the pivot. nixnan shows where the zero is divided by, "
+          "not why it is zero.",
+          "Counts are per kernel, from 331 detail lines (run_clamp_story.sh step2)."]
+    tb = s.shapes.add_textbox(Inches(0.7), Inches(5.3), Inches(12.0), Inches(1.9))
+    tf = tb.text_frame; tf.word_wrap = True
+    for i, t in enumerate(bl):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(6)
+        add_runs(p, "•  " + t, 16)
+
+
+def slide_story_matrix():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "The same two steps in FP32, and at 128×128")
+    hdr = ["bad matrix", "no clamp: pivot", "residual", "nixnan", "clamp: pivot", "residual", "clamp: nixnan"]
+    rows = [["FP64  20×20", "6.9e-17", "33.9", "none", "0.0", "NaN", "NaN 316, Inf 4, Div0 4"],
+            ["FP32  20×20", "3.0e-8", "26.2", "none", "0.0", "NaN", "NaN 253, Inf 8, Div0 2"],
+            ["FP64  128×128", "1.1e-15", "219", "none", "0.0", "NaN", "NaN 142, Inf 19, −Inf 2, Div0 2"],
+            ["FP32  128×128", "1.0e-6", "92.8", "none", "0.0", "NaN", "NaN 107, Inf 21, −Inf 2, Div0 1"]]
+    fills = {}
+    for r in range(1, 5):
+        fills[(r, 2)] = RED
+        fills[(r, 3)] = RED
+        fills[(r, 5)] = RED
+    data_table(s, 0.4, 1.3, [1.8, 1.45, 1.15, 1.0, 1.4, 1.15, 4.55], hdr, rows, size=13, rowh=0.5, fills=fills)
+    bl = ["Without the clamp: finite wrong answers (residual 26–219) and nothing for nixnan to report, in both precisions "
+          "and both sizes. With it: exact zero pivot, NaN, and nixnan counts the NaN, Inf and division by zero.",
+          "The well-conditioned matrices stay clean in every configuration (residual 1e-15 in FP64, 5e-7 in FP32; no exceptions).",
+          "128×128 matrix: product of two perturbed tridiagonal bands, cond ≈ 3×10^{17} (80-digit arithmetic; "
+          "gen_matrix_n.py); bad_matrix.csv: ≈ 2×10^{17}.",
+          "FP32 solves a rounded copy of the matrix. Its pivot at 128×128 (1.03e-6) sits just under the FP32 clamp "
+          "threshold (1.19e-6): one seed, no claim about other matrices."]
+    tb = s.shapes.add_textbox(Inches(0.5), Inches(4.3), Inches(12.3), Inches(3.1))
+    tf = tb.text_frame; tf.word_wrap = True
+    for i, t in enumerate(bl):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(7)
+        add_runs(p, "•  " + t, 15)
+
+
+def slide_story_lesson():
+    s = prs.slides.add_slide(BLANK)
+    title_bar(s, "What each check can see: nixnan, the residual, a pivot check")
+    N = "blind"
+    data_table(s, 0.7, 1.25, [4.4, 3.6, 3.6], ["", "v1: no clamp", "v2: clamp"], [
+        ["nixnan (NaN / Inf / div-by-zero)", N, "finds it: kernel, instruction, line"],
+        ["Residual ‖*Ax − b*‖  (one matrix-vector product)", "33.9: finds it", "NaN: finds it"],
+        ["Pivot / condition check before dividing", "finds it, before the solve", "finds it, before the solve"],
+    ], size=15, rowh=0.62, fills={(1, 1): RED, (1, 2): GREEN, (2, 1): GREEN, (2, 2): GREEN, (3, 1): GREEN, (3, 2): GREEN})
+    y, h = 3.95, 1.25
+    v1 = box(s, 0.7, y, 3.4, h, ["v1: no clamp", "residual 33.9, nothing else"], RED, size=15)
+    v2 = box(s, 4.95, y, 3.6, h, ["v2: add ε-clamp", "NaN; nixnan points at line 216"], RGBColor(0xFC, 0xE4, 0xC8), size=15)
+    v3 = box(s, 9.4, y, 3.2, h, ["v3 (proposed, not run)", "check pivots / rcond, stop with an error"], GREEN, size=15)
+    arrow(s, v1, v2)
+    arrow(s, v2, v3)
+    bl = ["nixnan finds exceptions, not ill-conditioning: v1 is invisible to it. A residual or pivot check covers that gap.",
+          "The clamp did not fix the problem; it moved it from “silently wrong” to “divide by 0.0”.",
+          "A sound check is relative (pivot against the matrix norm) and reports an error, as LAPACK’s info and rcond do."]
+    tb = s.shapes.add_textbox(Inches(0.7), Inches(5.45), Inches(12.0), Inches(1.9))
+    tf = tb.text_frame; tf.word_wrap = True
+    for i, t in enumerate(bl):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.space_after = Pt(6)
+        add_runs(p, "•  " + t, 16)
+
+
 SLIDES = [slide_cover, slide_algorithm, slide_envvars, slide_time_kernels,
-          slide_stage1_results, slide_fp32_artifact, slide_tc_panel,
+          slide_story_silent, slide_story_clamp,
+          slide_stage1_results, slide_story_pinpoint, slide_fp32_artifact,
+          slide_story_matrix, slide_story_lesson, slide_tc_panel,
           slide_tc_exceptions, slide_where_backward, slide_where_why,
           slide_where_history, slide_fix_memory]
 
