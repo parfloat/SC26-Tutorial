@@ -210,23 +210,42 @@ run_karpathy_ngram() {
 run_sru_study() {
     section "sru_study/"
     cd "$SCRIPT_DIR/sru_study"
-    mkdir -p Logs
+    mkdir -p Logs_uninit_bug
 
     echo "-- iter-autonixnan (no sampling) --"
     "$ITER_AUTONIXNAN" -s 0 -t 600 -- python3 reproducer.py \
-        > Logs/iter-autonixnan-nosampling.log 2>&1
+        > Logs_uninit_bug/iter-autonixnan-nosampling.log 2>&1
 
     echo "-- straight nixnan, all kernels together, no sampling (~79s, no timeout wrapper --"
     echo "   see All-Runs.md for why: nixnan can catch SIGTERM and exit 0 mid-run) --"
     LD_PRELOAD="$NIXNAN_LIB" python3 -u reproducer.py \
-        > Logs/straight-nixnan.log 2>&1
+        > Logs_uninit_bug/straight-nixnan.log 2>&1
+
+    cd "$SCRIPT_DIR"
+}
+
+# ----------------------------------------------------------------------
+# hello_nixnan/ -- 58-line demo: exceptions in every precision, STG leaks, one tensor-core op
+# ----------------------------------------------------------------------
+run_hello_nixnan() {
+    section "hello_nixnan/"
+    cd "$SCRIPT_DIR/hello_nixnan"
+
+    echo "-- building (needs sm_80+) --"
+    nvcc -lineinfo -arch=native -o hello_nixnan hello_nixnan.cu
+
+    echo "-- plain nixnan run (report printed on exit) --"
+    LD_PRELOAD="$NIXNAN_LIB" ./hello_nixnan 2>&1 | tee hello_nixnan.report.run.log
+
+    echo "-- per-instruction detail (PRINT_ILL_INSTR) -> exceptions.md, hello_nixnan.detail.log --"
+    python3 collect_exceptions.py "$NIXNAN_LIB"
 
     cd "$SCRIPT_DIR"
 }
 
 # ----------------------------------------------------------------------
 
-ALL_STUDIES=(tc_matmult rd_nixnan lu_solve_gpu mpir_gpu hec_atan2 hec_fluidSim pytorch_slogdet karpathy_ngram sru_study)
+ALL_STUDIES=(hello_nixnan tc_matmult rd_nixnan lu_solve_gpu mpir_gpu hec_atan2 hec_fluidSim pytorch_slogdet karpathy_ngram sru_study)
 
 usage() {
     echo "Usage: $0 [list | <study> [<study> ...]]"
@@ -236,6 +255,7 @@ usage() {
 
 run_study() {
     case "$1" in
+        hello_nixnan)     run_hello_nixnan ;;
         tc_matmult)       run_tc_matmult ;;
         rd_nixnan)        run_rd_nixnan ;;
         lu_solve_gpu)     run_lu_solve_gpu ;;

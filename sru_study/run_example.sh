@@ -17,15 +17,15 @@ if [[ ! -x "$ITER_AUTONIXNAN" ]]; then
     exit 1
 fi
 
-mkdir -p Logs
+mkdir -p Logs_uninit_bug
 
 echo "-- iter-autonixnan (no sampling) --"
 "$ITER_AUTONIXNAN" -s 0 -t 600 -- python3 reproducer.py \
-    > Logs/iter-autonixnan-nosampling.log 2>&1
+    > Logs_uninit_bug/iter-autonixnan-nosampling.log 2>&1
 
 echo "-- straight nixnan, all kernels together, no sampling (~79s, no timeout wrapper --"
 echo "   see ../All-Runs.md for why: nixnan can catch SIGTERM and exit 0 mid-run) --"
 LD_PRELOAD="$NIXNAN_LIB" python3 -u reproducer.py \
-    > Logs/straight-nixnan.log 2>&1
+    > Logs_uninit_bug/straight-nixnan.log 2>&1
 
-echo "Done. See Logs/ for output."
+echo "Done. See Logs_uninit_bug/ for output."

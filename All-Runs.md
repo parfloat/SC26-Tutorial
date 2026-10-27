@@ -16,6 +16,28 @@ Tool locations referenced throughout:
 
 ---
 
+## hello_nixnan/
+
+A 58-line demo for the tutorial (copied from `nixnan/test/first_test/`). It
+raises exceptions in FP64, FP32, FP16 and BF16, stores the NaN results to
+global memory (STG), and runs one 16x16x16 FP16 tensor-core multiply with an
+Inf input. Needs sm_80+.
+
+```bash
+cd hello_nixnan
+nvcc -lineinfo -arch=native -o hello_nixnan hello_nixnan.cu
+LD_PRELOAD=../external/nixnan/nixnan.so ./hello_nixnan          # report on exit
+python3 collect_exceptions.py ../external/nixnan/nixnan.so      # PRINT_ILL_INSTR=1 ENABLE_FUN_DETAIL=1
+# or: ./run_all_examples.sh hello_nixnan
+```
+Result on the RTX 3090 (sm_86): FP16 NaN 1 / Inf 4; BF16 NaN 1 / Inf 3;
+FP32 NaN 3 / Inf 3 / Subnormal 1 / Div0 1; FP64 NaN 17 / Inf 2 / Div0 1;
+memory NaN 1 (FP16), 1 (BF16), 3 (FP32), 1 (FP64). Most of the FP64 NaN
+count comes from the `DFMA` expansion of `1.0/0.0`. The per-instruction
+breakdown is in `hello_nixnan/exceptions.md`.
+
+---
+
 ## tc_matmult/
 
 Benchmark kernels from Lei Mao's Tensor Core blog post (`leimao-mm.cu`) plus
@@ -650,7 +672,7 @@ mechanism.
 ```bash
 cd sru_study
 ../external/nixnan/bin/iter-autonixnan -s 0 -t 600 -- python3 reproducer.py \
-  > Logs/iter-autonixnan-nosampling.log 2>&1
+  > Logs_uninit_bug/iter-autonixnan-nosampling.log 2>&1
 ```
 Fast: Phase 1 (4 unique kernels, 10 total launches) took 3.876s baseline;
 each of Phase 2's 4 per-kernel whitelisted runs took ~4.3-4.4s -- SRU's
@@ -690,7 +712,7 @@ GPU-FPX's comment didn't detail.
 ```bash
 cd sru_study
 LD_PRELOAD=../external/nixnan/nixnan.so python3 -u reproducer.py \
-  > Logs/straight-nixnan.log 2>&1
+  > Logs_uninit_bug/straight-nixnan.log 2>&1
 ```
 Took 78.8s wall time (no per-kernel enumeration cost here, since all 4
 kernels are instrumented together in a single process rather than
@@ -727,7 +749,7 @@ file by hand:
 
 - `run_all_examples.sh` (repo root) -- one function per case study,
   builds what it needs and reproduces that study's documented run to the
-  same `Logs/`/`logs/` paths used throughout this file. `./run_all_examples.sh
+  same `Logs_uninit_bug/`/`logs/` paths used throughout this file. `./run_all_examples.sh
   list` lists study names; `./run_all_examples.sh <name> [<name> ...]`
   runs a subset; no arguments runs everything (~30+ minutes, dominated by
   `karpathy_ngram`'s one-time CUDA fatbinary enumeration cost).
