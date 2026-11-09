@@ -41,7 +41,7 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-NIXNAN_SO="${NIXNAN_SO:-../../nixnan.so}"
+NIXNAN_SO="${NIXNAN_SO:-../external/nixnan/nixnan.so}"
 EXECUTABLE="./lu_solve_gpu"
 BIN_SPEC_FILE="./bin_spec.json"
 LOG_DIR="./logs"
