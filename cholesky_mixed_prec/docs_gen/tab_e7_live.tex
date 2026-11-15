@@ -1,0 +1,15 @@
+\begin{tabular}{p{3.0cm}p{2.5cm}p{2.5cm}p{3.6cm}p{2.6cm}}
+\toprule
+case & without guard & guard, $\tau=100u$ & nixnan, no guard & nixnan, guard\\
+\midrule
+$A_\delta$, FP16 update, $\delta=2^{-12}$ & breakdown, bad pivot 33 & \textbf{stop at pivot 1} (rel $4.9\!\times\!10^{-4}$) & FP16 NaN 8 (1\,616), FP32 NaN 522 (319\,118), FP32 Memory NaN 4 (1\,620) & no exceptions\\
+FP32, $\kappa=10^{7}$ & ok, fwd $4.4\!\times\!10^{-2}$ & no trip & no exceptions & no exceptions\\
+mixed BF16, $\kappa=10^{2}$ & inaccurate, fwd $7.7\!\times\!10^{-3}$ & \textbf{stop at pivot 133} (rel $3.8\!\times\!10^{-1}$) & no exceptions & no exceptions\\
+mixed FP16, $\kappa=10^{2}$ & ok, fwd $1.0\!\times\!10^{-3}$ & no trip & FP16 Sub 8 (634) & FP16 Sub 8 (634)\\
+mixed FP16, $\kappa=10^{4}$ & inaccurate, fwd $5.9\!\times\!10^{-2}$ & \textbf{stop at pivot 147} (rel $4.1\!\times\!10^{-2}$) & FP16 Sub 8 (838) & FP16 Sub 8 (671)\\
+mixed FP16, $\kappa=10^{6}$ & breakdown, bad pivot 193 & \textbf{stop at pivot 83} (rel $4.2\!\times\!10^{-2}$) & FP16 NaN 10 (14), FP16 Sub 12 (952), FP32 NaN 513 (121\,662), FP32 Memory NaN 4 (20) & FP16 Sub 8 (293)\\
+mixed TF32, $\kappa=10^{3}$ & inaccurate, fwd $8.8\!\times\!10^{-3}$ & \textbf{stop at pivot 247} (rel $4.7\!\times\!10^{-2}$) & no exceptions & no exceptions\\
+naive FP16, $\kappa=10^{3}$ & inaccurate, fwd $1.3\!\times\!10^{-1}$ & \textbf{stop at pivot 251} (rel $4.6\!\times\!10^{-2}$) & FP16 Sub 57 (40\,314) & FP16 Sub 4 (40\,184)\\
+naive FP16, $\kappa=10^{4}$ & breakdown, bad pivot 253 & \textbf{stop at pivot 147} (rel $4.2\!\times\!10^{-2}$) & FP16 NaN 34 (97\,653), FP16 Sub 82 (63\,676), FP32 NaN 27 (542) & FP16 Sub 4 (48\,674)\\
+\bottomrule
+\end{tabular}

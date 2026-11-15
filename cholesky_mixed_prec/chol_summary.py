@@ -111,10 +111,10 @@ def e5_cases(path="logs/e5/sweep.log"):
         return out
     for line in open(path, errors="replace"):
         m = re.match(r"CASE config=(\S+) kappa=(\S+) seed=(\d+) RESULT .*? status=(\S+) cause=\S+ stored_changed=\d "
-                     r"fact_err=(\S+) fact_err_stored=\S+ resid=(\S+) fwd_err=(\S+) first_bad_pivot=(\S+)", line)
+                     r"fact_err=(\S+) fact_err_stored=\S+ resid=(\S+) fwd_err=(\S+) first_bad_pivot=(\S+)(?: t_ms=\S+ min_rel_pivot=(\S+))?", line)
         if m:
             g = m.groups()
-            out[(g[0], g[1], int(g[2]))] = dict(status=g[3], fact_err=g[4], resid=g[5], fwd_err=g[6], bad=g[7])
+            out[(g[0], g[1], int(g[2]))] = dict(status=g[3], fact_err=g[4], resid=g[5], fwd_err=g[6], bad=g[7], minrel=g[8])
     return out
 
 def e5_points():
@@ -415,3 +415,45 @@ def e6_report():
                 print("   %-16s threshold reports %-6d exception lines %d" % (lab, t.count("reached threshold"), t.count("error [")))
 
 e6_report()
+
+
+def e7_report():
+    if not glob.glob("logs/e7/*_plain_native.log"):
+        return
+    U = {"F32": 2.0 ** -24, "mixed-F16": 2.0 ** -11, "mixed-TF32": 2.0 ** -11, "naive-F16": 2.0 ** -11, "mixed-BF16": 2.0 ** -8}
+    cases = e5_cases()
+    print("\nE7a: guard threshold tau = c u, evaluated on the 150 E5 runs from min_rel_pivot (a run is flagged if min_rel_pivot <= c u)")
+    print("  Cell = non-ok runs flagged / non-ok runs, and ok runs flagged / ok runs (false alarms)")
+    cs = (1, 10, 30, 100, 300)
+    print("  %-11s" % "config" + "".join("%-22s" % ("c=%d" % c) for c in cs))
+    for cf in E5_CONFIGS:
+        rows = [r for (c, k, s), r in cases.items() if c == cf and r.get("minrel")]
+        row = "  %-11s" % cf
+        for c in cs:
+            tau = c * U[cf]
+            bad = [r for r in rows if r["status"] != "ok"]; ok = [r for r in rows if r["status"] == "ok"]
+            row += "%-22s" % ("%d/%d, %d/%d" % (sum(float(r["minrel"]) <= tau for r in bad), len(bad), sum(float(r["minrel"]) <= tau for r in ok), len(ok)))
+        print(row)
+    print("E7b: live runs, tau = 100 u. Native status without / with the guard; nixnan counters without / with the guard")
+    for plain in sorted(glob.glob("logs/e7/*_plain_native.log")):
+        tag = os.path.basename(plain)[:-len("_plain_native.log")]
+        txt = open(plain, errors="replace").read(); g = open(plain.replace("_plain_", "_guard_"), errors="replace").read()
+        pm = re.search(r"status=(\S+).*?fwd_err=(\S+) first_bad_pivot=(\S+)", txt); gm = re.search(r"GUARD pivot (\d+): relative pivot (\S+) <= tau ([^\s;]+)", g)
+        gs = re.search(r"status=(\S+)", g)
+        def nx(f):
+            return nixnan(f) if os.path.exists(f) and has_report(f) else "?"
+        print("  %-22s plain: %s fwd=%s bad_pivot=%s | guard: %s | nixnan plain: %s | nixnan guard: %s" % (
+            tag, pm.group(1) if pm else "?", pm.group(2) if pm else "?", pm.group(3) if pm else "?",
+            ("status=%s, pivot %s rel %s <= %s" % (gs.group(1), gm.group(1), gm.group(2), gm.group(3))) if gm else "status=%s (no trip)" % (gs.group(1) if gs else "?"),
+            nx(plain.replace("_native", "_nixnan")), nx(plain.replace("_plain_native", "_guard_nixnan"))))
+    if os.path.exists("logs/e7/heldout.log"):
+        print("E7c: held-out kappa (150..700, seeds 10-12): status, forward error, min_rel_pivot / u, and whether tau = 100 u / 300 u would trip")
+        for line in open("logs/e7/heldout.log", errors="replace"):
+            m = re.match(r"HELD config=(\S+) kappa=(\S+) seed=(\d+) RESULT .*? status=(\S+) .*fwd_err=(\S+) first_bad_pivot=\S+ t_ms=\S+ min_rel_pivot=(\S+)", line)
+            if m:
+                c, k, sd, st, fw, mr = m.groups(); r = float(mr) / U[c]
+                print("  %-10s kappa %-4s seed %s: %-10s fwd %-9s min_rel/u = %6.0f   trip@100u: %-3s trip@300u: %s" % (c, k, sd, st, fw, r, "yes" if r <= 100 else "no", "yes" if r <= 300 else "no"))
+    if os.path.exists("logs/e7/cost.tsv"):
+        print("  cost of the per-step check: " + "; ".join(open("logs/e7/cost.tsv").read().split("\n")))
+
+e7_report()

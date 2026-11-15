@@ -90,56 +90,56 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: ----------------------------------------------------------------------------------
 #nixnan: Initializing GPU context...
 #nixnan: Instrumenting all functions
-#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*)] ...
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*)] execution time: 359126 microseconds
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R2, -QNAN  ;
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] ...
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] execution time: 320770 microseconds
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
 #nixnan: running kernel [trsm_panel_kernel(float*, int, int)] ...
-#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 331091 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 300062 microseconds
 #nixnan: running kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] ...
-#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 290803 microseconds
+#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 268800 microseconds
 #nixnan: running kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] ...
-#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 328380 microseconds
+#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 287933 microseconds
 #nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R12, R12, R24, RZ ; in function void tc_update_kernel of type f16
 #nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R12, R12, R24, RZ ; in function void tc_update_kernel of type f16
-#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R8, R12.reuse, R8, RZ ; in function void tc_update_kernel of type f16
-#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R12, R4, R18, R12 ; in function void tc_update_kernel of type f16
-#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R8, R12.reuse, R8, RZ ; in function void tc_update_kernel of type f16
 #nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R8, R4.reuse, R26, R8 ; in function void tc_update_kernel of type f16
-#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R8, R4.reuse, R26, R8 ; in function void tc_update_kernel of type f16
 #nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R12, R4, R18, R12 ; in function void tc_update_kernel of type f16
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*)] execution time: 46 microseconds
-#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 40 microseconds
-#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 40 microseconds
-#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 21 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*)] execution time: 21 microseconds
-#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 20 microseconds
-#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 14 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*)] execution time: 12 microseconds
-#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 13 microseconds
-#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 11 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*)] execution time: 12 microseconds
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R8, R12.reuse, R8, RZ ; in function void tc_update_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R12, R4, R18, R12 ; in function void tc_update_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HMMA.16816.F32 R8, R4.reuse, R26, R8 ; in function void tc_update_kernel of type f16
+#nixnan: error [subnormal] detected in operand 2 of instruction HMMA.16816.F32 R8, R12.reuse, R8, RZ ; in function void tc_update_kernel of type f16
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] execution time: 45 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 39 microseconds
+#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 46 microseconds
+#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 25 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] execution time: 28 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 21 microseconds
+#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 22 microseconds
+#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] execution time: 15 microseconds
 #nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 15 microseconds
 #nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 11 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*)] execution time: 12 microseconds
+#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] execution time: 13 microseconds
 #nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 14 microseconds
-#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 15 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*)] execution time: 11 microseconds
-#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 13 microseconds
-#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 12 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*)] execution time: 10 microseconds
+#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [void convert_panel_kernel<__half>(float const*, __half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [void tc_update_kernel<__half>(float*, __half const*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] execution time: 12 microseconds
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
 #nixnan: running kernel [forward_kernel(float const*, float const*, float*, int)] ...
-#nixnan: Kernel [forward_kernel(float const*, float const*, float*, int)] execution time: 310831 microseconds
+#nixnan: Kernel [forward_kernel(float const*, float const*, float*, int)] execution time: 289832 microseconds
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
 #nixnan: running kernel [backward_kernel(float const*, float const*, float*, int)] ...
-#nixnan: Kernel [backward_kernel(float const*, float const*, float*, int)] execution time: 302086 microseconds
-RESULT matrix=Q_n256_k1e2_s0.csv config=F32TC store=f32 path=blocked-tc-f16 n=256 log2delta=0 kappa=nan status=ok cause=- stored_changed=0 fact_err=1.121e-04 fact_err_stored=1.121e-04 resid=1.078e-04 fwd_err=1.009e-03 first_bad_pivot=-1 t_ms=0
+#nixnan: Kernel [backward_kernel(float const*, float const*, float*, int)] execution time: 280691 microseconds
+RESULT matrix=Q_n256_k1e2_s0.csv config=F32TC store=f32 path=blocked-tc-f16 n=256 log2delta=0 kappa=nan status=ok cause=- stored_changed=0 fact_err=1.121e-04 fact_err_stored=1.121e-04 resid=1.078e-04 fwd_err=1.009e-03 first_bad_pivot=-1 t_ms=0 min_rel_pivot=2.052e-01
 #nixnan: Finalizing GPU context...
 
 #nixnan: ------------ nixnan Report -----------

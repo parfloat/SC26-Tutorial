@@ -31,15 +31,37 @@
 #define REAL double
 #endif
 typedef REAL real;
+
+// E7: relative pivot guard, compiled only with -DGUARD (the default build is the one used for E0-E4, E6 and the sqrt study, unchanged).
+//   rel = pivot / (original diagonal entry); minrel keeps the smallest rel seen (float bits); --guard TAU with TAU > 0 records a pivot
+//   with !(rel > TAU) (NaN included) and returns BEFORE the sqrt, so no NaN is created; the host stops at the next check.
+#ifdef GUARD
+#define GUARD_PARAMS(T) , const T *d0, float tau, unsigned *minrel
+#define GUARD_ARGS , dd0, g_tau, dmin
+#define MR_FMT " min_rel_pivot=%.3e"
+#define MR_ARG , minrel
+#else
+#define GUARD_PARAMS(T)
+#define GUARD_ARGS
+#define MR_FMT ""
+#define MR_ARG
+#endif
 #define IDX(i, j, n) ((size_t)(i) * (n) + (j))
 #define CK(x) do { cudaError_t e_ = (x); if (e_ != cudaSuccess) { \
     fprintf(stderr, "CUDA error %s at %s:%d\n", cudaGetErrorString(e_), __FILE__, __LINE__); exit(2); } } while (0)
 
 // ------------------------------------------------------------------ unblocked path
-__global__ void pivot_kernel(real *A, int n, int k, int *bad)
+__global__ void pivot_kernel(real *A, int n, int k, int *bad GUARD_PARAMS(real))
 {
     real s = A[IDX(k, k, n)];
+#ifdef GUARD
+    float rel = (float)(s / d0[k]);
+    atomicMin(minrel, __float_as_uint(fmaxf(rel, 0.0f)));
+    if (tau > 0.0f ? !(rel > tau) : !(s > (real)0)) atomicMin(bad, k);
+    if (tau > 0.0f && !(rel > tau)) return;
+#else
     if (!(s > (real)0)) atomicMin(bad, k);   // record only; the sqrt below still runs
+#endif
     A[IDX(k, k, n)] = sqrt(s);
 }
 
@@ -58,19 +80,33 @@ __global__ void rank1_kernel(real *A, int n, int k)   // A[i][j] -= L[i][k] * L[
 
 // ------------------------------------------------------------------ blocked path
 #define MAXNB 64
-__global__ void potrf_tile_kernel(real *A, int n, int kb, int nb, int *bad)   // one block, nb threads
+__global__ void potrf_tile_kernel(real *A, int n, int kb, int nb, int *bad GUARD_PARAMS(real))   // one block, nb threads
 {
     __shared__ real s[MAXNB][MAXNB + 1];
+#ifdef GUARD
+    __shared__ int stop;
+    if (threadIdx.x == 0) stop = 0;
+#endif
     int t = threadIdx.x;
     for (int c = 0; c < nb; ++c) s[t][c] = A[IDX(kb + t, kb + c, n)];
     __syncthreads();
     for (int j = 0; j < nb; ++j) {
         if (t == j) {
             real d = s[j][j];
+#ifdef GUARD
+            float rel = (float)(d / d0[kb + j]);
+            atomicMin(minrel, __float_as_uint(fmaxf(rel, 0.0f)));
+            if (tau > 0.0f ? !(rel > tau) : !(d > (real)0)) atomicMin(bad, kb + j);
+            if (tau > 0.0f && !(rel > tau)) stop = 1; else s[j][j] = sqrt(d);
+#else
             if (!(d > (real)0)) atomicMin(bad, kb + j);
             s[j][j] = sqrt(d);
+#endif
         }
         __syncthreads();
+#ifdef GUARD
+        if (stop) return;
+#endif
         if (t > j) s[t][j] = s[t][j] / s[j][j];
         __syncthreads();
         if (t > j) for (int l = j + 1; l <= t; ++l) s[t][l] -= s[t][j] * s[l][j];
@@ -144,6 +180,7 @@ static double round_to(const char *fmt, double x)
 
 // ------------------------------------------------------------------ one case
 struct Opts { int nb = 32; };
+static float g_tau = 0.0f;   // --guard TAU (needs a -DGUARD build)
 
 static void run_case(const std::vector<double> &A0, int n, const char *mname, double log2d, const char *path, const char *store, int nb)
 {
@@ -156,6 +193,13 @@ static void run_case(const std::vector<double> &A0, int n, const char *mname, do
     std::vector<real> hA(A.begin(), A.end()), hb(b.begin(), b.end());
     size_t mb = (size_t)n * n * sizeof(real), vb = (size_t)n * sizeof(real);
     real *dA, *db, *dy, *dx; int *dbad;
+    bool guarded = false;
+#ifdef GUARD
+    real *dd0; unsigned *dmin;
+    CK(cudaMalloc(&dd0, vb)); CK(cudaMalloc(&dmin, sizeof(unsigned)));
+    { std::vector<real> d0(n); for (int i = 0; i < n; ++i) d0[i] = hA[IDX(i, i, n)];
+      CK(cudaMemcpy(dd0, d0.data(), vb, cudaMemcpyHostToDevice)); unsigned inf = 0x7f800000u; CK(cudaMemcpy(dmin, &inf, sizeof inf, cudaMemcpyHostToDevice)); }
+#endif
     CK(cudaMalloc(&dA, mb)); CK(cudaMalloc(&db, vb)); CK(cudaMalloc(&dy, vb)); CK(cudaMalloc(&dx, vb));
     CK(cudaMalloc(&dbad, sizeof(int)));
     CK(cudaMemcpy(dA, hA.data(), mb, cudaMemcpyHostToDevice));
@@ -166,7 +210,10 @@ static void run_case(const std::vector<double> &A0, int n, const char *mname, do
     cudaEventRecord(e0);
     if (!blocked) {
         for (int k = 0; k < n; ++k) {
-            pivot_kernel<<<1, 1>>>(dA, n, k, dbad);
+            pivot_kernel<<<1, 1>>>(dA, n, k, dbad GUARD_ARGS);
+#ifdef GUARD
+            if (g_tau > 0) { int b; CK(cudaMemcpy(&b, dbad, sizeof b, cudaMemcpyDeviceToHost)); if (b != INT_MAX) { guarded = true; break; } }
+#endif
             if (k + 1 < n) {
                 int m = n - k - 1;
                 scale_kernel<<<(m + 127) / 128, 128>>>(dA, n, k);
@@ -176,7 +223,10 @@ static void run_case(const std::vector<double> &A0, int n, const char *mname, do
         }
     } else {
         for (int kb = 0; kb < n; kb += nb) {
-            potrf_tile_kernel<<<1, nb>>>(dA, n, kb, nb, dbad);
+            potrf_tile_kernel<<<1, nb>>>(dA, n, kb, nb, dbad GUARD_ARGS);
+#ifdef GUARD
+            if (g_tau > 0) { int b; CK(cudaMemcpy(&b, dbad, sizeof b, cudaMemcpyDeviceToHost)); if (b != INT_MAX) { guarded = true; break; } }
+#endif
             int m = n - kb - nb;
             if (m > 0) {
                 trsm_panel_kernel<<<(m + 127) / 128, 128>>>(dA, n, kb, nb);
@@ -185,8 +235,7 @@ static void run_case(const std::vector<double> &A0, int n, const char *mname, do
             }
         }
     }
-    forward_kernel<<<1, 1>>>(dA, db, dy, n);
-    backward_kernel<<<1, 1>>>(dA, dy, dx, n);
+    if (!guarded) { forward_kernel<<<1, 1>>>(dA, db, dy, n); backward_kernel<<<1, 1>>>(dA, dy, dx, n); }
     cudaEventRecord(e1);
     CK(cudaGetLastError());
     CK(cudaDeviceSynchronize());
@@ -198,6 +247,17 @@ static void run_case(const std::vector<double> &A0, int n, const char *mname, do
     CK(cudaMemcpy(x.data(), dx, vb, cudaMemcpyDeviceToHost));
     CK(cudaMemcpy(&bad, dbad, sizeof(int), cudaMemcpyDeviceToHost));
     cudaFree(dA); cudaFree(db); cudaFree(dy); cudaFree(dx); cudaFree(dbad);
+#ifdef GUARD
+    unsigned mrb = 0; CK(cudaMemcpy(&mrb, dmin, sizeof mrb, cudaMemcpyDeviceToHost)); float minrel; memcpy(&minrel, &mrb, 4);
+    cudaFree(dd0); cudaFree(dmin);
+    if (guarded) {
+        printf("GUARD pivot %d: relative pivot %.3e <= tau %.3e; stopped before the sqrt, no NaN created\n", bad, minrel, (double)g_tau);
+        printf("RESULT matrix=%s config=%s store=%s path=%s n=%d log2delta=%g kappa=%.3e status=guarded cause=guard stored_changed=%d "
+               "fact_err=nan fact_err_stored=nan resid=nan fwd_err=nan first_bad_pivot=%d t_ms=%.3f min_rel_pivot=%.3e\n",
+               mname, cfg, store, path, n, log2d, log2d == 0 ? NAN : (n + ldexp(1.0, (int)log2d)) / ldexp(1.0, (int)log2d), chg > 0, bad, ms, minrel);
+        return;
+    }
+#endif
 
     bool finite = true;
     for (int i = 0; i < n; ++i) for (int j = 0; j <= i; ++j) finite &= std::isfinite((double)L[IDX(i, j, n)]);
@@ -227,9 +287,9 @@ static void run_case(const std::vector<double> &A0, int n, const char *mname, do
     const char *status = bad != INT_MAX ? "breakdown" : !finite ? "nan" : (fe > 1e3 * eps || fw > 0.1) ? "inaccurate" : "ok";
     const char *cause = !strcmp(status, "ok") ? "-" : chg > 0 ? "storage" : "arithmetic";
     printf("RESULT matrix=%s config=%s store=%s path=%s n=%d log2delta=%g kappa=%.3e status=%s cause=%s stored_changed=%d "
-           "fact_err=%.3e fact_err_stored=%.3e resid=%.3e fwd_err=%.3e first_bad_pivot=%d t_ms=%.3f\n",
+           "fact_err=%.3e fact_err_stored=%.3e resid=%.3e fwd_err=%.3e first_bad_pivot=%d t_ms=%.3f" MR_FMT "\n",
            mname, cfg, store, path, n, log2d, log2d == 0 ? NAN : (n + ldexp(1.0, (int)log2d)) / ldexp(1.0, (int)log2d),
-           status, cause, chg > 0, fe, fs, rs, fw, bad == INT_MAX ? -1 : bad, ms);
+           status, cause, chg > 0, fe, fs, rs, fw, bad == INT_MAX ? -1 : bad, ms MR_ARG);
 }
 
 static std::vector<std::string> split(const char *s)
@@ -246,6 +306,9 @@ int main(int argc, char **argv)
     const char *path = "unblocked", *csv = nullptr, *store = sizeof(real) == 4 ? "f32" : "f64", *stores = nullptr, *paths = nullptr;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--n") && i + 1 < argc) n = atoi(argv[++i]);
+#ifdef GUARD
+        else if (!strcmp(argv[i], "--guard") && i + 1 < argc) g_tau = (float)atof(argv[++i]);
+#endif
         else if (!strcmp(argv[i], "--nb") && i + 1 < argc) nb = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--log2delta") && i + 1 < argc) log2d = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--path") && i + 1 < argc) path = argv[++i];

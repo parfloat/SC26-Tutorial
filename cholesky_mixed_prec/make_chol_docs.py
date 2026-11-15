@@ -36,6 +36,9 @@ def report_block(path):
     i = t.find(MARK)
     return t[i:] if i >= 0 else ""
 
+def has_report(path):
+    return os.path.exists(path) and MARK in open(path, errors="replace").read()
+
 def nixnan_counts(path):
     """[(section, kind, unique, repeats)] for non-zero counters"""
     sec, out = None, []
@@ -324,5 +327,154 @@ if glob.glob("logs/sqrt/*_detail.log"):
     fast = open("logs/sqrt/sass_pivot_fast.txt").read().splitlines()
     start = next(i for i, l in enumerate(fast) if "LDG.E R0" in l)
     excerpt("sass_sqrt_fast.txt", "\n".join(re.sub(r"\s{2,}", " ", l) for l in fast[start + 1:] if "NOP" not in l))
+
+# ---------------------------------------------------------------- E5 / E6 / E7
+E5_CONFIGS = ["F32", "mixed-F16", "mixed-BF16", "mixed-TF32", "naive-F16"]
+E5_LABEL = {"F32": "FP32", "mixed-F16": "mixed FP16", "mixed-BF16": "mixed BF16", "mixed-TF32": "mixed TF32", "naive-F16": "naive FP16"}
+U_FMT = {"F32": 2.0 ** -24, "mixed-F16": 2.0 ** -11, "mixed-TF32": 2.0 ** -11, "naive-F16": 2.0 ** -11, "mixed-BF16": 2.0 ** -8}
+STAT_ORDER = ["breakdown", "nan", "inaccurate", "ok"]
+
+def e5_cases():
+    out = {}
+    if os.path.exists("logs/e5/sweep.log"):
+        for line in open("logs/e5/sweep.log", errors="replace"):
+            m = re.match(r"CASE config=(\S+) kappa=(\S+) seed=(\d+) RESULT .*? status=(\S+) cause=\S+ stored_changed=\d fact_err=(\S+) fact_err_stored=\S+ resid=(\S+) fwd_err=(\S+) first_bad_pivot=(\S+)(?: t_ms=\S+ min_rel_pivot=(\S+))?", line)
+            if m:
+                g = m.groups()
+                out[(g[0], g[1], int(g[2]))] = dict(status=g[3], fwd=g[6], bad=g[7], minrel=g[8])
+    return out
+
+c5 = e5_cases()
+if c5:
+    import statistics
+    kap = sorted({k for (_, k, _) in c5}, key=float)
+    t = "\\begin{tabular}{l|" + "c" * len(kap) + "}\n\\toprule\nconfiguration" + "".join(" & $\\kappa=10^{%d}$" % round(__import__("math").log10(float(k))) for k in kap) + "\\\\\n\\midrule\n"
+    for c in E5_CONFIGS:
+        t += E5_LABEL[c]
+        for k in kap:
+            rs = [c5[(c, k, s)] for s in range(5) if (c, k, s) in c5]
+            cnt = {}
+            for r in rs:
+                cnt[r["status"]] = cnt.get(r["status"], 0) + 1
+            worst = next(st for st in STAT_ORDER if st in cnt)
+            lab, col = COL[worst]
+            txt = ", ".join("%d %s" % (cnt[st], COL[st][0]) for st in STAT_ORDER if st in cnt)
+            fw = [float(r["fwd"]) for r in rs if r["fwd"] not in ("nan", "inf")]
+            if fw and worst != "breakdown":
+                txt += "\\newline\\scriptsize fwd %s" % sci("%.3e" % statistics.median(fw), 1)
+            t += " & \\cellcolor{%s}\\begin{tabular}[c]{@{}c@{}}%s\\end{tabular}" % (col, txt.replace("\\newline", "\\\\"))
+        t += "\\\\\n"
+    t += "\\bottomrule\n\\end{tabular}\n"
+    write("tab_e5_grid.tex", t)
+
+    # nixnan on the chosen points
+    pts = []
+    for f in sorted(glob.glob("logs/e5/*_nixnan.log")):
+        m = re.match(r"(.+)_k(\S+)_s(\d+)_nixnan\.log", os.path.basename(f))
+        if m:
+            pts.append((E5_CONFIGS.index(m.group(1)) if m.group(1) in E5_CONFIGS else 9, float(m.group(2)), m.group(1), m.group(2), int(m.group(3)), f))
+    rows = ""
+    for _, _, c, k, sd, f in sorted(pts):
+        r = c5.get((c, k, sd))
+        if not r:
+            continue
+        rows += "%s & $10^{%d}$ & %s%s & %s\\\\\n" % (E5_LABEL[c], round(__import__("math").log10(float(k))), r["status"], (", fwd %s" % sci(r["fwd"], 1)) if r["fwd"] not in ("nan", "inf") else "", counts_tex(f))
+    write("tab_e5_nixnan.tex", "\\begin{tabular}{llp{3.2cm}p{5.8cm}}\n\\toprule\nconfiguration & $\\kappa$ & native status & nixnan report\\\\\n\\midrule\n" + rows + "\\bottomrule\n\\end{tabular}\n")
+
+# ---- E6
+def e6_bins(path):
+    tab = {}
+    for line in open(path, errors="replace"):
+        m = re.search(r"(f32|f16) bin has reached threshold: function=(?:void )?([a-z_0-9]+).*? range=\[([-\w]+),([-\w]+)\] count=(\d+)", line)
+        if m:
+            key = (m.group(2), m.group(3) if m.group(3) == m.group(4) else "%s..%s" % (m.group(3), m.group(4)))
+            tab[key] = tab.get(key, 0) + int(m.group(5))
+    return tab
+
+def fmt_cnt(n):
+    return "--" if not n else ("%.1f\\,M" % (n / 1e6) if n >= 1e6 else ("%d\\,k" % round(n / 1e3) if n >= 1e3 else str(n)))
+
+if os.path.exists("logs/e6/s1_e6_hist.log"):
+    for sc, bins in (("s1", ["zero", "-126..-30", "-29..-14", "-13", "-12", "-11..-8", "-7..-1", "0", "1..10"]),
+                     ("s3", ["zero", "-14..-11", "-10..-8", "-7..-1", "0", "1..10"])):
+        h, f = e6_bins("logs/e6/%s_e6_hist.log" % sc), e6_bins("logs/e6/%s_e12_hist.log" % sc)
+        lab = lambda b: "zero/subnormal field" if b == "zero" else "$2^{%s}$" % b.replace("..", "\\ldots 2^{")+("}" if ".." in b else "")
+        t = "\\begin{tabular}{lrr}\n\\toprule\nexponent bin (%s) & $\\delta=2^{-6}$ & $\\delta=2^{-12}$\\\\\n\\midrule\n" % ("FP32" if sc == "s1" else "FP16")
+        for b in bins:
+            t += "%s & %s & %s\\\\\n" % (lab(b), fmt_cnt(h.get(("rank1_kernel", b), 0)), fmt_cnt(f.get(("rank1_kernel", b), 0)))
+        t += "\\bottomrule\n\\end{tabular}\n"
+        write("tab_e6_%s.tex" % sc, t)
+    rows = ""
+    labels = {"native": "native (no nixnan)", "report": "default report", "detail": "+ \\texttt{PRINT\\_ILL\\_INSTR}, \\texttt{ENABLE\\_FUN\\_DETAIL}", "histogram": "+ \\texttt{HISTOGRAM} (count 64)",
+              "hist_sampling4": "+ \\texttt{HISTOGRAM}, \\texttt{SAMPLING=4}", "whitelist_rank1": "\\texttt{FUNCTION\\_WHITELIST} (rank1 only)", "hist_whitelist": "\\texttt{HISTOGRAM} + whitelist", "instr_mem": "\\texttt{INSTR\\_MEM=1}"}
+    for line in open("logs/e6/options.tsv").read().splitlines():
+        k, v = line.split()
+        extra = ""
+        if k != "native":
+            tx = open("logs/e6/opt_%s.log" % k, errors="replace").read()
+            extra = "%d / %d" % (tx.count("reached threshold"), tx.count("error ["))
+        rows += "%s & %s & %s\\\\\n" % (labels.get(k, tex_escape(k)), v, extra or "--")
+    write("tab_e6_cost.tex", "\\begin{tabular}{lrr}\n\\toprule\noption & wall s & histogram reports / exception lines\\\\\n\\midrule\n" + rows + "\\bottomrule\n\\end{tabular}\n")
+    # zero-bin attribution (s1, failing)
+    attr = {}
+    for line in open("logs/e6/s1_e12_hist.log", errors="replace"):
+        m = re.search(r"function=(?:void )?([a-z_0-9]+).*? range=\[zero,zero\] count=\d+ instruction=([^;]*);", line)
+        if m:
+            attr[(m.group(1), m.group(2).strip())] = attr.get((m.group(1), m.group(2).strip()), 0) + 1
+    write("e6_zero_attr.tex", "\\begin{tabular}{llr}\n\\toprule\nkernel & instruction & reports\\\\\n\\midrule\n" + "".join(
+        "\\texttt{%s} & \\texttt{%s} & %d\\\\\n" % (tex_escape(k), tex_escape(i), n) for (k, i), n in sorted(attr.items(), key=lambda t: -t[1])[:3]) + "\\bottomrule\n\\end{tabular}\n")
+
+# ---- E7
+if c5 and any(r.get("minrel") for r in c5.values()):
+    cs = (1, 10, 30, 100, 300)
+    t = "\\begin{tabular}{l|" + "c" * len(cs) + "}\n\\toprule\nconfiguration" + "".join(" & $c=%d$" % c for c in cs) + "\\\\\n\\midrule\n"
+    for cfg in E5_CONFIGS:
+        rows_ = [r for (c, k, sd), r in c5.items() if c == cfg and r.get("minrel")]
+        bad = [r for r in rows_ if r["status"] != "ok"]; ok = [r for r in rows_ if r["status"] == "ok"]
+        t += E5_LABEL[cfg]
+        for c in cs:
+            tau = c * U_FMT[cfg]
+            a = sum(float(r["minrel"]) <= tau for r in bad); b = sum(float(r["minrel"]) <= tau for r in ok)
+            col = "green!15" if (a == len(bad) and b == 0) else ("red!25" if b else "orange!30")
+            t += " & \\cellcolor{%s}%d/%d, %d/%d" % (col, a, len(bad), b, len(ok))
+        t += "\\\\\n"
+    t += "\\bottomrule\n\\end{tabular}\n"
+    write("tab_e7_tau.tex", t)
+
+if os.path.exists("logs/e7/heldout.log"):
+    agg = {}
+    for line in open("logs/e7/heldout.log", errors="replace"):
+        m = re.match(r"HELD config=(\S+) kappa=(\S+) seed=(\d+) RESULT .*? status=(\S+) .*fwd_err=(\S+) first_bad_pivot=\S+ t_ms=\S+ min_rel_pivot=(\S+)", line)
+        if m:
+            c, k, sd, st, fw, mr = m.groups()
+            agg.setdefault((c, int(k)), []).append((st, float(mr) / U_FMT[c], fw))
+    t = "\\begin{tabular}{llcccc}\n\\toprule\nconfiguration & $\\kappa$ & statuses (3 seeds) & forward error & $\\mathrm{min\\_rel}/u$ & guard trips at $100u$ / $300u$\\\\\n\\midrule\n"
+    for (c, k), v in sorted(agg.items(), key=lambda t: (t[0][0], t[0][1])):
+        sts = {}
+        for st, _, _ in v:
+            sts[st] = sts.get(st, 0) + 1
+        fws = [float(x[2]) for x in v if x[2] != "nan"]
+        r = sorted(x[1] for x in v)[len(v) // 2]
+        t += "%s & %d & %s & %s & %.0f & %d/3 / %d/3\\\\\n" % (E5_LABEL[c], k, ", ".join("%d %s" % (n, COL[st][0]) for st, n in sts.items()),
+             sci("%.2e" % (sorted(fws)[len(fws) // 2]), 1) if fws else "--", r, sum(x[1] <= 100 for x in v), sum(x[1] <= 300 for x in v))
+    t += "\\bottomrule\n\\end{tabular}\n"
+    write("tab_e7_heldout.tex", t)
+
+if glob.glob("logs/e7/*_plain_native.log"):
+    rows = ""
+    for plain in sorted(glob.glob("logs/e7/*_plain_native.log")):
+        tag = os.path.basename(plain)[:-len("_plain_native.log")]
+        txt = open(plain, errors="replace").read(); g = open(plain.replace("_plain_", "_guard_"), errors="replace").read()
+        pm = re.search(r"status=(\S+).*?fwd_err=(\S+) first_bad_pivot=(\S+)", txt); gm = re.search(r"GUARD pivot (\d+): relative pivot (\S+) <= tau ([^\s;]+)", g)
+        nxp = plain.replace("_native", "_nixnan"); nxg = plain.replace("_plain_native", "_guard_nixnan")
+        parts = tag.split("_")
+        if tag.startswith("Adelta"):
+            name = "$A_\\delta$, FP16 update, $\\delta=2^{-12}$"
+        else:
+            name = "%s, $\\kappa=10^{%d}$" % (E5_LABEL.get(parts[0], parts[0]), round(__import__("math").log10(float(parts[1][1:]))))
+        st = pm.group(1) + ((", bad pivot %s" % pm.group(3)) if pm.group(3) != "-1" else ", fwd %s" % sci(pm.group(2), 1))
+        gtxt = ("\\textbf{stop at pivot %s} (rel %s)" % (gm.group(1), sci(gm.group(2), 1))) if gm else "no trip"
+        rows += "%s & %s & %s & %s & %s\\\\\n" % (name, st, gtxt, counts_tex(nxp) if has_report(nxp) else "?", counts_tex(nxg) if has_report(nxg) else "?")
+    write("tab_e7_live.tex", "\\begin{tabular}{p{3.0cm}p{2.5cm}p{2.5cm}p{3.6cm}p{2.6cm}}\n\\toprule\ncase & without guard & guard, $\\tau=100u$ & nixnan, no guard & nixnan, guard\\\\\n\\midrule\n" + rows + "\\bottomrule\n\\end{tabular}\n")
 
 print("wrote", len(os.listdir(OUT)), "files in", OUT)

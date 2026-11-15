@@ -1,0 +1,1 @@
+RESULT matrix=Q_n256_k1e2_s0.csv config=F32TC store=f32 path=blocked-tc-bf16 n=256 log2delta=0 kappa=nan status=inaccurate cause=arithmetic stored_changed=0 fact_err=9.113e-04 fact_err_stored=9.113e-04 resid=8.917e-04 fwd_err=7.674e-03 first_bad_pivot=-1 t_ms=0 min_rel_pivot=2.053e-01

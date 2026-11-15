@@ -90,40 +90,40 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: ----------------------------------------------------------------------------------
 #nixnan: Initializing GPU context...
 #nixnan: Instrumenting all functions
-#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R11, -QNAN  ;
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 338507 microseconds
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R2, -QNAN  ;
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*, float const*, float, unsigned int*)] ...
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*, float const*, float, unsigned int*)] execution time: 325780 microseconds
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
 #nixnan: running kernel [trsm_panel_kernel(float*, int, int, int)] ...
-#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 307260 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 292988 microseconds
 #nixnan: running kernel [syrk_kernel(float*, int, int, int)] ...
-#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 308747 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 23 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 340941 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*, float const*, float, unsigned int*)] execution time: 19 microseconds
 #nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 15 microseconds
-#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 317 microseconds
-#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 24 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 27 microseconds
-#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 12 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 294 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*, float const*, float, unsigned int*)] execution time: 23 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 14 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 11 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*, float const*, float, unsigned int*)] execution time: 11 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 11 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 10 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*, float const*, float, unsigned int*)] execution time: 10 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 10 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 9 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*, float const*, float, unsigned int*)] execution time: 9 microseconds
 #nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 9 microseconds
 #nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 9 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 10 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*, float const*, float, unsigned int*)] execution time: 9 microseconds
 #nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 10 microseconds
-#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 27 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 9 microseconds
-#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 9 microseconds
-#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 10 microseconds
-#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 9 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 9 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*, float const*, float, unsigned int*)] execution time: 8 microseconds
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
 #nixnan: running kernel [forward_kernel(float const*, float const*, float*, int)] ...
-#nixnan: Kernel [forward_kernel(float const*, float const*, float*, int)] execution time: 309997 microseconds
+#nixnan: Kernel [forward_kernel(float const*, float const*, float*, int)] execution time: 290255 microseconds
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
 #nixnan: running kernel [backward_kernel(float const*, float const*, float*, int)] ...
-#nixnan: Kernel [backward_kernel(float const*, float const*, float*, int)] execution time: 304290 microseconds
-RESULT matrix=Q_n256_k1e2_s0.csv config=F32 store=f32 path=blocked n=256 log2delta=0 kappa=nan status=ok cause=- stored_changed=1 fact_err=9.044e-08 fact_err_stored=8.682e-08 resid=3.057e-07 fwd_err=1.923e-06 first_bad_pivot=-1 t_ms=2554.447
+#nixnan: Kernel [backward_kernel(float const*, float const*, float*, int)] execution time: 282876 microseconds
+RESULT matrix=Q_n256_k1e2_s0.csv config=F32 store=f32 path=blocked n=256 log2delta=0 kappa=nan status=ok cause=- stored_changed=1 fact_err=9.044e-08 fact_err_stored=8.682e-08 resid=3.057e-07 fwd_err=1.923e-06 first_bad_pivot=-1 t_ms=2537.780 min_rel_pivot=2.052e-01
 #nixnan: Finalizing GPU context...
 
 #nixnan: ------------ nixnan Report -----------

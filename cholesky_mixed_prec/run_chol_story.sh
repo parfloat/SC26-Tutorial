@@ -10,6 +10,7 @@
 #   ./run_chol_story.sh e4       blocked Cholesky, FP32 panel, TENSOR-CORE trailing update (WMMA FP16 / BF16 / TF32, FP32 accumulate)
 #   ./run_chol_story.sh e5       random Q diag(sigma) Q^T matrices (kappa 1e2..1e7, 5 seeds) x five configurations; nixnan on chosen points
 #   ./run_chol_story.sh e6       nixnan histogram "danger zone" view (healthy vs failing), cost of HISTOGRAM / SAMPLING / FUNCTION_WHITELIST / INSTR_MEM
+#   ./run_chol_story.sh e7       explicit relative pivot guard (stop before the sqrt) vs nixnan on the same inputs
 #   ./run_chol_story.sh sqrt     what does nixnan report for sqrt(0)? IEEE sqrtf (MUFU.RSQ sequence) vs -prec-sqrt=false (MUFU.SQRT)
 #   ./run_chol_story.sh all      e0, e1, e2, e3, e4, sqrt, then the summary          (default)
 #   ./run_chol_story.sh summary  re-print the tables from the saved logs
@@ -22,7 +23,7 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NIXNAN_LIB="${NIXNAN_LIB:-$PWD/../external/nixnan/nixnan.so}"
 ARCH="${ARCH:-sm_86}"
 NATIVE_LIMIT=60; NIXNAN_LIMIT=120
-mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3 logs/e4 logs/e5 logs/e6 logs/sqrt
+mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3 logs/e4 logs/e5 logs/e6 logs/e7 logs/sqrt
 MATS=(M0 M1)   # from gen_chol_matrices.py (matrices/matrices.tsv has their definitions and kappa)
 unset LD_LIBRARY_PATH   # a stale CUDA dir here can shadow the toolkit nvcc built against
 [[ -f "$NIXNAN_LIB" ]] || { echo "error: nixnan.so not found at $NIXNAN_LIB (set NIXNAN_LIB)" >&2; exit 1; }
@@ -232,22 +233,27 @@ e6() {
     run_opt instr_mem INSTR_MEM=1
 }
 
+build_guard() {   # E5/E7 binaries: the same kernels plus the relative-pivot statistic and the --guard option (-DGUARD)
+    local o=(-std=c++17 -g -O2 -lineinfo -arch="$ARCH" -DGUARD)
+    [[ -x bin_chol/g_chol_f32 && bin_chol/g_chol_f32 -nt chol_study.cu ]] || nvcc "${o[@]}" -DREAL=float -o bin_chol/g_chol_f32 chol_study.cu || exit 1
+    [[ -x bin_chol/g_chol_tc && bin_chol/g_chol_tc -nt chol_tc.cu ]] || nvcc "${o[@]}" -o bin_chol/g_chol_tc chol_tc.cu || exit 1
+    [[ -x bin_chol/g_chol_h16 && bin_chol/g_chol_h16 -nt chol_half.cu ]] || nvcc "${o[@]}" -o bin_chol/g_chol_h16 chol_half.cu || exit 1
+}
+
 # E5: random Q diag(sigma) Q^T matrices (kappa 1e2..1e7, seeds 0-4, n=256) through five configurations
 E5_KAPPAS=(1e2 1e3 1e4 1e5 1e6 1e7); E5_SEEDS=(0 1 2 3 4)
 e5_run() {   # e5_run <config> <csv>   (prints the RESULT line)
     case $1 in
-        F32)       ./bin_chol/chol_f32 --csv "$2" --path blocked --store f32 ;;
-        mixed-F16) ./bin_chol/chol_tc --csv "$2" --fmt f16 ;;
-        mixed-BF16) ./bin_chol/chol_tc --csv "$2" --fmt bf16 ;;
-        mixed-TF32) ./bin_chol/chol_tc --csv "$2" --fmt tf32 ;;
-        naive-F16) ./bin_chol/chol_h16 --csv "$2" ;;
+        F32)       ./bin_chol/g_chol_f32 --csv "$2" --path blocked --store f32 ;;
+        mixed-F16) ./bin_chol/g_chol_tc --csv "$2" --fmt f16 ;;
+        mixed-BF16) ./bin_chol/g_chol_tc --csv "$2" --fmt bf16 ;;
+        mixed-TF32) ./bin_chol/g_chol_tc --csv "$2" --fmt tf32 ;;
+        naive-F16) ./bin_chol/g_chol_h16 --csv "$2" ;;
     esac
 }
 e5() {
     echo "== E5: random Q diag(sigma) Q^T, n=256, kappa 1e2..1e7, seeds 0-4, five configurations"
-    build f32; build_half h16
-    for t in chol_tc; do [[ -x bin_chol/$t && chol_tc.cu -nt bin_chol/$t ]] && rm -f bin_chol/$t; done
-    [[ -x bin_chol/chol_tc ]] || nvcc -std=c++17 -g -O2 -lineinfo -arch="$ARCH" -o bin_chol/chol_tc chol_tc.cu || exit 1
+    build_guard
     mkdir -p matrices_q logs/e5; rm -f logs/e5/*
     : > logs/e5/matrices.txt; : > logs/e5/sweep.log
     for k in "${E5_KAPPAS[@]}"; do for s in "${E5_SEEDS[@]}"; do
@@ -268,6 +274,59 @@ e5() {
     done
 }
 
+# E7: detect instead of crash. Relative pivot guard (pivot / original diagonal <= tau, evaluated BEFORE the sqrt), tau = C_GUARD * u of the
+# narrowest format fed to the arithmetic. Compared with nixnan's report on the same input.
+C_GUARD=100
+e7_u() { case $1 in F32) echo 5.96e-8 ;; mixed-F16|mixed-TF32|naive-F16) echo 4.883e-4 ;; mixed-BF16) echo 3.906e-3 ;; esac; }   # 2^-24, 2^-11, 2^-8
+e7() {
+    echo "== E7: relative pivot guard (tau = ${C_GUARD} u) vs nixnan, same inputs"
+    build_guard
+    [[ -f matrices_q/Q_n256_k1e2_s0.csv ]] || { echo "run ./run_chol_story.sh e5 first (it generates matrices_q/)"; exit 1; }
+    mkdir -p logs/e7; rm -f logs/e7/*
+    while read -r c k s; do
+        local f=matrices_q/Q_n256_k${k}_s${s}.csv tag=${c}_k${k}_s${s} u tau
+        u=$(e7_u $c); tau=$(awk -v u=$u -v c=$C_GUARD 'BEGIN{printf "%.4g", u*c}')
+        e5_g() { case $1 in   # e5_g <config> <csv> <tau|0>
+            F32) ./bin_chol/g_chol_f32 --csv "$2" --path blocked --store f32 --guard "$3" ;;
+            mixed-F16) ./bin_chol/g_chol_tc --csv "$2" --fmt f16 --guard "$3" ;;
+            mixed-BF16) ./bin_chol/g_chol_tc --csv "$2" --fmt bf16 --guard "$3" ;;
+            mixed-TF32) ./bin_chol/g_chol_tc --csv "$2" --fmt tf32 --guard "$3" ;;
+            naive-F16) ./bin_chol/g_chol_h16 --csv "$2" --guard "$3" ;; esac; }
+        e5_g $c "$f" 0 > logs/e7/${tag}_plain_native.log 2>&1
+        e5_g $c "$f" $tau > logs/e7/${tag}_guard_native.log 2>&1
+        LD_PRELOAD="$NIXNAN_LIB" bash -c "$(declare -f e5_g); e5_g $c $f 0" > logs/e7/${tag}_plain_nixnan.log 2>&1
+        LD_PRELOAD="$NIXNAN_LIB" bash -c "$(declare -f e5_g); e5_g $c $f $tau" > logs/e7/${tag}_guard_nixnan.log 2>&1
+        echo "$tau" > logs/e7/${tag}.tau
+        echo "   $tag tau=$tau"
+    done <<'PTS'
+F32 1e7 0
+mixed-F16 1e2 0
+mixed-F16 1e4 0
+mixed-F16 1e6 0
+mixed-BF16 1e2 0
+mixed-TF32 1e3 0
+naive-F16 1e3 0
+naive-F16 1e4 0
+PTS
+    echo "-- guard on A_delta (E4 point: tensor core, FP16 panel, delta=2^-12), tau = ${C_GUARD} u"
+    ./bin_chol/g_chol_tc --fmt f16 --log2delta -12 > logs/e7/Adelta_f16_e12_plain_native.log 2>&1
+    ./bin_chol/g_chol_tc --fmt f16 --log2delta -12 --guard 4.883e-2 > logs/e7/Adelta_f16_e12_guard_native.log 2>&1
+    LD_PRELOAD="$NIXNAN_LIB" ./bin_chol/g_chol_tc --fmt f16 --log2delta -12 > logs/e7/Adelta_f16_e12_plain_nixnan.log 2>&1
+    LD_PRELOAD="$NIXNAN_LIB" ./bin_chol/g_chol_tc --fmt f16 --log2delta -12 --guard 4.883e-2 > logs/e7/Adelta_f16_e12_guard_nixnan.log 2>&1
+    echo "-- held-out check of tau = c u: kappa between the E5 grid points (150..700), seeds 10-12, mixed-FP16 and naive-FP16, no guard"
+    : > logs/e7/heldout.log
+    for k in 150 200 300 500 700; do for sd in 10 11 12; do
+        f=matrices_q/Q_n256_k${k}_s${sd}.csv
+        python3 gen_chol_matrices.py --n 256 --qlq "$k" --seed "$sd" --out "$f" > /dev/null
+        for c in mixed-F16 naive-F16; do echo "HELD config=$c kappa=$k seed=$sd $(e5_g $c "$f" 0 | grep RESULT)" >> logs/e7/heldout.log; done
+    done; done
+    echo "-- cost of the check (FP32 unblocked, M1 n=256: 256 host syncs; wall seconds, best of 3)"
+    for g in 0 1e-6; do
+        best=99; for i in 1 2 3; do t0=$(now); ./bin_chol/g_chol_f32 --csv matrices/M1_n256.csv --path unblocked --guard $g >/dev/null 2>&1; t1=$(now); best=$(awk -v a=$best -v b="$(secs "$t0" "$t1")" 'BEGIN{print (b<a)?b:a}'); done
+        echo "guard_tau=$g $best" >> logs/e7/cost.tsv
+    done
+}
+
 case "${1:-all}" in
     e0) e0 ;;
     e1) e1 ;;
@@ -276,10 +335,11 @@ case "${1:-all}" in
     e4) e4 ;;
     e5) e5 ;;
     e6) e6 ;;
+    e7) e7 ;;
     sqrt) sqrtstudy ;;
     summary) ;;
-    all) e0; e1; e2; e3; e4; e5; e6; sqrtstudy ;;
-    *) sed -n 3,14p "$0"; exit 1 ;;
+    all) e0; e1; e2; e3; e4; e5; e6; e7; sqrtstudy ;;
+    *) sed -n 3,15p "$0"; exit 1 ;;
 esac
 echo
 python3 chol_summary.py

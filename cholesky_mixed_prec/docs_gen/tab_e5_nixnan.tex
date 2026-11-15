@@ -1,0 +1,17 @@
+\begin{tabular}{llp{3.2cm}p{5.8cm}}
+\toprule
+configuration & $\kappa$ & native status & nixnan report\\
+\midrule
+FP32 & $10^{2}$ & ok, fwd $1.9\!\times\!10^{-6}$ & no exceptions\\
+mixed FP16 & $10^{2}$ & ok, fwd $1.0\!\times\!10^{-3}$ & FP16 Sub 8 (634)\\
+mixed FP16 & $10^{3}$ & inaccurate, fwd $8.8\!\times\!10^{-3}$ & FP16 Sub 8 (681)\\
+mixed FP16 & $10^{6}$ & breakdown & FP16 NaN 10 (14), FP16 Sub 12 (952), FP32 NaN 513 (121\,662), FP32 Memory NaN 4 (20)\\
+mixed BF16 & $10^{2}$ & inaccurate, fwd $7.7\!\times\!10^{-3}$ & no exceptions\\
+mixed BF16 & $10^{5}$ & breakdown & BF16 NaN 8 (96), FP32 NaN 522 (134\,884), FP32 Memory NaN 4 (100)\\
+mixed TF32 & $10^{3}$ & inaccurate, fwd $8.8\!\times\!10^{-3}$ & no exceptions\\
+mixed TF32 & $10^{6}$ & breakdown & FP32 NaN 569 (121\,774), FP32 Memory NaN 4 (20)\\
+naive FP16 & $10^{2}$ & ok, fwd $2.3\!\times\!10^{-2}$ & FP16 Sub 41 (25\,666)\\
+naive FP16 & $10^{3}$ & inaccurate, fwd $1.3\!\times\!10^{-1}$ & FP16 Sub 57 (40\,314)\\
+naive FP16 & $10^{4}$ & breakdown & FP16 NaN 34 (97\,653), FP16 Sub 82 (63\,676), FP32 NaN 27 (542)\\
+\bottomrule
+\end{tabular}

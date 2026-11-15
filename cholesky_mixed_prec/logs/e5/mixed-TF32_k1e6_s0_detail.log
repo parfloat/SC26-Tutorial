@@ -90,178 +90,186 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: ----------------------------------------------------------------------------------
 #nixnan: Initializing GPU context...
 #nixnan: Instrumenting all functions
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R2, -QNAN  ;
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] ...
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*)] ...
-#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
 #nixnan: running kernel [trsm_panel_kernel(float*, int, int)] ...
 #nixnan: running kernel [tc_update_tf32_kernel(float*, int, int)] ...
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] ...
 #nixnan: running kernel [trsm_panel_kernel(float*, int, int)] ...
 #nixnan: running kernel [tc_update_tf32_kernel(float*, int, int)] ...
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] ...
 #nixnan: running kernel [trsm_panel_kernel(float*, int, int)] ...
 #nixnan: running kernel [tc_update_tf32_kernel(float*, int, int)] ...
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] ...
 #nixnan: running kernel [trsm_panel_kernel(float*, int, int)] ...
 #nixnan: running kernel [tc_update_tf32_kernel(float*, int, int)] ...
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] ...
 #nixnan: running kernel [trsm_panel_kernel(float*, int, int)] ...
 #nixnan: running kernel [tc_update_tf32_kernel(float*, int, int)] ...
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] ...
 #nixnan: running kernel [trsm_panel_kernel(float*, int, int)] ...
 #nixnan: running kernel [tc_update_tf32_kernel(float*, int, int)] ...
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] ...
 #nixnan: error [NaN] detected in operand 0 of instruction MUFU.RSQ R3, R0 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP R3, R16 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RCP R3, R16 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R14, -R16, R3, 1 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R14, -R16, R3, 1 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R14, -R16, R3, 1 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, R3, R14, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, R3, R14, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R3, R3, R14, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, R3, R14, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R14, R0, R3, RZ ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R14, R0, R3, RZ ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, -R16, R14, R0 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, -R16, R14, R0 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, -R16, R14, R0 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R14, R3, R13, R14 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R14, R3, R13, R14 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R14, R3, R13, R14 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R14, R3, R13, R14 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FADD.FTZ R0, R0, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FADD.FTZ R0, R0, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R0, R0, -R16, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R0, R0, -R16, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R0, R0, -R16, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R0, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R0, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R0, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction @P0 FFMA R16, -R16, R3, R14 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction @P0 FFMA R16, -R16, R3, R14 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction @P0 FFMA R16, -R16, R3, R14 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP R2, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RCP R2, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, -R17, R2, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, -R17, R2, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, -R17, R2, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, R2, R3, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, R2, R3, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R3, R2, R3, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, R2, R3, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R2, R0, R3, RZ ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R2, R0, R3, RZ ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, -R17, R2, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, -R17, R2, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, -R17, R2, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, R3, R16, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, R3, R16, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R3, R3, R16, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, R3, R16, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FADD.FTZ R2, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FADD.FTZ R2, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R0, -R16, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R0, -R16, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R0, -R16, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction @P0 FFMA R19, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction @P0 FFMA R19, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction @P0 FFMA R19, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R16, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R16, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R16, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R16, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R16, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R16, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R16, -R17, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R16, -R17, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R16, -R17, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R19, R16, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R19, R16, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R19, R16, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R16, -R17, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R16, -R17, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R16, -R17, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, R3, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, R3, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, R3, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R16, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R16, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R16, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, R3, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, R3, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, R3, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R2, R0, R15, RZ ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R2, R0, R15, RZ ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R14, -R3, R2, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R14, -R3, R2, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R14, -R3, R2, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R14, R15, R14, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R14, R15, R14, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R14, R15, R14, R2 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FADD.FTZ R2, R0, R3 ; in function potrf_tile_kernel of type f32
 #nixnan: error [NaN] detected in operand 1 of instruction MUFU.RSQ R3, R0 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction @P0 FADD.FTZ R3, R0, 1 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 0 of instruction @P0 FADD.FTZ R3, R0, 1 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FFMA R14, R0, R3, RZ ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, -R16, R14, R0 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction FADD.FTZ R0, R0, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R0, R0, -R16, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R0, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction @P0 FFMA R16, -R16, R3, R14 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R12, -R19, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R21 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction @P0 FADD.FTZ R2, R0, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction @P0 FADD.FTZ R2, R0, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R2, R0, R3, RZ ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, -R17, R2, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R0, -R16, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction @P0 FFMA R19, -R16, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R17, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R18, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R18, R20 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R16, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R16, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R16, -R17, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R19, R16, -R19, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R16, -R17, R21 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R3, R3, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R15, -R16, R18 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R16, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R3, R3, -R16, R18 ; in function potrf_tile_kernel of type f32
 #nixnan: running kernel [trsm_panel_kernel(float*, int, int)] ...
 #nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP R0, R12 ; in function trsm_panel_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction MUFU.RCP R0, R12 ; in function trsm_panel_kernel of type f32
@@ -412,8 +420,8 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R8, R8, R31, RZ ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R8, R8, R31, RZ ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction HMMA.1684.F32.TF32 R8, R8, R31, RZ ; in function tc_update_tf32_kernel of type f32
-#nixnan: error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R12, R22, R30, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R12, R22, R30, R12 ; in function tc_update_tf32_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R12, R22, R30, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 3 of instruction HMMA.1684.F32.TF32 R12, R22, R30, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction HMMA.1684.F32.TF32 R12, R22, R30, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R8, R22, R29, R8 ; in function tc_update_tf32_kernel of type f32
@@ -421,8 +429,8 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: error [NaN] detected in operand 3 of instruction HMMA.1684.F32.TF32 R8, R22, R29, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction HMMA.1684.F32.TF32 R8, R22, R29, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R12, R18, R28, R12 ; in function tc_update_tf32_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R12, R18, R28, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 3 of instruction HMMA.1684.F32.TF32 R12, R18, R28, R12 ; in function tc_update_tf32_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R12, R18, R28, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction HMMA.1684.F32.TF32 R12, R18, R28, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R8, R18, R27, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R8, R18, R27, R8 ; in function tc_update_tf32_kernel of type f32
@@ -445,12 +453,12 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: error [NaN] detected in operand 3 of instruction HMMA.1684.F32.TF32 R8, R18, R29, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction HMMA.1684.F32.TF32 R8, R18, R29, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R12, R6, R28, R12 ; in function tc_update_tf32_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction HMMA.1684.F32.TF32 R12, R6, R28, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R12, R6, R28, R12 ; in function tc_update_tf32_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.1684.F32.TF32 R12, R6, R28, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction HMMA.1684.F32.TF32 R12, R6, R28, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R8, R6, R26, R8 ; in function tc_update_tf32_kernel of type f32
-#nixnan: error [NaN] detected in operand 3 of instruction HMMA.1684.F32.TF32 R8, R6, R26, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R8, R6, R26, R8 ; in function tc_update_tf32_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction HMMA.1684.F32.TF32 R8, R6, R26, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction HMMA.1684.F32.TF32 R8, R6, R26, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R12, R22, R25, R12 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R12, R22, R25, R12 ; in function tc_update_tf32_kernel of type f32
@@ -468,8 +476,8 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R8, R2, R4, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 3 of instruction HMMA.1684.F32.TF32 R8, R2, R4, R8 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction HMMA.1684.F32.TF32 R8, R2, R4, R8 ; in function tc_update_tf32_kernel of type f32
-#nixnan: error [NaN] detected in operand 2 of instruction FADD R9, R8, -R9 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction FADD R9, R8, -R9 ; in function tc_update_tf32_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FADD R9, R8, -R9 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 1 of instruction STG.E [R4.64], R9 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 2 of instruction FADD R11, R8, -R11 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction FADD R11, R8, -R11 ; in function tc_update_tf32_kernel of type f32
@@ -480,7 +488,7 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: error [NaN] detected in operand 2 of instruction FADD R7, R6, -R7 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction FADD R7, R6, -R7 ; in function tc_update_tf32_kernel of type f32
 #nixnan: error [NaN] detected in operand 1 of instruction STG.E [R2.64], R7 ; in function tc_update_tf32_kernel of type f32
-#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int*, float const*, float, unsigned int*)] ...
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
 #nixnan: running kernel [forward_kernel(float const*, float const*, float*, int)] ...
 #nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP R0, R6 ; in function forward_kernel of type f32
@@ -683,7 +691,7 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, R27, -R26, R22 ; in function backward_kernel of type f32
 #nixnan: error [NaN] detected in operand 3 of instruction FFMA R11, R27, -R26, R22 ; in function backward_kernel of type f32
 #nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, R27, -R26, R22 ; in function backward_kernel of type f32
-RESULT matrix=Q_n256_k1e6_s0.csv config=F32TC store=f32 path=blocked-tc-tf32 n=256 log2delta=0 kappa=nan status=breakdown cause=arithmetic stored_changed=0 fact_err=nan fact_err_stored=nan resid=nan fwd_err=nan first_bad_pivot=193 t_ms=0
+RESULT matrix=Q_n256_k1e6_s0.csv config=F32TC store=f32 path=blocked-tc-tf32 n=256 log2delta=0 kappa=nan status=breakdown cause=arithmetic stored_changed=0 fact_err=nan fact_err_stored=nan resid=nan fwd_err=nan first_bad_pivot=193 t_ms=0 min_rel_pivot=0.000e+00
 #nixnan: Finalizing GPU context...
 
 #nixnan: ------------ nixnan Report -----------
@@ -703,7 +711,7 @@ RESULT matrix=Q_n256_k1e6_s0.csv config=F32TC store=f32 path=blocked-tc-tf32 n=2
 #nixnan: Division by 0:          0 (0 repeats)
 
 #nixnan: --- FP32 Operations ---
-#nixnan: NaN:                  561 (121162 repeats)
+#nixnan: NaN:                  569 (121774 repeats)
 #nixnan: Infinity:               0 (0 repeats)
 #nixnan: -Infinity:              0 (0 repeats)
 #nixnan: Subnormal:              0 (0 repeats)

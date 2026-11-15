@@ -1,0 +1,2 @@
+GUARD pivot 1: relative pivot 4.881e-04 <= tau 4.883e-02 (block step 0); stopped before the sqrt, no NaN created
+RESULT matrix=A_delta config=F32TC store=f32 path=blocked-tc-f16 n=256 log2delta=-12 kappa=1.049e+06 status=guarded cause=guard stored_changed=0 fact_err=nan fact_err_stored=nan resid=nan fwd_err=nan first_bad_pivot=1 t_ms=0 min_rel_pivot=4.881e-04

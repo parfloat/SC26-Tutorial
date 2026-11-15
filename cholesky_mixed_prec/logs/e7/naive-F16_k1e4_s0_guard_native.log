@@ -1,0 +1,2 @@
+GUARD pivot 147: relative pivot 4.220e-02 <= tau 4.883e-02; stopped before the sqrt, no NaN created
+RESULT matrix=Q_n256_k1e4_s0.csv config=F16A store=f16 path=unblocked n=256 log2delta=0 kappa=nan status=guarded cause=guard stored_changed=1 fact_err=nan fact_err_stored=nan resid=nan fwd_err=nan first_bad_pivot=147 t_ms=0 min_rel_pivot=4.220e-02

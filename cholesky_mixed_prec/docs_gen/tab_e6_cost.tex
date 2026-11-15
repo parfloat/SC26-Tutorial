@@ -1,0 +1,14 @@
+\begin{tabular}{lrr}
+\toprule
+option & wall s & histogram reports / exception lines\\
+\midrule
+native (no nixnan) & 0.3 & --\\
+default report & 2.9 & 0 / 249\\
++ \texttt{PRINT\_ILL\_INSTR}, \texttt{ENABLE\_FUN\_DETAIL} & 2.9 & 0 / 249\\
++ \texttt{HISTOGRAM} (count 64) & 3.4 & 3185 / 249\\
++ \texttt{HISTOGRAM}, \texttt{SAMPLING=4} & 3.3 & 2277 / 241\\
+\texttt{FUNCTION\_WHITELIST} (rank1 only) & 0.8 & 0 / 5\\
+\texttt{HISTOGRAM} + whitelist & 0.8 & 2545 / 5\\
+\texttt{INSTR\_MEM=1} & 2.9 & 0 / 249\\
+\bottomrule
+\end{tabular}

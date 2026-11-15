@@ -1,6 +1,6 @@
 # Experimental plan: Cholesky on a badly conditioned matrix, mixed precision, under nixnan
 
-Status: **E0, E1 (Section 9), E2 (Section 10), E3 (Section 11) and E4 (Section 12) and E5 (Section 13) and E6 (Section 14) are implemented and run; E7 is still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
+Status: **E0, E1 (Section 9), E2 (Section 10), E3 (Section 11) and E4 (Section 12) and E5 (Section 13) and E6 (Section 14) and E7 (Section 15) are implemented and run; the slides and report cover E0-E7.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 "checked" come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 
 Source: `cg-and-cholesky-nixnan.pdf` in this directory (6 pages). It is a ChatGPT transcript, not a reference: it
@@ -374,7 +374,7 @@ FP32 forward/backward substitution on the FP32 factor. The pivot is still unguar
 
 Reproduce: `./run_chol_story.sh e5` (about 2 min in total: 150 native runs, then 11 nixnan points, each run twice). Logs: `logs/e5/` (`sweep.log`, per-point `*_nixnan.log` and `*_detail.log`, `matrices.txt` with the numeric kappa of each matrix). The 30 matrices (1.3 MB each) are regenerated from the seeds into `matrices_q/`, which is git-ignored.
 
-Set-up. `sigma_j = kappa^(-j/(n-1))`, Q from the QR of a seeded Gaussian (`gen_chol_matrices.py --qlq`), kappa in {1e2 ... 1e7}, seeds 0-4. `b = A*1`, so the exact solution is 1. Configurations: `F32` (blocked FP32, `chol_study`), `mixed-F16/BF16/TF32` (`chol_tc`, FP32 panel, tensor-core update, FP32 accumulate), `naive-F16` (`chol_half`, true FP16 arithmetic, unblocked). `chol_tc` and `chol_half` gained `--csv`.
+Set-up. `sigma_j = kappa^(-j/(n-1))`, Q from the QR of a seeded Gaussian (`gen_chol_matrices.py --qlq`), kappa in {1e2 ... 1e7}, seeds 0-4. `b = A*1`, so the exact solution is 1. The E5/E7 binaries are built with `-DGUARD` (`bin_chol/g_chol_*`): the same kernels plus a running minimum of the relative pivot (`min_rel_pivot` in the RESULT line) and the `--guard` option; the default build used for E0-E4, E6 and the sqrt study is unchanged (its SASS was compared with the earlier build: identical). Because the guard build adds FP instructions, NixNan counts for E5 differ slightly from a plain build (FP32 NaN 505 became 513 for mixed-F16 kappa=1e6). Configurations: `F32` (blocked FP32, `chol_study`), `mixed-F16/BF16/TF32` (`chol_tc`, FP32 panel, tensor-core update, FP32 accumulate), `naive-F16` (`chol_half`, true FP16 arithmetic, unblocked). `chol_tc` and `chol_half` gained `--csv`.
 
 ```
 E5: random Q diag(sigma) Q^T, n=256, 5 seeds per cell. Cell = status counts; second line = median forward error (finite runs)
@@ -393,21 +393,21 @@ E5 nixnan on chosen points (counters unique(repeats); native status in brackets)
   F32         kappa 1e2  seed 0 [ok]: no exceptions
   mixed-F16   kappa 1e2  seed 0 [ok]: FP16 Sub 8(634)
   mixed-F16   kappa 1e3  seed 0 [inaccurate]: FP16 Sub 8(681)
-  mixed-F16   kappa 1e6  seed 0 [breakdown]: FP16 NaN 10(14); FP16 Sub 12(952); FP32 NaN 505(121050); FP32 Memory NaN 4(20)
+  mixed-F16   kappa 1e6  seed 0 [breakdown]: FP16 NaN 10(14); FP16 Sub 12(952); FP32 NaN 513(121662); FP32 Memory NaN 4(20)
   mixed-BF16  kappa 1e2  seed 0 [inaccurate]: no exceptions
-  mixed-BF16  kappa 1e5  seed 0 [breakdown]: BF16 NaN 8(96); FP32 NaN 514(134062); FP32 Memory NaN 4(100)
+  mixed-BF16  kappa 1e5  seed 0 [breakdown]: BF16 NaN 8(96); FP32 NaN 522(134884); FP32 Memory NaN 4(100)
   mixed-TF32  kappa 1e3  seed 0 [inaccurate]: no exceptions
-  mixed-TF32  kappa 1e6  seed 0 [breakdown]: FP32 NaN 561(121162); FP32 Memory NaN 4(20)
+  mixed-TF32  kappa 1e6  seed 0 [breakdown]: FP32 NaN 569(121774); FP32 Memory NaN 4(20)
   naive-F16   kappa 1e2  seed 0 [ok]: FP16 Sub 41(25666)
   naive-F16   kappa 1e3  seed 0 [inaccurate]: FP16 Sub 57(40314)
-  naive-F16   kappa 1e4  seed 0 [breakdown]: FP16 NaN 34(97653); FP16 Sub 82(63676); FP32 NaN 17(532)
+  naive-F16   kappa 1e4  seed 0 [breakdown]: FP16 NaN 34(97653); FP16 Sub 82(63676); FP32 NaN 27(542)
 ```
 
 What the table says (statuses use the E2 rule: `inaccurate` = factorization error above 1000 eps or forward error above 0.1; the 0.1 is arbitrary):
 - **Same ordering as on `A_delta`, now on random matrices.** FP32 never fails in this range. Mixed precision with FP16/TF32 inputs is inaccurate from kappa=1e3 and breaks down at 1e6; BF16 is inaccurate already at 1e2 and breaks down at 1e5; naive FP16 arithmetic breaks down from 1e4 (3 of 5 seeds; the other 2 are inaccurate: seed-dependent at the threshold).
 - **Every breakdown here is caught by the code's own pivot check** (status `breakdown`; a pivot <= 0 is recorded). The status `nan` (non-finite output nobody noticed) did not occur. The "silent" failures are the `inaccurate` ones, not NaN ones.
 - **The inaccurate cells are the large majority of the failing region, and nixnan sees little of them.** `mixed-BF16` kappa=1e2 and `mixed-TF32` kappa=1e3 are inaccurate (forward error 9e-3 and 9e-3) with **no exception at all**. `mixed-F16` at kappa=1e2 (ok) and 1e3 (inaccurate) both report 8 FP16 subnormals on the HMMA inputs (operands 1 and 2): the same count in an ok and an inaccurate run, so it does not separate them. `naive-F16` reports many subnormals (41 unique, 25666 repeats) already at kappa=1e2 where the status is ok.
-- **NaN reports appear only where the factorization has already failed** (breakdown rows: FP32 NaN 505-561 unique, 4 NaN stores to memory in the tensor-core runs; FP16 and BF16 NaNs only where the format is used in the arithmetic).
+- **NaN reports appear only where the factorization has already failed** (breakdown rows: FP32 NaN 513-569 unique, 4 NaN stores to memory in the tensor-core runs; FP16 and BF16 NaNs only where the format is used in the arithmetic).
 - Lesson as in the LU story: nixnan reports exceptions, not accuracy. The factorization error or residual (here `fact_err`, `fwd_err`) has to be checked beside it.
 
 Caveats.
@@ -492,3 +492,72 @@ Findings and warnings.
 - `count=1` on this program prints about 10^5 lines per run and exceeded my 120 s limit once; count=64 keeps it under 4 s.
 
 Caveats. Operand-level census; one matrix; s2's FP16 HMMA operands are not binned (only FP32 bins were set for it); the per-kernel breakdown of s2 depends on the NB=32 blocking; I did not run `E6` for BF16/TF32.
+
+## 15. Results: E7, an explicit pivot guard against NixNan (RTX 3090, sm_86; random `Q diag(sigma) Q^T`, n=256, and `A_delta`)
+
+Reproduce: `./run_chol_story.sh e7` (about 4 min; needs `matrices_q/` from `e5`). Logs: `logs/e7/`.
+
+The guard. At every pivot the kernel computes `rel = pivot / (original diagonal entry)` and keeps the minimum (`min_rel_pivot`). With `--guard TAU` a pivot with `!(rel > TAU)` (NaN included) is recorded and the kernel returns **before the sqrt**, so no Inf or NaN is created; the host reads the flag after each block step (after each pivot in the unblocked path), prints `GUARD pivot i: relative pivot r <= tau t ...` and stops. Code: `-DGUARD` builds of `chol_study.cu`, `chol_tc.cu`, `chol_half.cu`. The check costs a host sync per step; wall time was 0.3 s with and without it (FP32 unblocked, n=256, best of 3), too coarse to resolve a difference.
+
+Choosing TAU. `rel` is a property of the matrix (about 1/kappa, and the same for the F32 and the mixed runs of one matrix), so a useful TAU has to scale with the unit roundoff `u` of the narrowest format that feeds the arithmetic: TAU = c*u, with u = 2^-24 (FP32), 2^-11 (FP16, TF32), 2^-8 (BF16). Measured on the mixed runs: forward error is about 0.5 u / min_rel (mixed FP16, kappa 300-700) and about 10 u / min_rel (naive FP16 arithmetic), so c fixes the forward error the user is willing to accept: roughly 0.5/c (mixed) or 10/c (naive). This is an empirical fit to my matrices, not a bound.
+
+```
+E7a: guard threshold tau = c u, evaluated on the 150 E5 runs from min_rel_pivot (a run is flagged if min_rel_pivot <= c u)
+  Cell = non-ok runs flagged / non-ok runs, and ok runs flagged / ok runs (false alarms)
+  config     c=1                   c=10                  c=30                  c=100                 c=300                 
+  F32        0/0, 0/30             0/0, 0/30             0/0, 0/30             0/0, 0/30             0/0, 2/30             
+  mixed-F16  10/25, 0/5            15/25, 0/5            20/25, 0/5            25/25, 0/5            25/25, 0/5            
+  mixed-BF16 16/30, 0/0            23/30, 0/0            25/30, 0/0            30/30, 0/0            30/30, 0/0            
+  mixed-TF32 10/25, 0/5            15/25, 0/5            20/25, 0/5            25/25, 0/5            25/25, 0/5            
+  naive-F16  18/25, 0/5            19/25, 0/5            20/25, 0/5            25/25, 0/5            25/25, 0/5            
+E7b: live runs, tau = 100 u. Native status without / with the guard; nixnan counters without / with the guard
+  Adelta_f16_e12         plain: breakdown fwd=nan bad_pivot=33 | guard: status=guarded, pivot 1 rel 4.881e-04 <= 4.883e-02 | nixnan plain: FP16 NaN 8(1616); FP32 NaN 522(319118); FP32 Memory NaN 4(1620) | nixnan guard: no exceptions
+  F32_k1e7_s0            plain: ok fwd=4.398e-02 bad_pivot=-1 | guard: status=ok (no trip) | nixnan plain: no exceptions | nixnan guard: no exceptions
+  mixed-BF16_k1e2_s0     plain: inaccurate fwd=7.674e-03 bad_pivot=-1 | guard: status=guarded, pivot 133 rel 3.812e-01 <= 3.906e-01 | nixnan plain: no exceptions | nixnan guard: no exceptions
+  mixed-F16_k1e2_s0      plain: ok fwd=1.009e-03 bad_pivot=-1 | guard: status=ok (no trip) | nixnan plain: FP16 Sub 8(634) | nixnan guard: FP16 Sub 8(634)
+  mixed-F16_k1e4_s0      plain: inaccurate fwd=5.921e-02 bad_pivot=-1 | guard: status=guarded, pivot 147 rel 4.120e-02 <= 4.883e-02 | nixnan plain: FP16 Sub 8(838) | nixnan guard: FP16 Sub 8(671)
+  mixed-F16_k1e6_s0      plain: breakdown fwd=nan bad_pivot=193 | guard: status=guarded, pivot 83 rel 4.157e-02 <= 4.883e-02 | nixnan plain: FP16 NaN 10(14); FP16 Sub 12(952); FP32 NaN 513(121662); FP32 Memory NaN 4(20) | nixnan guard: FP16 Sub 8(293)
+  mixed-TF32_k1e3_s0     plain: inaccurate fwd=8.792e-03 bad_pivot=-1 | guard: status=guarded, pivot 247 rel 4.747e-02 <= 4.883e-02 | nixnan plain: no exceptions | nixnan guard: no exceptions
+  naive-F16_k1e3_s0      plain: inaccurate fwd=1.284e-01 bad_pivot=-1 | guard: status=guarded, pivot 251 rel 4.561e-02 <= 4.883e-02 | nixnan plain: FP16 Sub 57(40314) | nixnan guard: FP16 Sub 4(40184)
+  naive-F16_k1e4_s0      plain: breakdown fwd=nan bad_pivot=253 | guard: status=guarded, pivot 147 rel 4.220e-02 <= 4.883e-02 | nixnan plain: FP16 NaN 34(97653); FP16 Sub 82(63676); FP32 NaN 27(542) | nixnan guard: FP16 Sub 4(48674)
+E7c: held-out kappa (150..700, seeds 10-12): status, forward error, min_rel_pivot / u, and whether tau = 100 u / 300 u would trip
+  mixed-F16  kappa 150  seed 10: inaccurate fwd 1.663e-03 min_rel/u =    303   trip@100u: no  trip@300u: no
+  naive-F16  kappa 150  seed 10: ok         fwd 2.939e-02 min_rel/u =    306   trip@100u: no  trip@300u: no
+  mixed-F16  kappa 150  seed 11: ok         fwd 1.469e-03 min_rel/u =    316   trip@100u: no  trip@300u: no
+  naive-F16  kappa 150  seed 11: ok         fwd 3.342e-02 min_rel/u =    324   trip@100u: no  trip@300u: no
+  mixed-F16  kappa 150  seed 12: inaccurate fwd 1.771e-03 min_rel/u =    285   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 150  seed 12: ok         fwd 2.964e-02 min_rel/u =    292   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 200  seed 10: inaccurate fwd 2.014e-03 min_rel/u =    251   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 200  seed 10: ok         fwd 4.071e-02 min_rel/u =    254   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 200  seed 11: inaccurate fwd 2.891e-03 min_rel/u =    263   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 200  seed 11: ok         fwd 4.152e-02 min_rel/u =    271   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 200  seed 12: inaccurate fwd 1.779e-03 min_rel/u =    234   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 200  seed 12: ok         fwd 3.506e-02 min_rel/u =    240   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 300  seed 10: inaccurate fwd 2.804e-03 min_rel/u =    191   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 300  seed 10: ok         fwd 5.331e-02 min_rel/u =    198   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 300  seed 11: inaccurate fwd 2.745e-03 min_rel/u =    201   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 300  seed 11: ok         fwd 5.750e-02 min_rel/u =    206   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 300  seed 12: inaccurate fwd 2.786e-03 min_rel/u =    176   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 300  seed 12: ok         fwd 4.518e-02 min_rel/u =    185   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 500  seed 10: inaccurate fwd 4.572e-03 min_rel/u =    134   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 500  seed 10: ok         fwd 8.286e-02 min_rel/u =    136   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 500  seed 11: inaccurate fwd 4.228e-03 min_rel/u =    142   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 500  seed 11: ok         fwd 7.098e-02 min_rel/u =    144   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 500  seed 12: inaccurate fwd 4.754e-03 min_rel/u =    122   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 500  seed 12: ok         fwd 7.425e-02 min_rel/u =    127   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 700  seed 10: inaccurate fwd 5.050e-03 min_rel/u =    106   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 700  seed 10: ok         fwd 9.300e-02 min_rel/u =    107   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 700  seed 11: inaccurate fwd 7.354e-03 min_rel/u =    112   trip@100u: no  trip@300u: yes
+  naive-F16  kappa 700  seed 11: ok         fwd 9.345e-02 min_rel/u =    109   trip@100u: no  trip@300u: yes
+  mixed-F16  kappa 700  seed 12: inaccurate fwd 7.127e-03 min_rel/u =     95   trip@100u: yes trip@300u: yes
+  naive-F16  kappa 700  seed 12: inaccurate fwd 1.057e-01 min_rel/u =     97   trip@100u: yes trip@300u: yes
+```
+
+What it shows.
+- **On the E5 grid c=100 separates the runs perfectly (105 of 105 non-ok flagged, 0 of 15 ok low-precision runs flagged). That is a coincidence of the grid.** The E5 grid has nothing between kappa=100 (min_rel about 400u) and kappa=1000 (about 90u). The held-out check (E7c, kappa 150-700, seeds 10-12) shows that at c=100 the guard misses 13 of the 14 mixed-FP16 runs that the 1000-eps rule labels inaccurate (forward error 1.7e-3 to 7e-3), while c=300 catches 13 of 14. For naive FP16, c=300 flags runs labelled ok with forward error 0.03-0.09. So there is no "right" c: it is the accuracy requirement, and my status labels (1000 eps, forward error 0.1) are not a ground truth for it.
+- **The guard fires earlier than the exception.** mixed-F16 kappa=1e6: guard at pivot 83, first non-positive pivot 193, the first NaN later still; naive-F16 kappa=1e4: guard at 147, breakdown at 253; `A_delta` FP16 update: guard at pivot 1 (relative pivot 4.9e-4, which is the true small pivot of this ill-conditioned matrix), breakdown at 33.
+- **On the guarded runs NixNan reports no NaN at all** (A_delta: 522 FP32 NaN and 4 NaN stores without the guard, none with it; mixed-F16 kappa=1e6: 513 FP32 NaN without, none with). What remains are the FP16 subnormals of the panel (the same counts as in E5): the guard removes the symptom NixNan sees, not those reports.
+- **The guard sees what NixNan cannot:** mixed-BF16 kappa=1e2 and mixed-TF32 kappa=1e3 are inaccurate with no NixNan exception; the guard stops both (pivot 133 and 247). It does not trip on the accurate FP32 run at kappa=1e7 (min_rel 1.4e-5 > 100 u = 6e-6) and not on mixed-F16 kappa=1e2.
+- **It does not repair anything**; it turns "NaN, or a quietly wrong answer" into "stop at pivot i, ill-conditioned for this precision". The remedy is a wider format or iterative refinement (`../mpir_gpu`).
+
+Caveats. tau was picked after looking at the E5 data; E7c is the only out-of-sample check and it shows c=100 is too permissive for the 1000-eps rule. One matrix family and size. `min_rel_pivot` is taken over the whole run, including pivots computed after a failure (it is 0 for breakdown runs). The guard test uses the original diagonal of the matrix as stored (after rounding for the storage experiments); it is one common choice of reference (others: the matrix norm, as in the plan, or the running maximum diagonal) and I did not compare them. Unblocked E7 kernels check after each pivot; in the blocked kernels the check is per tile, and within a tile the stop is immediate (the tile kernel returns).

@@ -1,0 +1,11 @@
+\begin{tabular}{l|ccccc}
+\toprule
+configuration & $c=1$ & $c=10$ & $c=30$ & $c=100$ & $c=300$\\
+\midrule
+FP32 & \cellcolor{green!15}0/0, 0/30 & \cellcolor{green!15}0/0, 0/30 & \cellcolor{green!15}0/0, 0/30 & \cellcolor{green!15}0/0, 0/30 & \cellcolor{red!25}0/0, 2/30\\
+mixed FP16 & \cellcolor{orange!30}10/25, 0/5 & \cellcolor{orange!30}15/25, 0/5 & \cellcolor{orange!30}20/25, 0/5 & \cellcolor{green!15}25/25, 0/5 & \cellcolor{green!15}25/25, 0/5\\
+mixed BF16 & \cellcolor{orange!30}16/30, 0/0 & \cellcolor{orange!30}23/30, 0/0 & \cellcolor{orange!30}25/30, 0/0 & \cellcolor{green!15}30/30, 0/0 & \cellcolor{green!15}30/30, 0/0\\
+mixed TF32 & \cellcolor{orange!30}10/25, 0/5 & \cellcolor{orange!30}15/25, 0/5 & \cellcolor{orange!30}20/25, 0/5 & \cellcolor{green!15}25/25, 0/5 & \cellcolor{green!15}25/25, 0/5\\
+naive FP16 & \cellcolor{orange!30}18/25, 0/5 & \cellcolor{orange!30}19/25, 0/5 & \cellcolor{orange!30}20/25, 0/5 & \cellcolor{green!15}25/25, 0/5 & \cellcolor{green!15}25/25, 0/5\\
+\bottomrule
+\end{tabular}

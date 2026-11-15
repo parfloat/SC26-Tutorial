@@ -90,781 +90,782 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: ----------------------------------------------------------------------------------
 #nixnan: Initializing GPU context...
 #nixnan: Instrumenting all functions
-#nixnan: running kernel [pivot_kernel(__half*, int, int, int*)] ...
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 299633 microseconds
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R9, -QNAN  ;
+#nixnan: running kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] ...
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 319531 microseconds
 #nixnan: running kernel [scale_kernel(__half*, int, int)] ...
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 307387 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 270514 microseconds
 #nixnan: running kernel [rank1_kernel(__half*, int, int)] ...
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 288566 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 270401 microseconds
 #nixnan: error [subnormal] detected in operand 3 of instruction HFMA2 R0, -R8.H0_H0, R11.H0_H0, R0.H0_H0 ; in function rank1_kernel of type f16
 #nixnan: error [subnormal] detected in operand 0 of instruction HFMA2 R0, -R8.H0_H0, R11.H0_H0, R0.H0_H0 ; in function rank1_kernel of type f16
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 29 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 23 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 30 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: error [subnormal] detected in operand 2 of instruction HFMA2 R0, -R8.H0_H0, R11.H0_H0, R0.H0_H0 ; in function rank1_kernel of type f16
-#nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R0, -R8.H0_H0, R11.H0_H0, R0.H0_H0 ; in function rank1_kernel of type f16
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 23 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 19 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 20 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 31 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 21 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 25 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 22 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 20 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 35 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 20 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 28 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 23 microseconds
+#nixnan: error [subnormal] detected in operand 2 of instruction HFMA2 R0, -R8.H0_H0, R11.H0_H0, R0.H0_H0 ; in function rank1_kernel of type f16
+#nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R0, -R8.H0_H0, R11.H0_H0, R0.H0_H0 ; in function rank1_kernel of type f16
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 29 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 23 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 27 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 23 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 19 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 20 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 20 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 19 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 19 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 31 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 19 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 23 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 19 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 20 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 22 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 25 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 27 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 20 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 26 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 34 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 20 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 19 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 23 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 27 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 34 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 22 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 30 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
 #nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
-#nixnan: Kernel [pivot_kernel(__half*, int, int, int*)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 24 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 26 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 19 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 21 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 16 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 26 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 15 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 16 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 15 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 14 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 13 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
+#nixnan: Kernel [scale_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [rank1_kernel(__half*, int, int)] execution time: 13 microseconds
+#nixnan: Kernel [pivot_kernel(__half*, int, int, int*, __half const*, float, unsigned int*)] execution time: 14 microseconds
 #nixnan: running kernel [forward_kernel(__half const*, __half const*, __half*, int)] ...
-#nixnan: Kernel [forward_kernel(__half const*, __half const*, __half*, int)] execution time: 310281 microseconds
+#nixnan: Kernel [forward_kernel(__half const*, __half const*, __half*, int)] execution time: 295738 microseconds
 #nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R32, -R23.H0_H0, R24.H0_H0, R32.H0_H0 ; in function forward_kernel of type f16
 #nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R32, -R29.H0_H0, R30.H0_H0, R32.H0_H0 ; in function forward_kernel of type f16
 #nixnan: error [subnormal] detected in operand 0 of instruction HFMA2 R32, -R29.H0_H0, R30.H0_H0, R32.H0_H0 ; in function forward_kernel of type f16
@@ -897,14 +898,14 @@ bin just reports every "count" occurrences forever, as before.
 #nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R33, -R25.H0_H0, R26.H0_H0, R32.H0_H0 ; in function forward_kernel of type f16
 #nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R15, -R18.H0_H0, R19.H0_H0, R15.H0_H0 ; in function forward_kernel of type f16
 #nixnan: running kernel [backward_kernel(__half const*, __half const*, __half*, int)] ...
-#nixnan: Kernel [backward_kernel(__half const*, __half const*, __half*, int)] execution time: 280800 microseconds
+#nixnan: Kernel [backward_kernel(__half const*, __half const*, __half*, int)] execution time: 274654 microseconds
 #nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R20, -R22.H0_H0, R20.H0_H0, R9.H0_H0 ; in function backward_kernel of type f16
 #nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R17, -R14.H0_H0, R24.H0_H0, R17.H0_H0 ; in function backward_kernel of type f16
 #nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R17, -R17.H0_H0, R23.H0_H0, R20.H0_H0 ; in function backward_kernel of type f16
 #nixnan: error [subnormal] detected in operand 1 of instruction HFMA2 R17, -R26.H0_H0, R25.H0_H0, R17.H0_H0 ; in function backward_kernel of type f16
 #nixnan: error [subnormal] detected in operand 0 of instruction HFMA2 R17, -R14.H0_H0, R24.H0_H0, R17.H0_H0 ; in function backward_kernel of type f16
 #nixnan: error [subnormal] detected in operand 3 of instruction HFMA2 R17, -R26.H0_H0, R25.H0_H0, R17.H0_H0 ; in function backward_kernel of type f16
-RESULT matrix=Q_n256_k1e2_s0.csv config=F16A store=f16 path=unblocked n=256 log2delta=0 kappa=nan status=ok cause=- stored_changed=1 fact_err=1.655e-03 fact_err_stored=1.642e-03 resid=3.046e-03 fwd_err=2.277e-02 first_bad_pivot=-1 t_ms=0
+RESULT matrix=Q_n256_k1e2_s0.csv config=F16A store=f16 path=unblocked n=256 log2delta=0 kappa=nan status=ok cause=- stored_changed=1 fact_err=1.655e-03 fact_err_stored=1.642e-03 resid=3.046e-03 fwd_err=2.277e-02 first_bad_pivot=-1 t_ms=0 min_rel_pivot=2.100e-01
 #nixnan: Finalizing GPU context...
 
 #nixnan: ------------ nixnan Report -----------

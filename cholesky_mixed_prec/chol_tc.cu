@@ -30,24 +30,52 @@
 #include <cuda_bf16.h>
 using namespace nvcuda;
 
+// E7: relative pivot guard, compiled only with -DGUARD (the default build is the one used for E0-E4, E6 and the sqrt study, unchanged).
+//   rel = pivot / (original diagonal entry); minrel keeps the smallest rel seen (float bits); --guard TAU with TAU > 0 records a pivot
+//   with !(rel > TAU) (NaN included) and returns BEFORE the sqrt, so no NaN is created; the host stops at the next check.
+#ifdef GUARD
+#define GUARD_PARAMS(T) , const T *d0, float tau, unsigned *minrel
+#define GUARD_ARGS , dd0, g_tau, dmin
+#define MR_FMT " min_rel_pivot=%.3e"
+#define MR_ARG , minrel
+#else
+#define GUARD_PARAMS(T)
+#define GUARD_ARGS
+#define MR_FMT ""
+#define MR_ARG
+#endif
 #define IDX(i, j, n) ((size_t)(i) * (n) + (j))
 #define NB 32
 #define CK(x) do { cudaError_t e_ = (x); if (e_ != cudaSuccess) { \
     fprintf(stderr, "CUDA error %s at %s:%d\n", cudaGetErrorString(e_), __FILE__, __LINE__); exit(2); } } while (0)
 
-__global__ void potrf_tile_kernel(float *A, int n, int kb, int *bad)   // one block, NB threads
+__global__ void potrf_tile_kernel(float *A, int n, int kb, int *bad GUARD_PARAMS(float))   // one block, NB threads
 {
     __shared__ float s[NB][NB + 1];
+#ifdef GUARD
+    __shared__ int stop;
+    if (threadIdx.x == 0) stop = 0;
+#endif
     int t = threadIdx.x;
     for (int c = 0; c < NB; ++c) s[t][c] = A[IDX(kb + t, kb + c, n)];
     __syncthreads();
     for (int j = 0; j < NB; ++j) {
         if (t == j) {
             float d = s[j][j];
+#ifdef GUARD
+            float rel = d / d0[kb + j];
+            atomicMin(minrel, __float_as_uint(fmaxf(rel, 0.0f)));
+            if (tau > 0.0f ? !(rel > tau) : !(d > 0.0f)) atomicMin(bad, kb + j);
+            if (tau > 0.0f && !(rel > tau)) stop = 1; else s[j][j] = sqrtf(d);
+#else
             if (!(d > 0.0f)) atomicMin(bad, kb + j);
             s[j][j] = sqrtf(d);
+#endif
         }
         __syncthreads();
+#ifdef GUARD
+        if (stop) return;
+#endif
         if (t > j) s[t][j] = s[t][j] / s[j][j];
         __syncthreads();
         if (t > j) for (int l = j + 1; l <= t; ++l) s[t][l] -= s[t][j] * s[l][j];
@@ -143,6 +171,7 @@ __global__ void backward_kernel(const float *L, const float *y, float *x, int n)
     }
 }
 
+static float g_tau = 0.0f;                   // --guard TAU (needs a -DGUARD build)
 static std::vector<double> g_csv;            // --csv: matrix from a file instead of A_delta
 static const char *g_name = "A_delta";
 
@@ -154,15 +183,28 @@ static void run_case(int n, int e, const char *fmt)
     for (int i = 0; i < n; ++i) for (int j = 0; j < n; ++j) b[i] += A0[IDX(i, j, n)];
     std::vector<float> hA(A0.begin(), A0.end()), hb(b.begin(), b.end());
     float *dA, *db, *dy, *dx; int *dbad; void *dLh = nullptr;
+    bool guarded = false; int guard_step = -1;
     size_t mb = (size_t)n * n * sizeof(float), vb = n * sizeof(float);
     CK(cudaMalloc(&dA, mb)); CK(cudaMalloc(&db, vb)); CK(cudaMalloc(&dy, vb)); CK(cudaMalloc(&dx, vb)); CK(cudaMalloc(&dbad, sizeof(int)));
     CK(cudaMalloc(&dLh, (size_t)n * NB * 2));
+#ifdef GUARD
+    float *dd0; unsigned *dmin;
+    CK(cudaMalloc(&dd0, vb)); CK(cudaMalloc(&dmin, sizeof(unsigned)));
+    { std::vector<float> d0(n); for (int i = 0; i < n; ++i) d0[i] = hA[IDX(i, i, n)];
+      CK(cudaMemcpy(dd0, d0.data(), vb, cudaMemcpyHostToDevice)); unsigned inf = 0x7f800000u; CK(cudaMemcpy(dmin, &inf, sizeof inf, cudaMemcpyHostToDevice)); }
+#endif
     CK(cudaMemcpy(dA, hA.data(), mb, cudaMemcpyHostToDevice));
     CK(cudaMemcpy(db, hb.data(), vb, cudaMemcpyHostToDevice));
     int big = INT_MAX; CK(cudaMemcpy(dbad, &big, sizeof(int), cudaMemcpyHostToDevice));
     const bool f16 = !strcmp(fmt, "f16"), bf16 = !strcmp(fmt, "bf16");
     for (int kb = 0; kb < n; kb += NB) {
-        potrf_tile_kernel<<<1, NB>>>(dA, n, kb, dbad);
+        potrf_tile_kernel<<<1, NB>>>(dA, n, kb, dbad GUARD_ARGS);
+#ifdef GUARD
+        if (g_tau > 0.0f) {
+            int b; CK(cudaMemcpy(&b, dbad, sizeof(int), cudaMemcpyDeviceToHost));
+            if (b != INT_MAX) { guarded = true; guard_step = kb; break; }
+        }
+#endif
         int m = n - kb - NB;
         if (m > 0) {
             trsm_panel_kernel<<<(m + 127) / 128, 128>>>(dA, n, kb);
@@ -178,8 +220,7 @@ static void run_case(int n, int e, const char *fmt)
             }
         }
     }
-    forward_kernel<<<1, 1>>>(dA, db, dy, n);
-    backward_kernel<<<1, 1>>>(dA, dy, dx, n);
+    if (!guarded) { forward_kernel<<<1, 1>>>(dA, db, dy, n); backward_kernel<<<1, 1>>>(dA, dy, dx, n); }
     CK(cudaGetLastError());
     CK(cudaDeviceSynchronize());
     std::vector<float> L((size_t)n * n), x(n);
@@ -188,6 +229,17 @@ static void run_case(int n, int e, const char *fmt)
     CK(cudaMemcpy(x.data(), dx, vb, cudaMemcpyDeviceToHost));
     CK(cudaMemcpy(&bad, dbad, sizeof(int), cudaMemcpyDeviceToHost));
     cudaFree(dA); cudaFree(db); cudaFree(dy); cudaFree(dx); cudaFree(dbad); cudaFree(dLh);
+#ifdef GUARD
+    unsigned mrb = 0; CK(cudaMemcpy(&mrb, dmin, sizeof mrb, cudaMemcpyDeviceToHost)); float minrel; memcpy(&minrel, &mrb, 4);
+    cudaFree(dd0); cudaFree(dmin);
+    if (guarded) {
+        printf("GUARD pivot %d: relative pivot %.3e <= tau %.3e (block step %d); stopped before the sqrt, no NaN created\n", bad, minrel, (double)g_tau, guard_step);
+        printf("RESULT matrix=%s config=F32TC store=f32 path=blocked-tc-%s n=%d log2delta=%d kappa=%.3e status=guarded cause=guard stored_changed=0 "
+               "fact_err=nan fact_err_stored=nan resid=nan fwd_err=nan first_bad_pivot=%d t_ms=0 min_rel_pivot=%.3e\n",
+               g_name, fmt, n, g_csv.empty() ? -e : 0, g_csv.empty() ? (n + delta) / delta : NAN, bad, minrel);
+        return;
+    }
+#endif
 
     bool finite = true;
     for (int i = 0; i < n; ++i) for (int j = 0; j <= i; ++j) finite &= std::isfinite((double)L[IDX(i, j, n)]);
@@ -211,8 +263,8 @@ static void run_case(int n, int e, const char *fmt)
     }
     const char *status = bad != INT_MAX ? "breakdown" : !finite ? "nan" : (fe > 1e3 * FLT_EPSILON || fw > 0.1) ? "inaccurate" : "ok";
     printf("RESULT matrix=%s config=F32TC store=f32 path=blocked-tc-%s n=%d log2delta=%d kappa=%.3e status=%s cause=%s stored_changed=0 "
-           "fact_err=%.3e fact_err_stored=%.3e resid=%.3e fwd_err=%.3e first_bad_pivot=%d t_ms=0\n",
-           g_name, fmt, n, g_csv.empty() ? -e : 0, g_csv.empty() ? (n + delta) / delta : NAN, status, !strcmp(status, "ok") ? "-" : "arithmetic", fe, fe, rs, fw, bad == INT_MAX ? -1 : bad);
+           "fact_err=%.3e fact_err_stored=%.3e resid=%.3e fwd_err=%.3e first_bad_pivot=%d t_ms=0" MR_FMT "\n",
+           g_name, fmt, n, g_csv.empty() ? -e : 0, g_csv.empty() ? (n + delta) / delta : NAN, status, !strcmp(status, "ok") ? "-" : "arithmetic", fe, fe, rs, fw, bad == INT_MAX ? -1 : bad MR_ARG);
 }
 
 static std::vector<std::string> split(const char *s)
@@ -230,11 +282,14 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--n") && i + 1 < argc) n = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--log2delta") && i + 1 < argc) e = -atoi(argv[++i]);
+#ifdef GUARD
+        else if (!strcmp(argv[i], "--guard") && i + 1 < argc) g_tau = (float)atof(argv[++i]);
+#endif
         else if (!strcmp(argv[i], "--csv") && i + 1 < argc) csvp = argv[++i];
         else if (!strcmp(argv[i], "--fmt") && i + 1 < argc) fmt = argv[++i];
         else if (!strcmp(argv[i], "--fmts") && i + 1 < argc) fmts = argv[++i];
         else if (!strcmp(argv[i], "--sweep") && i + 2 < argc) { lo = atoi(argv[++i]); hi = atoi(argv[++i]); }
-        else { fprintf(stderr, "usage: %s [--n N] [--csv FILE] [--fmt f16|bf16|tf32] [--log2delta E | --sweep LO HI [--fmts a,b]]\n", argv[0]); return 1; }
+        else { fprintf(stderr, "usage: %s [--n N] [--csv FILE] [--guard TAU, -DGUARD builds] [--fmt f16|bf16|tf32] [--log2delta E | --sweep LO HI [--fmts a,b]]\n", argv[0]); return 1; }
     }
     if (csvp) {
         if (!read_csv_matrix(csvp, g_csv, n)) return 1;
