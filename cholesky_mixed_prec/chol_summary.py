@@ -382,3 +382,36 @@ def e5_report():
             print("  %-11s kappa %-4s seed %d [%s]: %s" % (c, k, s, cases[(c, k, s)]["status"], nixnan(f)))
 
 e5_report()
+
+
+def e6_report():
+    if not glob.glob("logs/e6/*_hist.log"):
+        return
+    print("\nE6: nixnan histogram, danger-zone view. Cell = approx. occurrences (threshold reports x count, count=%s) of values with that exponent" % "64")
+    for sc, what, order in (("s1", "FP32 arithmetic on FP16-rounded A (chol_f32 --store f16, unblocked)", "f32"),
+                            ("s2", "tensor-core update (chol_tc --fmt f16)", "f32"),
+                            ("s3", "true FP16 arithmetic (chol_h16)", "f16")):
+        print(" %s: %s" % (sc, what))
+        for e in (6, 12):
+            f = "logs/e6/%s_e%d_hist.log" % (sc, e)
+            if not os.path.exists(f):
+                continue
+            tab = {}
+            for line in open(f, errors="replace"):
+                m = re.search(r"(f32|f16) bin has reached threshold: function=(?:void )?([a-z_0-9]+).*? range=\[([-\w]+),([-\w]+)\] count=(\d+)", line)
+                if m:
+                    key = (m.group(2), "%s..%s" % (m.group(3), m.group(4)) if m.group(3) != m.group(4) else m.group(3))
+                    tab[key] = tab.get(key, 0) + 1
+            kern = sorted({k for k, _ in tab})
+            print("   delta=2^-%d" % e)
+            for k in kern:
+                print("     %-14s %s" % (k, "  ".join("[%s]:%d" % (b, n * 64) for (kk, b), n in sorted(tab.items(), key=lambda t: t[0][1]) if kk == k)))
+    if os.path.exists("logs/e6/options.tsv"):
+        print(" cost of the options (s1, delta=2^-12, wall s): " + "; ".join(l.replace(" ", "=") for l in open("logs/e6/options.tsv").read().split("\n") if l))
+        for lab in ("report", "histogram", "hist_sampling4", "whitelist_rank1", "hist_whitelist", "instr_mem"):
+            f = "logs/e6/opt_%s.log" % lab
+            if os.path.exists(f):
+                t = open(f, errors="replace").read()
+                print("   %-16s threshold reports %-6d exception lines %d" % (lab, t.count("reached threshold"), t.count("error [")))
+
+e6_report()

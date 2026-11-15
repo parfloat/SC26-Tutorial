@@ -1,6 +1,6 @@
 # Experimental plan: Cholesky on a badly conditioned matrix, mixed precision, under nixnan
 
-Status: **E0, E1 (Section 9), E2 (Section 10), E3 (Section 11) and E4 (Section 12) and E5 (Section 13) are implemented and run; E6–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
+Status: **E0, E1 (Section 9), E2 (Section 10), E3 (Section 11) and E4 (Section 12) and E5 (Section 13) and E6 (Section 14) are implemented and run; E7 is still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 "checked" come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 
 Source: `cg-and-cholesky-nixnan.pdf` in this directory (6 pages). It is a ChatGPT transcript, not a reference: it
@@ -415,3 +415,80 @@ Caveats.
 - One matrix family, one size, FP32 accumulate only, NB=32; five seeds give counts, not confidence intervals.
 - The subnormal reports on the HMMA inputs come from the FP16 panel entries (values below 6.1e-5); I did not trace them to individual panel entries.
 - The `mixed-*` rows use the panel conversion exactly as in E4; I did not separate the effect of the panel rounding from the accumulate/update rounding.
+
+## 14. Results: E6, the histogram "danger-zone" view and the cost of nixnan's options (RTX 3090, sm_86; `A_delta`, n=256)
+
+Reproduce: `./run_chol_story.sh e6` (about 50 s). Logs and the two generated bin specs: `logs/e6/`.
+
+Set-up. Three scenarios, each run healthy (delta = 2^-6) and failing (delta = 2^-12) under `HISTOGRAM=1 BIN_SPEC_FILE=...`: s1 FP32 arithmetic on FP16-rounded A (unblocked, E3a), s2 the tensor-core update (E4), s3 true FP16 arithmetic (E3b). Bins: FP32 `zero` (exponent field 0), [-126,-30], [-29,-14], -13, -12, [-11,-8], [-7,-1], 0, [1,10]; FP16 the analogous set. -12 is the binade of the exact pivots (delta = 2^-12). The zero bin has `(record_inst)` so each hit names its SASS instruction. `count` = 64: a bin reports at every 64th occurrence, so a cell below is (reports x 64), an approximate number of operand values.
+
+```
+E6: nixnan histogram, danger-zone view. Cell = approx. occurrences (threshold reports x count, count=64) of values with that exponent
+ s1: FP32 arithmetic on FP16-rounded A (chol_f32 --store f16, unblocked)
+   delta=2^-6
+     backward_kernel [-11..-8]:28672  [-126..-30]:384  [-29..-14]:576  [-7..-1]:82624  [0]:17408  [1..10]:5888  [zero]:256
+     forward_kernel [-11..-8]:28672  [-126..-30]:384  [-29..-14]:576  [-7..-1]:94592  [0]:4736  [1..10]:6528  [zero]:192
+     pivot_kernel   [-126..-30]:384  [-29..-14]:64  [-7..-1]:1984  [1..10]:1216
+     rank1_kernel   [-11..-8]:6316608  [-12]:1380480  [-13]:1649984  [-29..-14]:690816  [-7..-1]:1113920  [0]:32576
+     scale_kernel   [-11..-8]:129024  [-12]:13248  [-126..-30]:68736  [-13]:20352  [-29..-14]:78016  [-7..-1]:115264  [0]:1216  [1..10]:226688  [zero]:32576
+   delta=2^-12
+     backward_kernel [0]:256  [zero]:256
+     forward_kernel [0]:256  [1..10]:512  [zero]:768
+     rank1_kernel   [0]:97856  [zero]:65024
+     scale_kernel   [0]:4032  [zero]:34880
+ s2: tensor-core update (chol_tc --fmt f16)
+   delta=2^-6
+     backward_kernel [-11..-8]:28672  [-126..-30]:192  [-29..-14]:768  [-7..-1]:95232  [0]:4672  [1..10]:5952  [zero]:192
+     forward_kernel [-11..-8]:28672  [-126..-30]:384  [-29..-14]:512  [-7..-1]:94592  [0]:4736  [1..10]:6528  [zero]:192
+     potrf_tile_kernel [-11..-8]:108096  [-12]:10880  [-126..-30]:8768  [-13]:21760  [-29..-14]:44608  [-7..-1]:33984  [0]:640  [1..10]:28800  [zero]:3904
+     tc_update_kernel [-11..-8]:46400  [-12]:113536  [-13]:37312  [-29..-14]:139712  [-7..-1]:109056  [0]:26816  [zero]:78784
+     trsm_panel_kernel [-11..-8]:1128064  [-12]:187328  [-126..-30]:61248  [-13]:273280  [-29..-14]:209920  [-7..-1]:283776  [0]:8000  [1..10]:199104  [zero]:28608
+   delta=2^-12
+     backward_kernel [-11..-8]:7104  [-7..-1]:832  [1..10]:192  [zero]:192
+     forward_kernel [-11..-8]:18944  [-126..-30]:64  [-7..-1]:11776  [0]:512  [1..10]:960  [zero]:192
+     potrf_tile_kernel [-11..-8]:11840  [-12]:1024  [-126..-30]:1088  [-13]:1472  [-29..-14]:10432  [-7..-1]:4992  [0]:640  [1..10]:3584  [zero]:3904
+     tc_update_kernel [-13]:46400  [-29..-14]:384  [0]:134336  [zero]:78784
+     trsm_panel_kernel [-11..-8]:234560  [-126..-30]:15552  [-13]:20416  [-29..-14]:228800  [-7..-1]:64128  [0]:8000  [1..10]:49920  [zero]:28608
+ s3: true FP16 arithmetic (chol_h16)
+   delta=2^-6
+     backward_kernel [-10..-8]:20544  [-14..-11]:8064  [-7..-1]:135808  [0]:20608  [1..10]:8384  [zero]:67456
+     forward_kernel [-10..-8]:20544  [-14..-11]:8064  [-7..-1]:153600  [0]:5696  [1..10]:5184  [zero]:67776
+     rank1_kernel   [-10..-8]:5272768  [-14..-11]:7496384  [-7..-1]:1178944  [0]:32576  [zero]:8388416
+   delta=2^-12
+     backward_kernel [0]:192  [zero]:67456
+     forward_kernel [0]:192  [1..10]:448  [zero]:68800
+     rank1_kernel   [0]:97856  [zero]:8486144
+ cost of the options (s1, delta=2^-12, wall s): native=0.3; report=2.9; detail=2.9; histogram=3.4; hist_sampling4=3.3; whitelist_rank1=0.8; hist_whitelist=0.8; instr_mem=2.9
+   report           threshold reports 0      exception lines 249
+   histogram        threshold reports 3185   exception lines 249
+   hist_sampling4   threshold reports 2277   exception lines 241
+   whitelist_rank1  threshold reports 0      exception lines 5
+   hist_whitelist   threshold reports 2545   exception lines 5
+   instr_mem        threshold reports 0      exception lines 249
+```
+
+What it shows.
+- **Healthy runs have a population in the low binades; failing runs have none.** In s1, `rank1_kernel` at delta=2^-6 holds millions of values in [-13,-8] and 690k in [-29,-14] (the Schur complement shrinking toward the small pivots). At delta=2^-12 the only populated bins are exponent 0 (the 1s of the rank-one matrix) and the zero bin: the values do not approach zero, they are exactly 0. The same in s3 (rank1: 12.7M values in [-14,-8] healthy, none failing) and in s2's `tc_update_kernel`.
+- **The zero bin names the instruction.** s1 delta=2^-12: 1016 of the 2.5k zero-bin reports are `rank1_kernel FFMA R3, R8, -R11, R3` (the Schur update `a_ij - l_i l_j` landing on exactly 0), 513 are `scale_kernel FFMA R2, R0, R3, RZ`. Caution: the second is the multiply by the reciprocal with an RZ addend; RZ is a zero operand, so it is the histogram counting an input, not a defect. The zero bin also counts exponent-field 0 subnormals and is populated in the healthy runs too (s3 healthy: 8.4M), so by itself it is not an alarm; the signature is the empty low binades next to a full zero bin.
+- **The histogram is an operand census.** It counts the exponent of every FP source and destination operand of every instrumented instruction, per kernel, so the numbers are not "values of the Schur complement". The pivot kernel in the failing runs reports nothing because its few values never reach 64 occurrences in one bin.
+- **It does not replace the exception report.** `exception lines` is the same (249) with and without the histogram.
+
+Cost of the options (s1, delta=2^-12, wall seconds; native 0.3):
+
+| option | s | what changes |
+|---|---|---|
+| default report | 2.9 | startup dominates: about 0.3 s per distinct kernel x 5, plus launch overhead of 255 x 3 instrumented launches |
+| + `PRINT_ILL_INSTR`, `ENABLE_FUN_DETAIL` | 2.9 | 768 "running kernel" lines are the extra output |
+| + `HISTOGRAM` (count 64) | 3.4 | 3185 threshold reports |
+| + `SAMPLING=4` | 3.3 | reports 3185 -> 2277; no visible time saving here |
+| `FUNCTION_WHITELIST` (rank1 only) | 0.8 | exception lines 249 -> 5; the file must hold the full demangled name `rank1_kernel(float*, int, int)`; the bare name `rank1_kernel` instrumented nothing and reported nothing |
+| `INSTR_MEM=1` | 2.9 | identical to the default report (see below) |
+
+Findings and warnings.
+- `INSTR_MEM=1` changed nothing (same exception lines, same time), as `nixnan/test/README.md` suspected: the NaN-store reports are already in the default report. I did not read the code path further.
+- Writing `LD_PRELOAD=nixnan.so timeout 100 ./prog` loads the tool into `timeout`, not the program: nothing is instrumented and nothing says so. Use `timeout 100 env LD_PRELOAD=... ./prog`. (I lost several runs to this while setting E6 up.)
+- A whitelist entry that does not match a kernel silently produces an empty report, which looks like a clean run.
+- The threshold test is `prev % count == 0 && prev != 0`: with `count=1` the first occurrence is not reported, and one occurrence per kernel is never seen; I did not check whether that is intended.
+- `count=1` on this program prints about 10^5 lines per run and exceeded my 120 s limit once; count=64 keeps it under 4 s.
+
+Caveats. Operand-level census; one matrix; s2's FP16 HMMA operands are not binned (only FP32 bins were set for it); the per-kernel breakdown of s2 depends on the NB=32 blocking; I did not run `E6` for BF16/TF32.

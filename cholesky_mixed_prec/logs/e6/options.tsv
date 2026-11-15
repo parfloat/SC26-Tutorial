@@ -1,0 +1,8 @@
+native 0.3
+report 2.9
+detail 2.9
+histogram 3.4
+hist_sampling4 3.3
+whitelist_rank1 0.8
+hist_whitelist 0.8
+instr_mem 2.9

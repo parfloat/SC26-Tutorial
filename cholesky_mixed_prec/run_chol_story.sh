@@ -9,6 +9,7 @@
 #                                nixnan report + per-instruction trace (PRINT_ILL_INSTR) at the failing and the silent points
 #   ./run_chol_story.sh e4       blocked Cholesky, FP32 panel, TENSOR-CORE trailing update (WMMA FP16 / BF16 / TF32, FP32 accumulate)
 #   ./run_chol_story.sh e5       random Q diag(sigma) Q^T matrices (kappa 1e2..1e7, 5 seeds) x five configurations; nixnan on chosen points
+#   ./run_chol_story.sh e6       nixnan histogram "danger zone" view (healthy vs failing), cost of HISTOGRAM / SAMPLING / FUNCTION_WHITELIST / INSTR_MEM
 #   ./run_chol_story.sh sqrt     what does nixnan report for sqrt(0)? IEEE sqrtf (MUFU.RSQ sequence) vs -prec-sqrt=false (MUFU.SQRT)
 #   ./run_chol_story.sh all      e0, e1, e2, e3, e4, sqrt, then the summary          (default)
 #   ./run_chol_story.sh summary  re-print the tables from the saved logs
@@ -21,7 +22,7 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NIXNAN_LIB="${NIXNAN_LIB:-$PWD/../external/nixnan/nixnan.so}"
 ARCH="${ARCH:-sm_86}"
 NATIVE_LIMIT=60; NIXNAN_LIMIT=120
-mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3 logs/e4 logs/e5 logs/sqrt
+mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3 logs/e4 logs/e5 logs/e6 logs/sqrt
 MATS=(M0 M1)   # from gen_chol_matrices.py (matrices/matrices.tsv has their definitions and kappa)
 unset LD_LIBRARY_PATH   # a stale CUDA dir here can shadow the toolkit nvcc built against
 [[ -f "$NIXNAN_LIB" ]] || { echo "error: nixnan.so not found at $NIXNAN_LIB (set NIXNAN_LIB)" >&2; exit 1; }
@@ -178,6 +179,59 @@ sqrtstudy() {
     done
 }
 
+# E6: nixnan's histogram ("danger zone") view and its cost. Scenarios (healthy delta=2^-6 vs failing delta=2^-12):
+#   s1 chol_f32 --store f16 (FP32 arithmetic on FP16-rounded A)   s2 chol_tc --fmt f16 (tensor-core update)   s3 chol_h16 (true FP16)
+# Bins: one per decade of binades around the pivot size; the zero bin (exponent field 0) carries (record_inst).
+E6_COUNT=64
+e6_specs() {
+    python3 - "$E6_COUNT" <<'PY'
+import json, sys
+c = int(sys.argv[1])
+f32 = [[-127, -127], [-126, -30], [-29, -14], [-13, -13], [-12, -12], [-11, -8], [-7, -1], [0, 0], [1, 10]]
+f16 = [[-15, -15], [-14, -11], [-10, -8], [-7, -1], [0, 0], [1, 10]]
+def spec(fmt, bins):
+    d = {"count": c, "doublings": 0, "max_reports": 0}
+    d[fmt] = [b for b in bins if b[0] != bins[0][0]]
+    d[fmt + " (record_inst)"] = [bins[0]]
+    return d
+json.dump(spec("f32", f32), open("logs/e6/spec_f32.json", "w"), indent=1)
+json.dump(spec("f16", f16), open("logs/e6/spec_f16.json", "w"), indent=1)
+PY
+}
+e6() {
+    echo "== E6: histogram danger-zone view (healthy delta=2^-6 vs failing delta=2^-12), and the cost of nixnan's options"
+    build f32; build_half h16
+    [[ -x bin_chol/chol_tc ]] || nvcc -std=c++17 -g -O2 -lineinfo -arch="$ARCH" -o bin_chol/chol_tc chol_tc.cu || exit 1
+    mkdir -p logs/e6; rm -f logs/e6/*
+    e6_specs
+    local -A CMD=( [s1]="./bin_chol/chol_f32 --store f16 --path unblocked --log2delta" [s2]="./bin_chol/chol_tc --fmt f16 --log2delta" [s3]="./bin_chol/chol_h16 --log2delta" )
+    local -A SPEC=( [s1]=f32 [s2]=f32 [s3]=f16 )
+    for sc in s1 s2 s3; do for e in 6 12; do
+        local tag=${sc}_e$e t0 t1
+        t0=$(now)
+        timeout 110 env HISTOGRAM=1 BIN_SPEC_FILE=logs/e6/spec_${SPEC[$sc]}.json LD_PRELOAD="$NIXNAN_LIB" ${CMD[$sc]} -$e > logs/e6/${tag}_stdout.log 2> logs/e6/${tag}_hist.log
+        t1=$(now); echo "$(secs "$t0" "$t1")" > logs/e6/$tag.time
+        echo "   $tag: $(grep -c 'reached threshold' logs/e6/${tag}_hist.log) threshold reports in $(cat logs/e6/$tag.time) s"
+    done; done
+    echo "-- cost of the options (s1, delta=2^-12, wall seconds)"
+    echo "rank1_kernel(float*, int, int)" > logs/e6/whitelist.txt   # the full demangled name is matched
+    local c="./bin_chol/chol_f32 --store f16 --path unblocked --log2delta -12" r
+    run_opt() {   # run_opt <label> <env...>
+        local label=$1; shift; local t0 t1; t0=$(now)
+        timeout 110 env LD_PRELOAD="$NIXNAN_LIB" "$@" $c > /dev/null 2> logs/e6/opt_${label}.log; t1=$(now)
+        echo "$label $(secs "$t0" "$t1")" >> logs/e6/options.tsv; echo "   $label $(secs "$t0" "$t1")"
+    }
+    : > logs/e6/options.tsv
+    t0=$(now); $c > /dev/null 2>&1; t1=$(now); echo "native $(secs "$t0" "$t1")" >> logs/e6/options.tsv; echo "   native $(secs "$t0" "$t1")"
+    run_opt report
+    run_opt detail PRINT_ILL_INSTR=1 ENABLE_FUN_DETAIL=1
+    run_opt histogram HISTOGRAM=1 BIN_SPEC_FILE=logs/e6/spec_f32.json
+    run_opt hist_sampling4 HISTOGRAM=1 BIN_SPEC_FILE=logs/e6/spec_f32.json SAMPLING=4
+    run_opt whitelist_rank1 FUNCTION_WHITELIST=logs/e6/whitelist.txt
+    run_opt hist_whitelist HISTOGRAM=1 BIN_SPEC_FILE=logs/e6/spec_f32.json FUNCTION_WHITELIST=logs/e6/whitelist.txt
+    run_opt instr_mem INSTR_MEM=1
+}
+
 # E5: random Q diag(sigma) Q^T matrices (kappa 1e2..1e7, seeds 0-4, n=256) through five configurations
 E5_KAPPAS=(1e2 1e3 1e4 1e5 1e6 1e7); E5_SEEDS=(0 1 2 3 4)
 e5_run() {   # e5_run <config> <csv>   (prints the RESULT line)
@@ -221,10 +275,11 @@ case "${1:-all}" in
     e3) e3 ;;
     e4) e4 ;;
     e5) e5 ;;
+    e6) e6 ;;
     sqrt) sqrtstudy ;;
     summary) ;;
-    all) e0; e1; e2; e3; e4; e5; sqrtstudy ;;
-    *) sed -n 3,13p "$0"; exit 1 ;;
+    all) e0; e1; e2; e3; e4; e5; e6; sqrtstudy ;;
+    *) sed -n 3,14p "$0"; exit 1 ;;
 esac
 echo
 python3 chol_summary.py

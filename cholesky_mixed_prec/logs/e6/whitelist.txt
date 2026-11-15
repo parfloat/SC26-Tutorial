@@ -1,0 +1,1 @@
+rank1_kernel(float*, int, int)
