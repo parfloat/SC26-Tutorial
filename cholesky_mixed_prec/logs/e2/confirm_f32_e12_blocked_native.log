@@ -1,0 +1,1 @@
+RESULT matrix=A_delta config=F32 store=f32 path=blocked n=256 log2delta=-12 kappa=1.049e+06 status=ok cause=- stored_changed=0 fact_err=5.216e-08 fact_err_stored=5.216e-08 resid=1.744e-08 fwd_err=1.821e-02 first_bad_pivot=-1 t_ms=2.272

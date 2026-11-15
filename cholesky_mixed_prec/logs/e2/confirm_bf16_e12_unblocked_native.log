@@ -1,0 +1,1 @@
+RESULT matrix=A_delta config=F32 store=bf16 path=unblocked n=256 log2delta=-12 kappa=1.049e+06 status=breakdown cause=storage stored_changed=1 fact_err=nan fact_err_stored=nan resid=nan fwd_err=nan first_bad_pivot=1 t_ms=3.393

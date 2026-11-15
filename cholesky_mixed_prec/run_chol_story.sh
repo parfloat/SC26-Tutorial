@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
-# run_chol_story.sh -- Cholesky mixed-precision study (see EXPERIMENT_PLAN.md). Implemented so far: E0 and E1, on M0 and M1.
+# run_chol_story.sh -- Cholesky mixed-precision study (see EXPERIMENT_PLAN.md). Implemented so far: E0, E1 (on M0 and M1) and E2.
 #
 #   ./run_chol_story.sh e0       budget: wall time of every planned run, native and under nixnan (limits: 60 s / 120 s)
 #   ./run_chol_story.sh e1       reference: M0 and M1 (n=256) factor in FP64 and FP32; errors and nixnan counters
-#   ./run_chol_story.sh all      e0, then e1, then the summary          (default)
+#   ./run_chol_story.sh e2       where does each storage format / precision break? delta sweep, CPU cross-check, nixnan on chosen points
+#   ./run_chol_story.sh all      e0, e1, e2, then the summary          (default)
 #   ./run_chol_story.sh summary  re-print the tables from the saved logs
 #
 # Logs: logs/e0/, logs/e1/.   Env: NIXNAN_LIB=<nixnan.so> (default ../external/nixnan/nixnan.so)  ARCH=sm_86
@@ -15,7 +16,7 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NIXNAN_LIB="${NIXNAN_LIB:-$PWD/../external/nixnan/nixnan.so}"
 ARCH="${ARCH:-sm_86}"
 NATIVE_LIMIT=60; NIXNAN_LIMIT=120
-mkdir -p bin_chol logs/e0 logs/e1
+mkdir -p bin_chol logs/e0 logs/e1 logs/e2
 MATS=(M0 M1)   # from gen_chol_matrices.py (matrices/matrices.tsv has their definitions and kappa)
 unset LD_LIBRARY_PATH   # a stale CUDA dir here can shadow the toolkit nvcc built against
 [[ -f "$NIXNAN_LIB" ]] || { echo "error: nixnan.so not found at $NIXNAN_LIB (set NIXNAN_LIB)" >&2; exit 1; }
@@ -75,11 +76,29 @@ e1() {
     done; done; done
 }
 
+e2() {
+    echo "== E2: delta = 2^-e sweep, A_delta n=256 (kappa = (n+delta)/delta), native (fast: one process per precision)"
+    for c in f64 f32; do build $c; done
+    ./bin_chol/chol_f32 --sweep 2 26 --stores f32,tf32,f16,bf16 --paths unblocked,blocked > logs/e2/sweep_f32.log 2>&1
+    ./bin_chol/chol_f64 --sweep 2 56 --stores f64 --paths unblocked,blocked > logs/e2/sweep_f64.log 2>&1
+    echo "-- CPU cross-check (LAPACK float32 on the rounded matrix)"
+    python3 e2_emulate.py 2 26 > /dev/null
+    echo "-- nixnan on chosen points: delta = 2^-12 (matrix M1) and each storage format's first failing delta, both paths"
+    rm -f logs/e2/confirm_*.log
+    python3 chol_summary.py --e2-points | while read -r store e path; do
+        tag=${store}_e${e}_${path}
+        ./bin_chol/chol_f32 --log2delta -$e --store $store --path $path > logs/e2/confirm_${tag}_native.log 2>&1
+        LD_PRELOAD="$NIXNAN_LIB" ./bin_chol/chol_f32 --log2delta -$e --store $store --path $path > logs/e2/confirm_${tag}_nixnan.log 2>&1
+        echo "   $tag"
+    done
+}
+
 case "${1:-all}" in
     e0) e0 ;;
     e1) e1 ;;
+    e2) e2 ;;
     summary) ;;
-    all) e0; e1 ;;
+    all) e0; e1; e2 ;;
     *) sed -n 3,11p "$0"; exit 1 ;;
 esac
 echo

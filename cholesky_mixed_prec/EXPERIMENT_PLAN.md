@@ -1,6 +1,6 @@
 # Experimental plan: Cholesky on a badly conditioned matrix, mixed precision, under nixnan
 
-Status: **E0 and E1 are implemented and run (Section 9); E2–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
+Status: **E0, E1 (Section 9) and E2 (Section 10) are implemented and run; E3–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 "checked" come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 
 Source: `cg-and-cholesky-nixnan.pdf` in this directory (6 pages). It is a ChatGPT transcript, not a reference: it
@@ -43,7 +43,7 @@ The tutorial should show both outcomes, so the plan includes a randomised sweep 
 |---|---|---|
 | `A_δ = 11ᵀ + δI` is SPD for every δ > 0, with κ₂ = (n+δ)/δ ≈ n/δ | **Checked** (n=256, δ=2⁻¹²: κ = 1.049e6 both ways) | Use as the deterministic matrix |
 | In FP16, TF32-input and BF16, `1+δ` rounds to 1 when δ is below 2⁻¹¹ (FP16, TF32) or 2⁻⁸ (BF16), so the stored matrix becomes the rank-one `11ᵀ` | **Checked** for FP16 (all 65,536 entries equal 1) and BF16 (`bf16(1+2⁻¹²) = 1`) | Rounding emulation in E2; real hardware in E3/E4 |
-| FP32 "remains safe" because 1+δ rounds only below 2⁻²⁴ | **Misleading.** 2⁻²⁴ is where *storage* rounds. FP32 *factorization* fails much earlier from cancellation in the Schur complement: LAPACK in FP32 factors δ=2⁻¹⁴ (κ≈4e6) and reports "not positive definite" at δ=2⁻¹⁶ (κ≈2e7); 2⁻¹⁵ not tried | E2 finds the FP32 threshold on the GPU; the demo δ must sit **between** the FP32 and FP16 thresholds (δ=2⁻¹² does: FP32 factors it with ‖A−LLᵀ‖/‖A‖ = 4.3e-7, checked) |
+| FP32 "remains safe" because 1+δ rounds only below 2⁻²⁴ | **Partly right, see Section 10.** *First reading (CPU, kept for the record):* misleading, 2⁻²⁴ is where *storage* rounds. FP32 *factorization* fails much earlier from cancellation in the Schur complement: LAPACK in FP32 factors δ=2⁻¹⁴ (κ≈4e6) and reports "not positive definite" at δ=2⁻¹⁶ (κ≈2e7); 2⁻¹⁵ not tried | E2 found the thresholds on the GPU: breakdown does occur at 2⁻²⁴ for our FP32 kernels, but LAPACK and the kernels disagree between 2⁻¹⁶ and 2⁻²², and accuracy is lost long before. The demo δ must sit **between** the FP32 and FP16 thresholds; δ=2⁻¹² does (Section 10) |
 | An unblocked Cholesky of the rounded matrix has a zero second pivot, then 0/0 | **Not yet run.** LAPACK reports "not PD" instead of producing a NaN, so the NaN needs our own kernel that does not check | E3 |
 | nixnan "can identify the invalid sqrt, divide-by-zero and resulting NaN" | **Partly known.** nixnan counts NaN/Inf/div-by-zero at SASS level and has `fp32/sqrt_single`, `div_single` tests in `../../nixnan/test/`. Whether the sqrt-of-negative path is reported in the form this kernel compiles to is **unverified** | E3, with `PRINT_ILL_INSTR` |
 | nixnan "can watch HMMA instructions" for FP16/BF16/TF32 inputs with FP32 accumulate | **Known** from nixnan's `test/mma/` (HMMA.16816.F32, .F32.BF16, HMMA.1684.F32.TF32 covered). A blocked Cholesky actually compiling to HMMA is **unverified** | E4 (check SASS with `cuobjdump -sass`) |
@@ -209,3 +209,52 @@ Four columns: for each matrix, the factorization error ‖A−LLᵀ‖/‖A‖ a
 ### Deviations from the plan
 - E0's "blocked" variant uses SIMT kernels (no tensor cores yet); the WMMA update belongs to E4.
 - The matrix names are M0 (benign) and M1 (ill-conditioned); E2 onward will add the δ sweep and the randomised matrices.
+
+## 10. Results: E2, where each format breaks (RTX 3090, sm_86; `A_δ`, n=256)
+
+Code: `chol_study.cu --sweep LO HI --stores ... --paths ...` (one process, all δ), `e2_emulate.py` (CPU cross-check), `run_chol_story.sh e2`
+(about 1 minute), tables from `chol_summary.py`. Logs: `logs/e2/` (`sweep_f32.log`, `sweep_f64.log`, `emulate.tsv`, `confirm_*`). δ = 2⁻ᵉ, κ₂ = (n+δ)/δ.
+"Store" = the format `A` is rounded to before factoring. **All arithmetic is FP32 (FP64 for the FP64 rows); half-precision arithmetic is E3b.**
+Status: `ok`; `inacc` = factorization error above 1000·ε or forward error above 0.1 (my threshold, arbitrary); `BRK` = the kernel saw a pivot ≤ 0.
+
+### Where the failures start
+
+| arithmetic / store | first not-ok e (κ₂) | status, cause | last ok |
+|---|---|---|---|
+| FP32 / **bf16** | 8 (6.6e4) | breakdown, **storage** (1+2⁻⁸ rounds to 1: tie, round-to-even) | 7 |
+| FP32 / **f16** | 11 (5.2e5) | breakdown, storage (1+2⁻¹¹ is a tie, rounds to 1) | 10 |
+| FP32 / **tf32** | 12 (1.0e6) | breakdown, storage | 11 |
+| FP32 / f32, unblocked | 23 (2.1e9) inaccurate; **breakdown at 24** (storage: 1+2⁻²⁴ rounds to 1) | | 22 |
+| FP32 / f32, blocked | 14 (4.2e6) inaccurate (not monotone: e=16 is ok again); breakdown at 24 | arithmetic | 13 |
+| FP64 / f64 | 52 (unblocked) or 43 (blocked) inaccurate; **breakdown at 53** (1+2⁻⁵³ rounds to 1 in the matrix itself) | | 51 / 42 |
+
+- **Predictions confirmed:** FP16 and BF16 storage break where 1+δ is a tie that rounds to 1 (2⁻¹¹, 2⁻⁸); the failure is the stored matrix becoming
+  exactly `11ᵀ`: **the first bad pivot is index 1 (the second pivot is 0) in every breakdown**, as in the PDF.
+- **TF32 differs from FP16 by one step:** with ties away from zero (`cvt.rna`, as `wmma::__float_to_tf32`) 1+2⁻¹¹ rounds *up* to 1+2⁻¹⁰, so TF32 still works at e=11 and fails at 12.
+  With round-to-nearest-even it would fail at 11 like FP16. The rounding mode of the tensor-core inputs therefore moves the threshold, as the plan's risk 4 expected.
+- **The demo point works:** at δ=2⁻¹² (M1, κ₂ = 1.05e6) FP32 is `ok` on both paths while TF32, FP16 and BF16 storage all `BRK`. At δ=2⁻¹⁰ (κ₂ = 2.6e5) FP16 and TF32 are still `ok` and BF16 breaks.
+- **The FP32 thresholds are implementation-dependent, and `A_δ` is special.** LAPACK (`spotrf` via SciPy) reports "not positive definite" for FP32 at e=16–22; the GPU
+  kernels do not (unblocked is ok up to e=22). The kernels' CPU/GPU agreement for tf32, f16 and bf16 is exact at every e (those fail at storage); for f32 they disagree
+  at e=16–22 as just said. `A_δ`'s structure (every Schur complement keeps the form `s·11ᵀ + δ'I`) makes the errors benign for some operation orders, so a
+  threshold measured on it says how the failure looks, not where it will occur in general (plan risk 5). E5's random matrices are the real test.
+- **Accuracy is lost long before breakdown.** FP32 forward error exceeds 0.1 from e=14 (blocked) or 23 (unblocked), with no pivot ≤ 0 and no exception.
+  Cause label `arithmetic` for the FP64 breakdown at e=53 is loose: there the matrix itself, built in double, has already lost δ.
+
+### nixnan on chosen points (`logs/e2/confirm_*`, FP32 arithmetic, n=256)
+
+| store, e | path | status | nixnan |
+|---|---|---|---|
+| f32, 12 | both | ok | no exceptions |
+| f32, 14 (blocked) / 23 (unblocked) | | inaccurate | **no exceptions** (the silent case) |
+| tf32 / f16 / bf16 at their first failing e, and at 12 | unblocked | breakdown, bad pivot 1 | FP32 NaN 231 (675,688 repeats), Inf 13, Div0 4, memory NaN 1 |
+| same | blocked | breakdown, bad pivot 1 | FP32 NaN 566 (689,040 repeats), Inf 17, Div0 5, memory NaN 1 |
+
+- The counts are **identical across tf32, f16 and bf16** (and across δ): all three stores produce the same rounded matrix `11ᵀ`, so the same operations run on the same values.
+  Per path, the exception profile is a property of the algorithm, not of the format.
+- The exceptions are all in the FP32 section: the conversions to the narrow formats happen on the host here, and nixnan does not instrument conversion opcodes anyway.
+- E3 will trace these exceptions to kernel and source line.
+
+### Deviations and caveats
+- The status threshold (forward error 0.1) is mine; moving it moves the `inacc` boundary, not the `BRK` one.
+- The matrix is rounded on the host (the formats are emulated for storage); it is not yet produced by device conversions or tensor-core inputs (E4).
+- FP64 was swept to e=56 only for the f64/f64 combination.

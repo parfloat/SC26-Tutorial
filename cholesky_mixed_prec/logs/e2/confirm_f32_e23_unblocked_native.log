@@ -1,0 +1,1 @@
+RESULT matrix=A_delta config=F32 store=f32 path=unblocked n=256 log2delta=-23 kappa=2.147e+09 status=inaccurate cause=arithmetic stored_changed=0 fact_err=4.657e-10 fact_err_stored=4.657e-10 resid=7.436e-09 fwd_err=1.597e+01 first_bad_pivot=-1 t_ms=3.463
