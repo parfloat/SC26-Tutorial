@@ -1,0 +1,20 @@
+\begin{tabular}{llllp{7.3cm}}
+\toprule
+storage & $e$ & path & status & nixnan: non-zero counters, unique (repeats)\\
+\midrule
+BF16 & 12 & blocked & breakdown & FP32 NaN 566 (689\,040), FP32 Inf 17 (24), FP32 Div0 5 (11), FP32 Memory NaN 1 (2\,463)\\
+BF16 & 12 & unblocked & breakdown & FP32 NaN 231 (675\,688), FP32 Inf 13 (28), FP32 Div0 4 (11), FP32 Memory NaN 1 (94\,655)\\
+BF16 & 8 & blocked & breakdown & FP32 NaN 566 (689\,040), FP32 Inf 17 (24), FP32 Div0 5 (11), FP32 Memory NaN 1 (2\,463)\\
+BF16 & 8 & unblocked & breakdown & FP32 NaN 231 (675\,688), FP32 Inf 13 (28), FP32 Div0 4 (11), FP32 Memory NaN 1 (94\,655)\\
+FP16 & 11 & blocked & breakdown & FP32 NaN 566 (689\,040), FP32 Inf 17 (24), FP32 Div0 5 (11), FP32 Memory NaN 1 (2\,463)\\
+FP16 & 11 & unblocked & breakdown & FP32 NaN 231 (675\,688), FP32 Inf 13 (28), FP32 Div0 4 (11), FP32 Memory NaN 1 (94\,655)\\
+FP16 & 12 & blocked & breakdown & FP32 NaN 566 (689\,040), FP32 Inf 17 (24), FP32 Div0 5 (11), FP32 Memory NaN 1 (2\,463)\\
+FP16 & 12 & unblocked & breakdown & FP32 NaN 231 (675\,688), FP32 Inf 13 (28), FP32 Div0 4 (11), FP32 Memory NaN 1 (94\,655)\\
+FP32 & 12 & blocked & ok & no exceptions\\
+FP32 & 12 & unblocked & ok & no exceptions\\
+FP32 & 14 & blocked & inaccurate & no exceptions\\
+FP32 & 23 & unblocked & inaccurate & no exceptions\\
+TF32 & 12 & blocked & breakdown & FP32 NaN 566 (689\,040), FP32 Inf 17 (24), FP32 Div0 5 (11), FP32 Memory NaN 1 (2\,463)\\
+TF32 & 12 & unblocked & breakdown & FP32 NaN 231 (675\,688), FP32 Inf 13 (28), FP32 Div0 4 (11), FP32 Memory NaN 1 (94\,655)\\
+\bottomrule
+\end{tabular}

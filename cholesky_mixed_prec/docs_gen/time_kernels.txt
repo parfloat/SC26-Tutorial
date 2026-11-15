@@ -1,0 +1,7 @@
+Kernel [pivot_kernel(float*, int, int, int*)] execution time: 301891 microseconds
+Kernel [scale_kernel(float*, int, int)] execution time: 282521 microseconds
+Kernel [rank1_kernel(float*, int, int)] execution time: 294340 microseconds
+Kernel [forward_kernel(float const*, float const*, float*, int)] execution time: 319188 microseconds
+Kernel [backward_kernel(float const*, float const*, float*, int)] execution time: 321294 microseconds
+...
+Kernel [backward_kernel(float const*, float const*, float*, int)] execution time: 321294 microseconds

@@ -7,6 +7,8 @@ Source: `cg-and-cholesky-nixnan.pdf` in this directory (6 pages). It is a ChatGP
 explains CG, asks whether CG suits tensor cores, then explains Cholesky and ends with a proposal for a nixnan
 tutorial example. This plan keeps that proposal's idea and tests each claim instead of assuming it.
 
+Documents for E0--E3: slides `Chol_Slides.pdf` (source `Chol_Slides.tex`), full report `chol_report.pdf` (source `chol_report.tex`, includes the NixNan details); both are built from the logs through `make_chol_docs.py` (fragments in `docs_gen/`).
+
 ## 1. What the tutorial should show
 
 > A **straight Cholesky** of a badly conditioned SPD matrix, with the precision lowered without thinking about the

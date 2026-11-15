@@ -1,0 +1,356 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{mathptmx}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, shapes.geometric, decorations.pathreplacing}
+
+\geometry{margin=1in}
+
+\tikzset{
+  matbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm, align=center, font=\scriptsize, fill=gray!8},
+  outbox/.style={draw, thick, minimum width=1.15cm, minimum height=1.15cm, align=center, font=\scriptsize, fill=green!12},
+  kernbox/.style={draw, thick, rounded corners=2pt, minimum width=2.5cm, minimum height=1.2cm, align=center, font=\scriptsize,
+                  fill=blue!7, text width=2.3cm},
+  redbox/.style={draw, thick, rounded corners=2pt, align=center, font=\scriptsize, fill=red!12, minimum height=1.0cm},
+  flowarrow/.style={-{Stealth[length=2.2mm, width=1.6mm]}, thick},
+}
+
+\definecolor{codebg}{gray}{0.95}
+\lstset{basicstyle=\ttfamily\scriptsize, backgroundcolor=\color{codebg}, breaklines=true, frame=single, columns=fullflexible,
+        showstringspaces=false, breakatwhitespace=false}
+
+\title{Cholesky Factorization in Mixed Precision under NixNan\\
+\large Where Lowering the Precision Loses Positive Definiteness, and What NixNan Reports}
+\author{SC26 Tutorial / NixNan Experiments}
+\date{}
+
+\begin{document}
+\maketitle
+
+% ================================================================== 1
+\section{Executive Summary}
+
+This report documents the first four experiments (E0--E3) of a mixed-precision Cholesky study for the SC26 tutorial. The tutorial
+point is: \emph{if the precision of a Cholesky factorization is reduced without regard to the condition number, rounding can destroy the
+small positive Schur-complement pivot that the algorithm needs; the factorization then reaches
+$L_{jj}=\sqrt{S_{jj}}$ with $S_{jj}\le 0$ and produces Inf and NaN, which NixNan can locate.} All experiments ran on one NVIDIA GeForce RTX 3090
+(compute capability 8.6, driver 595.99.02, CUDA 12.4), with NixNan (\url{https://github.com/parfloat/nixnan}) built from
+the copy in \texttt{external/nixnan} (commit \texttt{ce35185}, 2026-09-26).
+
+\begin{enumerate}
+  \item \textbf{The failure is reproducible, fast and located by NixNan.} On $A_\delta=\mathbf{1}\mathbf{1}^T+\delta I$ ($n=256$, $\delta=2^{-12}$,
+  $\kappa_2=1.05\times10^{6}$), storing the matrix in FP16, BF16 or TF32 rounds $1+\delta$ to $1$, so the stored matrix is the rank-one
+  $\mathbf{1}\mathbf{1}^T$ and the \emph{second pivot is exactly zero}. The division by it gives Inf, then NaN, which travel through every later kernel to the output.
+  A NixNan run takes about 3~s. FP32 factors the same matrix cleanly.
+  \item \textbf{Where each format breaks} (Section~\ref{sec:e2}): BF16 storage from $\delta=2^{-8}$, FP16 from $2^{-11}$, TF32 from $2^{-12}$
+  (its ties round away from zero, so it survives one step longer than FP16), FP32 from $2^{-24}$, FP64 from $2^{-53}$. In FP32 and FP64 the forward error
+  exceeds $0.1$ long before: from $2^{-14}$ or $2^{-23}$ in FP32, depending on the code path.
+  \item \textbf{A bad condition number does not guarantee an exception.} With true FP16 arithmetic at $\delta=2^{-10}$ and BF16 arithmetic at $\delta=2^{-7}$
+  the factorization error is small, no pivot is non-positive, \textbf{NixNan reports no exception}, and the solution is garbage (forward error $16$).
+  NixNan finds exceptions, not ill-conditioning.
+  \item \textbf{Reading a NixNan report needs care} (Section~\ref{sec:nixnan}): the first report is the compiler's expansion of $\sqrt0$,
+  not the defect; FP16/BF16 division and square root run in FP32, so one source operation shows up in two precision sections;
+  conversion opcodes are not instrumented; and some kernels' reports carry no source line.
+  \item \textbf{Cost.} Custom kernels (5 distinct kernels per run) cost 3~s under NixNan; the existing cuSOLVER/cuBLAS-based \texttt{mpir\_gpu}
+  costs 88~s. All experiments stay inside the planned budget of 1~minute native, 2~minutes with NixNan.
+\end{enumerate}
+
+Scope: this report covers E0--E3. Tensor-core updates (E4), random matrices (E5), histogram views (E6) and an explicit pivot guard (E7) are planned and
+not run (Section~\ref{sec:next}).
+
+% ================================================================== 2
+\section{Background and the Question}
+
+The study started from a discussion document (\texttt{cg-and-cholesky-nixnan.pdf}, a chat transcript, not a reference) that compares conjugate gradients with Cholesky
+factorization, observes that the dominant cost of a blocked Cholesky is the trailing update $A_{RR}\leftarrow A_{RR}-L_{Rk}L_{Rk}^T$, a symmetric rank-$k$ update that is
+essentially a GEMM and therefore maps to \textbf{tensor cores}, and proposes a NixNan tutorial: factor a badly conditioned SPD matrix in lowered precision and watch the exceptions.
+The proposal's core idea is kept; each of its claims was checked rather than assumed.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{p{5.1cm}p{1.9cm}p{7.2cm}}
+\toprule
+Claim in the document & Status & Result in this study\\
+\midrule
+$A_\delta=\mathbf{1}\mathbf{1}^T+\delta I$ is SPD with $\kappa_2=(n+\delta)/\delta$ & confirmed & $\kappa_2=1.049\times10^6$ analytically and from the eigenvalues of the stored matrix\\
+$1+\delta$ rounds to 1 in FP16/TF32 below $2^{-11}$, in BF16 below $2^{-8}$ & confirmed, with a refinement & FP16/BF16 break exactly at the tie ($2^{-11}$, $2^{-8}$); TF32 with ties away from zero breaks one step later ($2^{-12}$)\\
+FP32 is safe because $1+\delta$ rounds only below $2^{-24}$ & partly right & breakdown does occur at $2^{-24}$, but accuracy is lost earlier and LAPACK disagrees with our kernels between $2^{-16}$ and $2^{-22}$\\
+An unguarded factorization of the rounded matrix has a zero second pivot, then $0/0$ & confirmed & first bad pivot is index 1 in every breakdown\\
+NixNan identifies the invalid operation, not merely the bad residual & confirmed, with caveats & Section~\ref{sec:nixnan}\\
+Bad conditioning does not guarantee an exception & confirmed & finite-but-wrong runs with no NixNan report (Section~\ref{sec:e3})\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ================================================================== 3
+\section{Implementation}
+
+\subsection{Algorithm and kernels}
+
+Right-looking Cholesky without pivoting, $A=LL^T$, in custom CUDA (file \texttt{chol\_study.cu}). Two code paths:
+
+\begin{itemize}
+  \item \textbf{unblocked}: per column $k$, \texttt{pivot\_kernel} ($L_{kk}=\sqrt{S_{kk}}$), \texttt{scale\_kernel} ($L_{ik}=S_{ik}/L_{kk}$), \texttt{rank1\_kernel}
+  ($S_{ij}\mathrel{-}=L_{ik}L_{jk}$), then \texttt{forward\_kernel} ($Ly=b$) and \texttt{backward\_kernel} ($L^Tx=y$);
+  \item \textbf{blocked} ($NB=32$): \texttt{potrf\_tile\_kernel} (diagonal tile in shared memory), \texttt{trsm\_panel\_kernel}, \texttt{syrk\_kernel}
+  (trailing update; the slot where tensor cores enter in E4), and the same two substitution kernels.
+\end{itemize}
+
+\begin{center}
+\begin{tikzpicture}[node distance=5mm]
+  \node[matbox] (A) {$A$\\$n{\times}n$};
+  \node[kernbox, right=7mm of A] (piv) {\texttt{pivot\_kernel}\\$\sqrt{S_{kk}}$};
+  \node[kernbox, right=of piv] (sc) {\texttt{scale\_kernel}\\$L_{ik}=S_{ik}/L_{kk}$};
+  \node[kernbox, right=of sc] (r1) {\texttt{rank1\_kernel}\\$S_{ij}\mathrel{-}=L_{ik}L_{jk}$};
+  \node[draw, dashed, rounded corners=3pt, fit=(piv)(sc)(r1), inner sep=5pt, label={[font=\scriptsize]above:repeat for $k=0,\dots,n-1$}] (loop) {};
+  \node[kernbox, below=9mm of loop, xshift=-1.7cm] (fw) {\texttt{forward\_kernel}\\$Ly=b$};
+  \node[kernbox, right=of fw] (bw) {\texttt{backward\_kernel}\\$L^Tx=y$};
+  \node[outbox, right=of bw] (x) {$x$};
+  \draw[flowarrow] (A) -- (loop.west |- A.east); \draw[flowarrow] (piv) -- (sc); \draw[flowarrow] (sc) -- (r1);
+  \draw[flowarrow] (loop.south) -- (loop.south |- fw.north) -- (fw.north);
+  \draw[flowarrow] (fw) -- (bw); \draw[flowarrow] (bw) -- (x);
+\end{tikzpicture}
+
+\small Unblocked path. Five distinct kernels; the blocked path replaces the loop body by \texttt{potrf\_tile}, \texttt{trsm\_panel}, \texttt{syrk}.
+\end{center}
+
+The kernels do \textbf{not} guard the pivot. A non-positive pivot is only \emph{recorded} (\texttt{atomicMin} of its index, read back by the host);
+the arithmetic goes on, so the bad pivot becomes Inf/NaN exactly as in unguarded code. In the arithmetic of the narrow formats (file \texttt{chol\_half.cu}, unblocked path only)
+the update is one fused \texttt{\_\_hfma}, the scaling is \texttt{\_\_hdiv} and the pivot is \texttt{hsqrt}, for \texttt{\_\_half} or \texttt{\_\_nv\_bfloat16}.
+
+\subsection{Matrices}
+
+\begin{center}\small
+\begin{tabular}{lllrr}
+\toprule
+name & definition & $\delta$ & $\kappa_2$, $n=256$ & $\kappa_2$, $n=64$\\
+\midrule
+M0 & $\mathbf{1}\mathbf{1}^T+\delta I$ & $2^{-6}$ & $1.6\times10^{4}$ & $4.1\times10^{3}$\\
+M1 & $\mathbf{1}\mathbf{1}^T+\delta I$ & $2^{-12}$ & $1.0\times10^{6}$ & $2.6\times10^{5}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The eigenvalues are $n+\delta$ (once) and $\delta$ ($n-1$ times), so $A_\delta$ is SPD for every $\delta>0$. The matrices are written by
+\texttt{gen\_chol\_matrices.py} (which can also produce random $Q\,\mathrm{diag}(\sigma)Q^T$ matrices for E5); the right-hand side is $b=A\mathbf{1}$, so the exact solution is $x=\mathbf{1}$.
+The sweeps of E2 and E3 use the built-in $A_\delta$ with $\delta=2^{-e}$.
+
+\subsection{Storage formats and metrics}
+
+``Storage'' means every entry of $A$ is rounded to a narrow format and back before the factorization; the arithmetic is then FP32 (FP64 for the FP64 rows) unless
+stated. FP16 and BF16 use round-to-nearest-even (\texttt{\_\_float2half\_rn}, \texttt{\_\_float2bfloat16\_rn}); TF32 keeps 10 mantissa bits with ties away from zero
+(\texttt{cvt.rna.tf32.f32}, as \texttt{wmma::\_\_float\_to\_tf32}). Metrics are computed on the host in double:
+$\|A-LL^T\|_F/\|A\|_F$ against the exact matrix, $\|b-Ax\|_2/\|b\|_2$ and $\|x-\mathbf{1}\|_2/\|\mathbf{1}\|_2$.
+Status: \textbf{ok}; \textbf{inaccurate} (factorization error above $1000\,\varepsilon$ or forward error above $0.1$, a threshold chosen by me and arbitrary);
+\textbf{breakdown} (the kernel saw a pivot $\le0$); \textbf{nan} (non-finite output the kernel did not notice).
+
+% ================================================================== 4
+\section{NixNan in Detail}\label{sec:nixnan}
+
+\subsection{How it was run}
+
+NixNan is a binary-instrumentation tool (NVBit) loaded with \texttt{LD\_PRELOAD}; it rewrites each kernel's SASS the first time the kernel launches and prints a report when the program exits.
+No source change or recompilation is needed; the programs are built with \texttt{-lineinfo} so that source locations can be attributed.
+
+\begin{center}\small
+\begin{tabular}{p{4.6cm}p{9.2cm}}
+\toprule
+\texttt{LD\_PRELOAD=nixnan.so ./prog} & instrument every kernel; end-of-run report on stderr (all experiments)\\
+\texttt{TIME\_KERNELS=1} & print every kernel's execution time; the first launch includes NVBit's instrumentation (E0)\\
+\texttt{PRINT\_ILL\_INSTR=1} & print one line per exception with the SASS instruction that raised it (E3 traces)\\
+\texttt{ENABLE\_FUN\_DETAIL=1} & put the kernel name on every line (E3 traces)\\
+\texttt{LINE\_INFO} (default 1) & add \texttt{file:line} when the line table can be resolved\\
+\texttt{NIXNAN\_TIMEOUT=N} & self-terminate after $N$ seconds (used for the 120~s reference run of \texttt{mpir\_gpu})\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Anatomy of the end-of-run report}
+
+The report has one section per precision (FP16, BF16, FP32, FP64) with five counters each (NaN, Infinity, $-$Infinity, Subnormal, Division by 0), and four memory sections that count
+NaNs stored to global memory. Each counter reads ``\emph{unique} (\emph{repeats})'': the number of distinct instruction sites that raised it, and the number of further occurrences of
+those sites. A clean run (matrix M1, FP32, unblocked, all counters zero):
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/report_clean.txt}
+
+The same matrix with FP16 storage (E3a, unblocked). Sections whose counters are all zero are dropped here (FP16, BF16, FP64 and the three other memory sections are zero): only the FP32 section and the FP32 memory section light up.
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/report_f16_store.txt}
+
+\noindent The same run with true FP16 arithmetic (E3b), again without the all-zero sections: \emph{two} precision sections are non-zero, and no memory section is.
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/report_h16_arith.txt}
+
+\subsection{The per-instruction trace}
+
+With \texttt{PRINT\_ILL\_INSTR=1 ENABLE\_FUN\_DETAIL=1} every exception is printed with its operand number
+(\texttt{0} = destination, \texttt{1\ldots n} = sources), the SASS instruction, the kernel and the type NixNan decoded the operand as. FP32 arithmetic on FP16-stored $A_\delta$ ($\delta=2^{-12}$), first lines:
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/detail_f16_store.txt}
+
+True FP16 arithmetic, same matrix, first lines:
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/detail_h16_arith.txt}
+
+The detail logs are summarised by the order in which kernels first appear and the number of lines each contributes (\emph{chain}):
+
+\begin{center}\small
+\begin{tabular}{lp{10.2cm}}
+\toprule
+run & chain (kernel: report lines), total lines, by kind\\
+\midrule
+FP16 storage, unblocked & \input{docs_gen/chain_a_f16_e12_unblocked.tex}\\
+FP16 storage, blocked & \input{docs_gen/chain_a_f16_e12_blocked.tex}\\
+FP16 arithmetic & \input{docs_gen/chain_b_h16_e12_breakdown.tex}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Cost of instrumentation}
+
+NixNan instruments a kernel once, at its first launch, so the cost scales with the number of \emph{distinct} kernels, not with the number of launches. \texttt{TIME\_KERNELS=1} on M1, $n=256$, unblocked:
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/time_kernels.txt}
+
+Each first launch costs $\approx$0.3~s (it includes the NVBit rewrite); later launches are $\approx$20~$\mu$s. Five kernels therefore cost about 1.5~s of the 3~s run.
+The library-based \texttt{mpir\_gpu/ir\_gpu} (cuSOLVER/cuBLAS), same size, ran in \input{docs_gen/mpir_time.tex}. Its NixNan run printed a complete report and then ended with
+\texttt{terminate called without an active exception} and an abort; I did not investigate that.
+
+\subsection{What the NixNan output does and does not mean}\label{sec:caveats}
+
+\begin{enumerate}
+  \item \textbf{The first report may be a benign expansion.} $\sqrt{0}$ in FP32 compiles to a \texttt{MUFU.RSQ} sequence; $\mathrm{rsqrt}(0)=\mathrm{Inf}$ inside it is flagged
+  (\texttt{div0} on operand 1, \texttt{infinity} on operand 0) although the final result 0 is correct. The failure that matters is the next kernel's division by that zero pivot
+  (\texttt{MUFU.RCP}, then NaN from the \texttt{FFMA} fix-up). Compare the \texttt{FFMA}-as-register-move artifact in the LU study.
+  \item \textbf{One source operation, two precision sections.} FP16 and BF16 \texttt{\_\_hdiv} and \texttt{hsqrt} execute in FP32: the SASS of the FP16 build contains 39 \texttt{HFMA2}, 3 \texttt{MUFU.RCP},
+  1 \texttt{MUFU.SQRT}, 6 \texttt{FFMA}, 3 \texttt{FMUL}, 7 \texttt{F2FP.PACK\_AB}, 3+4 \texttt{HSETP2}, 7 \texttt{HADD2}. The \texttt{HFMA2} updates are reported in the FP16 (or BF16) section, the division in the FP32 section.
+  \item \textbf{Conversions are not instrumented.} The narrow-format rounding in E3a happens on the host, and NixNan does not instrument conversion opcodes (\texttt{F2F}, \texttt{F2FP}) in any case; the exception appears on the
+  first arithmetic instruction that uses the converted value.
+  \item \textbf{Memory sections:} the FP32-arithmetic runs report one memory NaN site (94\,655 repeats, unblocked). The FP16-arithmetic run reports none, consistent with nixnan's known gap that 16-bit stores (\texttt{STG.E.U16}) are not instrumented; I did not check the store opcode in this program.
+  \item \textbf{Source lines are partial.} \texttt{file:line} is printed for the substitution kernels but not for \texttt{pivot\_kernel}, \texttt{scale\_kernel}, \texttt{rank1\_kernel} (nor the tile kernels). The cubin contains a line table (\texttt{nvdisasm -g}); the cause on the NixNan side was not found. Attribution is therefore by kernel and SASS instruction.
+  \item \textbf{Silence is not correctness.} Where no pivot is non-positive and no value overflows, NixNan reports nothing even if the answer is wrong (Section~\ref{sec:e3}).
+\end{enumerate}
+
+% ================================================================== 5
+\section{Experiments}
+
+All runs: $n=256$ unless stated; logs in \texttt{logs/e0}\ldots\texttt{logs/e3}; every table below is generated from those logs by \texttt{make\_chol\_docs.py}.
+
+\subsection{E0: run-time budget}
+
+Design constraint: at most 1~minute natively and 2~minutes under NixNan per run, so the tutorial can run live.
+
+\begin{center}\small\input{docs_gen/tab_e0.tex}\end{center}
+
+Custom kernels are far inside the budget; the NixNan time is dominated by the one-time instrumentation of 5 kernels. $n=1024$ looks affordable for these kernels (not run).
+
+\subsection{E1: reference}
+
+\begin{center}\small\input{docs_gen/tab_e1.tex}\end{center}
+
+All eight runs have status ok, no bad pivot, and \textbf{no NixNan exception} in any precision section or in memory. The matrices are valid and the kernels are right.
+The forward error depends on the code path in FP32 (M1: $7.5\times10^{-6}$ unblocked, $1.8\times10^{-2}$ blocked) although both factorizations are accurate; it is the more sensitive metric.
+
+\subsection{E2: where does each format break?}\label{sec:e2}
+
+Sweep of $\delta=2^{-e}$ on $A_\delta$ ($\kappa_2=(n+\delta)/\delta$); FP32 arithmetic on the rounded matrix; u = unblocked, b = blocked.
+ok / inacc (error above $1000\,\varepsilon$ or forward error above 0.1) / BRK (pivot $\le0$).
+
+\begin{center}\scriptsize\input{docs_gen/tab_e2_grid.tex}\end{center}
+
+\begin{center}\small\input{docs_gen/tab_e2_thr.tex}\end{center}
+
+\begin{itemize}
+  \item \textbf{Storage breakdown} occurs where $1+\delta$ falls on a tie that rounds to 1: $2^{-8}$ (BF16), $2^{-11}$ (FP16). TF32 with ties away from zero rounds $1+2^{-11}$ up to $1+2^{-10}$ and fails one step later.
+  The rounding mode of the tensor-core inputs therefore moves the threshold.
+  \item \textbf{Demo point:} $\delta=2^{-12}$ (M1): FP32 ok on both paths while TF32, FP16 and BF16 all break. At $\delta=2^{-10}$ FP16 and TF32 are still ok, BF16 breaks.
+  \item \textbf{The FP32 thresholds are implementation-dependent.} LAPACK \texttt{spotrf} (SciPy) reports ``not positive definite'' for $e=16$--22 where our kernels do not; for TF32, FP16 and BF16 the CPU and GPU agree at every $e$ (those fail at storage).
+  $A_\delta$ keeps the form $s\,\mathbf{1}\mathbf{1}^T+\delta' I$ after every elimination step, which makes errors benign for some operation orders. Thresholds measured on it show how the failure looks, not where it will occur in general.
+  \item The FP32 blocked path is not monotone (e=16 is ok between inaccurate neighbours). In FP64 the breakdown at $e=53$ is the matrix itself losing $\delta$ when built in double; its ``arithmetic'' label is loose.
+\end{itemize}
+
+NixNan on chosen points (FP32 arithmetic; the rows for FP16, BF16 and TF32 are identical because all three produce the same rounded matrix $\mathbf{1}\mathbf{1}^T$):
+
+\begin{center}\scriptsize\input{docs_gen/tab_e2_nixnan.tex}\end{center}
+
+\subsection{E3: naive reduced precision}\label{sec:e3}
+
+\paragraph{E3a: FP16/BF16 storage, FP32 arithmetic, $\delta=2^{-12}$.}
+
+\begin{center}\scriptsize\input{docs_gen/tab_e3a.tex}\end{center}
+
+The stored matrix is $\mathbf{1}\mathbf{1}^T$; $L_{i1}=1$ for all $i$; the update gives $S=0$; $\sqrt{0}=0$; then $0/0$. The NaNs travel through the update (\texttt{rank1} or \texttt{trsm}/\texttt{syrk}) and both substitutions.
+FP16 and BF16 storage produce identical counts. The first line of each trace is the $\sqrt0$ expansion (Section~\ref{sec:caveats}); the first real failure is the next kernel's division by the zero pivot.
+
+\paragraph{E3b: true FP16/BF16 arithmetic (unblocked).}
+
+\begin{center}\small
+FP16 arithmetic\\[1mm]\input{docs_gen/tab_e3_sweep_h16.tex}\\[3mm]
+BF16 arithmetic\\[1mm]\input{docs_gen/tab_e3_sweep_hbf16.tex}
+\end{center}
+
+\begin{center}\scriptsize\input{docs_gen/tab_e3b.tex}\end{center}
+
+\begin{itemize}
+  \item At $\delta=2^{-12}$ the stored matrix is again $\mathbf{1}\mathbf{1}^T$ and both formats break down. The FP16/BF16 NaNs (156 sites, 636\,986 repeats) come from the \texttt{HFMA2} updates and substitutions; the division is reported in the FP32 section.
+  \item \textbf{Silent points:} FP16 at $\delta=2^{-10}$ and BF16 at $\delta=2^{-7}$: the stored matrix is exact, the factorization error is small ($3.8\times10^{-6}$, $3.1\times10^{-5}$), no pivot is non-positive, NixNan reports nothing, and the forward error is $16$.
+  This is the small-backward-error, large-forward-error signature of $\kappa_2\cdot u\gg1$. The value 15.97 ($=\sqrt{255}$) also appeared in the FP32 ($e=23$) and FP64 ($e=52$) sweeps; I do not know why it recurs.
+  \item BF16's ``inaccurate'' for every $e\le7$ is partly my 0.1 threshold: BF16 arithmetic gives forward errors of $0.6$--$1$ even at $\kappa_2\approx10^3$.
+\end{itemize}
+
+% ================================================================== 6
+\section{Lessons for the Tutorial}
+
+\begin{enumerate}
+  \item A deterministic 3-second demo: \texttt{./bin\_chol/chol\_f32 --log2delta -12 --store f16 --path unblocked} under \texttt{LD\_PRELOAD=nixnan.so}; and the quiet twin with \texttt{--store f32}.
+  \item Say that the failure is precision-induced loss of positive definiteness: the matrix, as stored, is no longer SPD.
+  \item Show the chain (pivot $\to$ scale $\to$ update $\to$ substitutions) and note that the first NixNan line is the $\sqrt0$ expansion.
+  \item Show the silent run next to it: finite, wrong, no report. NixNan finds exceptions; a forward-error or pivot check finds ill-conditioning.
+  \item Tell the audience to read both the FP16/BF16 and the FP32 sections for half-precision code.
+\end{enumerate}
+
+% ================================================================== 7
+\section{Limits and Next Steps}\label{sec:next}
+
+\begin{itemize}
+  \item $A_\delta$ is a special matrix; random $Q\Lambda Q^T$ matrices (E5) are needed to say how often the failure occurs.
+  \item The narrow formats are emulated by host rounding; the device-conversion and tensor-core path (E4: FP32 panel, WMMA FP16/BF16/TF32 update with FP32 accumulate, check for \texttt{HMMA.16816.F32}, \texttt{.F32.BF16}, \texttt{HMMA.1684.F32.TF32}) is not yet run.
+  \item True half arithmetic exists only for the unblocked path.
+  \item The 0.1 forward-error threshold behind ``inaccurate'' is mine.
+  \item One GPU (sm\_86); NixNan counts reflect how the compiler expands division and square root on this machine.
+  \item Planned: E6 (exponent-binade histogram as a ``danger zone'' monitor) and E7 (an explicit relative pivot test compared with NixNan).
+\end{itemize}
+
+% ================================================================== 8
+\section*{Reproduction}
+
+From \texttt{cholesky\_mixed\_prec/}: \texttt{./run\_chol\_story.sh} (modes \texttt{e0}, \texttt{e1}, \texttt{e2}, \texttt{e3}, \texttt{all}, \texttt{summary}; about 3 minutes in total), then
+\texttt{python3 make\_chol\_docs.py} regenerates \texttt{docs\_gen/}, and \texttt{pdflatex} on \texttt{chol\_report.tex} and \texttt{Chol\_Slides.tex} rebuilds this report and the slides.
+
+\begin{center}\small
+\begin{tabular}{ll}
+\toprule
+file & content\\
+\midrule
+\texttt{chol\_study.cu} & FP64/FP32 kernels, storage formats, sweep mode\\
+\texttt{chol\_half.cu} & true FP16/BF16 arithmetic (unblocked)\\
+\texttt{gen\_chol\_matrices.py} & M0, M1 and random matrices\\
+\texttt{run\_chol\_story.sh}, \texttt{chol\_summary.py} & experiments and summary tables\\
+\texttt{e2\_emulate.py} & CPU cross-check with LAPACK\\
+\texttt{make\_chol\_docs.py} & tables and excerpts for this report and the slides\\
+\texttt{EXPERIMENT\_PLAN.md} & plan, checked claims, results as written during the work\\
+\texttt{logs/} & every log; \texttt{matrices/}: M0, M1\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}

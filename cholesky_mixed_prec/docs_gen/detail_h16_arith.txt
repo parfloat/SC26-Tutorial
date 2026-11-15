@@ -1,0 +1,12 @@
+error [div0] detected in operand 1 of instruction MUFU.RCP R9, R3 ; in function scale_kernel of type f32
+error [infinity] detected in operand 0 of instruction MUFU.RCP R9, R3 ; in function scale_kernel of type f32
+error [infinity] detected in operand 2 of instruction FMUL R2, R0, R9 ; in function scale_kernel of type f32
+error [NaN] detected in operand 0 of instruction FMUL R2, R0, R9 ; in function scale_kernel of type f32
+error [NaN] detected in operand 1 of instruction HFMA2 R0, -R8.H0_H0, R11.H0_H0, R0.H0_H0 ; in function rank1_kernel of type f16
+error [NaN] detected in operand 2 of instruction HFMA2 R0, -R8.H0_H0, R11.H0_H0, R0.H0_H0 ; in function rank1_kernel of type f16
+error [NaN] detected in operand 0 of instruction HFMA2 R0, -R8.H0_H0, R11.H0_H0, R0.H0_H0 ; in function rank1_kernel of type f16
+error [NaN] detected in operand 1 of instruction MUFU.SQRT R0, R0 ; in function pivot_kernel of type f32
+error [NaN] detected in operand 0 of instruction MUFU.SQRT R0, R0 ; in function pivot_kernel of type f32
+error [NaN] detected in operand 1 of instruction MUFU.RCP R9, R3 ; in function scale_kernel of type f32
+error [NaN] detected in operand 2 of instruction FMUL R2, R0, R9 ; in function scale_kernel of type f32
+error [NaN] detected in operand 0 of instruction MUFU.RCP R9, R3 ; in function scale_kernel of type f32

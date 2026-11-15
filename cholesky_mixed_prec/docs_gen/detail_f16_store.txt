@@ -1,0 +1,14 @@
+error [div0] detected in operand 1 of instruction MUFU.RSQ R7, R0 ; in function pivot_kernel of type f32
+error [infinity] detected in operand 0 of instruction MUFU.RSQ R7, R0 ; in function pivot_kernel of type f32
+error [div0] detected in operand 1 of instruction MUFU.RCP R2, R7 ; in function scale_kernel of type f32
+error [infinity] detected in operand 0 of instruction MUFU.RCP R2, R7 ; in function scale_kernel of type f32
+error [infinity] detected in operand 2 of instruction FFMA R3, -R7, R2, 1 ; in function scale_kernel of type f32
+error [NaN] detected in operand 2 of instruction FFMA R3, R2, R3, R2 ; in function scale_kernel of type f32
+error [NaN] detected in operand 0 of instruction FFMA R3, -R7, R2, 1 ; in function scale_kernel of type f32
+error [infinity] detected in operand 1 of instruction FFMA R3, R2, R3, R2 ; in function scale_kernel of type f32
+error [NaN] detected in operand 0 of instruction FFMA R3, R2, R3, R2 ; in function scale_kernel of type f32
+error [NaN] detected in operand 2 of instruction FFMA R2, R0, R3, RZ ; in function scale_kernel of type f32
+error [NaN] detected in operand 0 of instruction FFMA R2, R0, R3, RZ ; in function scale_kernel of type f32
+error [NaN] detected in operand 2 of instruction FFMA R8, -R7, R2, R0 ; in function scale_kernel of type f32
+error [infinity] detected in operand 3 of instruction FFMA R3, R2, R3, R2 ; in function scale_kernel of type f32
+error [NaN] detected in operand 0 of instruction FFMA R8, -R7, R2, R0 ; in function scale_kernel of type f32

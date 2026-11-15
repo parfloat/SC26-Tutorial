@@ -1,0 +1,10 @@
+\begin{tabular}{lllp{4.6cm}p{3.6cm}}
+\toprule
+storage & path & status & nixnan report & first exception\\
+\midrule
+BF16 & blocked & breakdown, bad pivot 1 & FP32 NaN 566 (689\,040), FP32 Inf 17 (24), FP32 Div0 5 (11), FP32 Memory NaN 1 (2\,463) & \texttt{MUFU.RSQ R3, R0}, div0, potrf\_tile\_kernel\\
+BF16 & unblocked & breakdown, bad pivot 1 & FP32 NaN 231 (675\,688), FP32 Inf 13 (28), FP32 Div0 4 (11), FP32 Memory NaN 1 (94\,655) & \texttt{MUFU.RSQ R7, R0}, div0, pivot\_kernel\\
+FP16 & blocked & breakdown, bad pivot 1 & FP32 NaN 566 (689\,040), FP32 Inf 17 (24), FP32 Div0 5 (11), FP32 Memory NaN 1 (2\,463) & \texttt{MUFU.RSQ R3, R0}, div0, potrf\_tile\_kernel\\
+FP16 & unblocked & breakdown, bad pivot 1 & FP32 NaN 231 (675\,688), FP32 Inf 13 (28), FP32 Div0 4 (11), FP32 Memory NaN 1 (94\,655) & \texttt{MUFU.RSQ R7, R0}, div0, pivot\_kernel\\
+\bottomrule
+\end{tabular}

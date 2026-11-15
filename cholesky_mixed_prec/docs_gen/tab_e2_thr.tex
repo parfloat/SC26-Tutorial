@@ -1,0 +1,16 @@
+\begin{tabular}{lllrrl}
+\toprule
+arithmetic & storage & path & first not-ok $e$ & $\kappa_2$ & status (cause)\\
+\midrule
+FP32 & BF16 & blocked & 8 & $6.6\!\times\!10^{4}$ & breakdown (storage)\\
+FP32 & BF16 & unblocked & 8 & $6.6\!\times\!10^{4}$ & breakdown (storage)\\
+FP32 & FP16 & blocked & 11 & $5.2\!\times\!10^{5}$ & breakdown (storage)\\
+FP32 & FP16 & unblocked & 11 & $5.2\!\times\!10^{5}$ & breakdown (storage)\\
+FP32 & TF32 & blocked & 12 & $1.0\!\times\!10^{6}$ & breakdown (storage)\\
+FP32 & TF32 & unblocked & 12 & $1.0\!\times\!10^{6}$ & breakdown (storage)\\
+FP32 & FP32 & blocked & 14 & $4.2\!\times\!10^{6}$ & inaccurate (arithmetic), breakdown at 24\\
+FP32 & FP32 & unblocked & 23 & $2.1\!\times\!10^{9}$ & inaccurate (arithmetic), breakdown at 24\\
+FP64 & FP64 & blocked & 43 & $2.3\!\times\!10^{15}$ & inaccurate (arithmetic), breakdown at 53\\
+FP64 & FP64 & unblocked & 52 & $1.2\!\times\!10^{18}$ & inaccurate (arithmetic), breakdown at 53\\
+\bottomrule
+\end{tabular}

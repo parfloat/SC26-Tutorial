@@ -1,0 +1,10 @@
+\begin{tabular}{llllp{5.4cm}}
+\toprule
+arithmetic & $\delta$ & status & forward error & nixnan report\\
+\midrule
+FP16 & $2^{-10}$ & inaccurate & $1.6\!\times\!10^{1}$ & no exceptions\\
+FP16 & $2^{-12}$ & breakdown (bad pivot 1) & NaN & FP16 NaN 156 (636\,986), FP32 NaN 17 (8\,684), FP32 Inf 6 (14), FP32 Div0 3 (10)\\
+BF16 & $2^{-12}$ & breakdown (bad pivot 1) & NaN & BF16 NaN 156 (636\,986), FP32 NaN 73 (38\,196), FP32 Inf 12 (28), FP32 Div0 3 (10)\\
+BF16 & $2^{-7}$ & inaccurate & $1.6\!\times\!10^{1}$ & no exceptions\\
+\bottomrule
+\end{tabular}
