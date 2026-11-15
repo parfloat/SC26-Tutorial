@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include "csv_matrix.h"
 #include <vector>
 #include <mma.h>
 #include <cuda_fp16.h>
@@ -142,11 +143,14 @@ __global__ void backward_kernel(const float *L, const float *y, float *x, int n)
     }
 }
 
+static std::vector<double> g_csv;            // --csv: matrix from a file instead of A_delta
+static const char *g_name = "A_delta";
+
 static void run_case(int n, int e, const char *fmt)
 {
     const double delta = ldexp(1.0, -e);
     std::vector<double> A0((size_t)n * n), b(n, 0.0);
-    for (int i = 0; i < n; ++i) for (int j = 0; j < n; ++j) A0[IDX(i, j, n)] = 1.0 + (i == j ? delta : 0.0);
+    for (int i = 0; i < n; ++i) for (int j = 0; j < n; ++j) A0[IDX(i, j, n)] = g_csv.empty() ? 1.0 + (i == j ? delta : 0.0) : g_csv[IDX(i, j, n)];
     for (int i = 0; i < n; ++i) for (int j = 0; j < n; ++j) b[i] += A0[IDX(i, j, n)];
     std::vector<float> hA(A0.begin(), A0.end()), hb(b.begin(), b.end());
     float *dA, *db, *dy, *dx; int *dbad; void *dLh = nullptr;
@@ -206,9 +210,9 @@ static void run_case(int n, int e, const char *fmt)
         rs = sqrt(r2 / b2); fw = sqrt(f2 / n);
     }
     const char *status = bad != INT_MAX ? "breakdown" : !finite ? "nan" : (fe > 1e3 * FLT_EPSILON || fw > 0.1) ? "inaccurate" : "ok";
-    printf("RESULT matrix=A_delta config=F32TC store=f32 path=blocked-tc-%s n=%d log2delta=%d kappa=%.3e status=%s cause=%s stored_changed=0 "
+    printf("RESULT matrix=%s config=F32TC store=f32 path=blocked-tc-%s n=%d log2delta=%d kappa=%.3e status=%s cause=%s stored_changed=0 "
            "fact_err=%.3e fact_err_stored=%.3e resid=%.3e fwd_err=%.3e first_bad_pivot=%d t_ms=0\n",
-           fmt, n, -e, (n + delta) / delta, status, !strcmp(status, "ok") ? "-" : "arithmetic", fe, fe, rs, fw, bad == INT_MAX ? -1 : bad);
+           g_name, fmt, n, g_csv.empty() ? -e : 0, g_csv.empty() ? (n + delta) / delta : NAN, status, !strcmp(status, "ok") ? "-" : "arithmetic", fe, fe, rs, fw, bad == INT_MAX ? -1 : bad);
 }
 
 static std::vector<std::string> split(const char *s)
@@ -222,14 +226,19 @@ static std::vector<std::string> split(const char *s)
 int main(int argc, char **argv)
 {
     int n = 256, e = 12, lo = 0, hi = -1;
-    const char *fmt = "f16", *fmts = nullptr;
+    const char *fmt = "f16", *fmts = nullptr, *csvp = nullptr;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--n") && i + 1 < argc) n = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--log2delta") && i + 1 < argc) e = -atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--csv") && i + 1 < argc) csvp = argv[++i];
         else if (!strcmp(argv[i], "--fmt") && i + 1 < argc) fmt = argv[++i];
         else if (!strcmp(argv[i], "--fmts") && i + 1 < argc) fmts = argv[++i];
         else if (!strcmp(argv[i], "--sweep") && i + 2 < argc) { lo = atoi(argv[++i]); hi = atoi(argv[++i]); }
-        else { fprintf(stderr, "usage: %s [--n N] [--fmt f16|bf16|tf32] [--log2delta E | --sweep LO HI [--fmts a,b]]\n", argv[0]); return 1; }
+        else { fprintf(stderr, "usage: %s [--n N] [--csv FILE] [--fmt f16|bf16|tf32] [--log2delta E | --sweep LO HI [--fmts a,b]]\n", argv[0]); return 1; }
+    }
+    if (csvp) {
+        if (!read_csv_matrix(csvp, g_csv, n)) return 1;
+        g_name = strrchr(csvp, '/') ? strrchr(csvp, '/') + 1 : csvp;
     }
     if (n % NB) { fprintf(stderr, "n must be a multiple of %d\n", NB); return 1; }
     if (hi >= lo) { for (int k = lo; k <= hi; ++k) for (auto &f : split(fmts ? fmts : fmt)) run_case(n, k, f.c_str()); }

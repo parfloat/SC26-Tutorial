@@ -1,6 +1,6 @@
 # Experimental plan: Cholesky on a badly conditioned matrix, mixed precision, under nixnan
 
-Status: **E0, E1 (Section 9), E2 (Section 10), E3 (Section 11) and E4 (Section 12) are implemented and run; E5–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
+Status: **E0, E1 (Section 9), E2 (Section 10), E3 (Section 11) and E4 (Section 12) and E5 (Section 13) are implemented and run; E6–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 "checked" come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 
 Source: `cg-and-cholesky-nixnan.pdf` in this directory (6 pages). It is a ChatGPT transcript, not a reference: it
@@ -369,3 +369,49 @@ FP32 forward/backward substitution on the FP32 factor. The pivot is still unguar
 - Only FP32 accumulate was run; FP16 accumulate (`HMMA.16816.F16`, as in `lu_solve_gpu_tc`) would break much earlier and is not covered.
 - NB=32 only; the number of mma steps per tile (2 for FP16/BF16, 4 for TF32) was not varied.
 - The slide deck and report (`Chol_Slides.pdf`, `chol_report.pdf`) now cover E0–E4 and the sqrt study (`run_chol_story.sh sqrt`, `logs/sqrt/`).
+
+## 13. Results: E5, random matrices (RTX 3090, sm_86; `Q diag(sigma) Q^T`, n=256, 5 seeds)
+
+Reproduce: `./run_chol_story.sh e5` (about 2 min in total: 150 native runs, then 11 nixnan points, each run twice). Logs: `logs/e5/` (`sweep.log`, per-point `*_nixnan.log` and `*_detail.log`, `matrices.txt` with the numeric kappa of each matrix). The 30 matrices (1.3 MB each) are regenerated from the seeds into `matrices_q/`, which is git-ignored.
+
+Set-up. `sigma_j = kappa^(-j/(n-1))`, Q from the QR of a seeded Gaussian (`gen_chol_matrices.py --qlq`), kappa in {1e2 ... 1e7}, seeds 0-4. `b = A*1`, so the exact solution is 1. Configurations: `F32` (blocked FP32, `chol_study`), `mixed-F16/BF16/TF32` (`chol_tc`, FP32 panel, tensor-core update, FP32 accumulate), `naive-F16` (`chol_half`, true FP16 arithmetic, unblocked). `chol_tc` and `chol_half` gained `--csv`.
+
+```
+E5: random Q diag(sigma) Q^T, n=256, 5 seeds per cell. Cell = status counts; second line = median forward error (finite runs)
+config     kappa 1e2             kappa 1e3             kappa 1e4             kappa 1e5             kappa 1e6             kappa 1e7             
+F32        5 ok                  5 ok                  5 ok                  5 ok                  5 ok                  5 ok                  
+           2.1e-06               1.2e-05               9.6e-05               6.0e-04               6.5e-03               4.4e-02               
+mixed-F16  5 ok                  5 inacc               5 inacc               5 inacc               5 BRK                 5 BRK                 
+           1.0e-03               8.8e-03               6.9e-02               9.1e-01               -                     -                     
+mixed-BF16 5 inacc               5 inacc               5 inacc               5 BRK                 5 BRK                 5 BRK                 
+           8.9e-03               6.4e-02               1.7e+00               -                     -                     -                     
+mixed-TF32 5 ok                  5 inacc               5 inacc               5 inacc               5 BRK                 5 BRK                 
+           1.1e-03               8.8e-03               7.1e-02               8.9e-01               -                     -                     
+naive-F16  5 ok                  5 inacc               3 BRK 2 inacc         5 BRK                 5 BRK                 5 BRK                 
+           2.3e-02               1.3e-01               3.2e+01               -                     -                     -                     
+E5 nixnan on chosen points (counters unique(repeats); native status in brackets)
+  F32         kappa 1e2  seed 0 [ok]: no exceptions
+  mixed-F16   kappa 1e2  seed 0 [ok]: FP16 Sub 8(634)
+  mixed-F16   kappa 1e3  seed 0 [inaccurate]: FP16 Sub 8(681)
+  mixed-F16   kappa 1e6  seed 0 [breakdown]: FP16 NaN 10(14); FP16 Sub 12(952); FP32 NaN 505(121050); FP32 Memory NaN 4(20)
+  mixed-BF16  kappa 1e2  seed 0 [inaccurate]: no exceptions
+  mixed-BF16  kappa 1e5  seed 0 [breakdown]: BF16 NaN 8(96); FP32 NaN 514(134062); FP32 Memory NaN 4(100)
+  mixed-TF32  kappa 1e3  seed 0 [inaccurate]: no exceptions
+  mixed-TF32  kappa 1e6  seed 0 [breakdown]: FP32 NaN 561(121162); FP32 Memory NaN 4(20)
+  naive-F16   kappa 1e2  seed 0 [ok]: FP16 Sub 41(25666)
+  naive-F16   kappa 1e3  seed 0 [inaccurate]: FP16 Sub 57(40314)
+  naive-F16   kappa 1e4  seed 0 [breakdown]: FP16 NaN 34(97653); FP16 Sub 82(63676); FP32 NaN 17(532)
+```
+
+What the table says (statuses use the E2 rule: `inaccurate` = factorization error above 1000 eps or forward error above 0.1; the 0.1 is arbitrary):
+- **Same ordering as on `A_delta`, now on random matrices.** FP32 never fails in this range. Mixed precision with FP16/TF32 inputs is inaccurate from kappa=1e3 and breaks down at 1e6; BF16 is inaccurate already at 1e2 and breaks down at 1e5; naive FP16 arithmetic breaks down from 1e4 (3 of 5 seeds; the other 2 are inaccurate: seed-dependent at the threshold).
+- **Every breakdown here is caught by the code's own pivot check** (status `breakdown`; a pivot <= 0 is recorded). The status `nan` (non-finite output nobody noticed) did not occur. The "silent" failures are the `inaccurate` ones, not NaN ones.
+- **The inaccurate cells are the large majority of the failing region, and nixnan sees little of them.** `mixed-BF16` kappa=1e2 and `mixed-TF32` kappa=1e3 are inaccurate (forward error 9e-3 and 9e-3) with **no exception at all**. `mixed-F16` at kappa=1e2 (ok) and 1e3 (inaccurate) both report 8 FP16 subnormals on the HMMA inputs (operands 1 and 2): the same count in an ok and an inaccurate run, so it does not separate them. `naive-F16` reports many subnormals (41 unique, 25666 repeats) already at kappa=1e2 where the status is ok.
+- **NaN reports appear only where the factorization has already failed** (breakdown rows: FP32 NaN 505-561 unique, 4 NaN stores to memory in the tensor-core runs; FP16 and BF16 NaNs only where the format is used in the arithmetic).
+- Lesson as in the LU story: nixnan reports exceptions, not accuracy. The factorization error or residual (here `fact_err`, `fwd_err`) has to be checked beside it.
+
+Caveats.
+- `F32` at kappa=1e7 has median forward error 4.4e-2 and is classed ok only because the threshold is 0.1.
+- One matrix family, one size, FP32 accumulate only, NB=32; five seeds give counts, not confidence intervals.
+- The subnormal reports on the HMMA inputs come from the FP16 panel entries (values below 6.1e-5); I did not trace them to individual panel entries.
+- The `mixed-*` rows use the panel conversion exactly as in E4; I did not separate the effect of the panel rounding from the accumulate/update rounding.

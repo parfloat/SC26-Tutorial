@@ -8,6 +8,7 @@
 #   ./run_chol_story.sh e3       naive reduced precision: FP16/BF16 storage (FP32 arithmetic) and true FP16/BF16 arithmetic;
 #                                nixnan report + per-instruction trace (PRINT_ILL_INSTR) at the failing and the silent points
 #   ./run_chol_story.sh e4       blocked Cholesky, FP32 panel, TENSOR-CORE trailing update (WMMA FP16 / BF16 / TF32, FP32 accumulate)
+#   ./run_chol_story.sh e5       random Q diag(sigma) Q^T matrices (kappa 1e2..1e7, 5 seeds) x five configurations; nixnan on chosen points
 #   ./run_chol_story.sh sqrt     what does nixnan report for sqrt(0)? IEEE sqrtf (MUFU.RSQ sequence) vs -prec-sqrt=false (MUFU.SQRT)
 #   ./run_chol_story.sh all      e0, e1, e2, e3, e4, sqrt, then the summary          (default)
 #   ./run_chol_story.sh summary  re-print the tables from the saved logs
@@ -20,7 +21,7 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NIXNAN_LIB="${NIXNAN_LIB:-$PWD/../external/nixnan/nixnan.so}"
 ARCH="${ARCH:-sm_86}"
 NATIVE_LIMIT=60; NIXNAN_LIMIT=120
-mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3 logs/e4 logs/sqrt
+mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3 logs/e4 logs/e5 logs/sqrt
 MATS=(M0 M1)   # from gen_chol_matrices.py (matrices/matrices.tsv has their definitions and kappa)
 unset LD_LIBRARY_PATH   # a stale CUDA dir here can shadow the toolkit nvcc built against
 [[ -f "$NIXNAN_LIB" ]] || { echo "error: nixnan.so not found at $NIXNAN_LIB (set NIXNAN_LIB)" >&2; exit 1; }
@@ -177,16 +178,53 @@ sqrtstudy() {
     done
 }
 
+# E5: random Q diag(sigma) Q^T matrices (kappa 1e2..1e7, seeds 0-4, n=256) through five configurations
+E5_KAPPAS=(1e2 1e3 1e4 1e5 1e6 1e7); E5_SEEDS=(0 1 2 3 4)
+e5_run() {   # e5_run <config> <csv>   (prints the RESULT line)
+    case $1 in
+        F32)       ./bin_chol/chol_f32 --csv "$2" --path blocked --store f32 ;;
+        mixed-F16) ./bin_chol/chol_tc --csv "$2" --fmt f16 ;;
+        mixed-BF16) ./bin_chol/chol_tc --csv "$2" --fmt bf16 ;;
+        mixed-TF32) ./bin_chol/chol_tc --csv "$2" --fmt tf32 ;;
+        naive-F16) ./bin_chol/chol_h16 --csv "$2" ;;
+    esac
+}
+e5() {
+    echo "== E5: random Q diag(sigma) Q^T, n=256, kappa 1e2..1e7, seeds 0-4, five configurations"
+    build f32; build_half h16
+    for t in chol_tc; do [[ -x bin_chol/$t && chol_tc.cu -nt bin_chol/$t ]] && rm -f bin_chol/$t; done
+    [[ -x bin_chol/chol_tc ]] || nvcc -std=c++17 -g -O2 -lineinfo -arch="$ARCH" -o bin_chol/chol_tc chol_tc.cu || exit 1
+    mkdir -p matrices_q logs/e5; rm -f logs/e5/*
+    : > logs/e5/matrices.txt; : > logs/e5/sweep.log
+    for k in "${E5_KAPPAS[@]}"; do for s in "${E5_SEEDS[@]}"; do
+        f=matrices_q/Q_n256_k${k}_s${s}.csv
+        python3 gen_chol_matrices.py --n 256 --qlq "$k" --seed "$s" --out "$f" >> logs/e5/matrices.txt
+        for c in F32 mixed-F16 mixed-BF16 mixed-TF32 naive-F16; do
+            echo "CASE config=$c kappa=$k seed=$s $(e5_run $c "$f" | grep RESULT)" >> logs/e5/sweep.log
+        done
+    done; done
+    echo "-- $(grep -c CASE logs/e5/sweep.log) native runs done"
+    echo "-- nixnan on chosen points (default report + PRINT_ILL_INSTR trace)"
+    python3 chol_summary.py --e5-points | while read -r c k s; do
+        f=matrices_q/Q_n256_k${k}_s${s}.csv; tag=${c}_k${k}_s${s}
+        [[ -f $f ]] || { echo "   missing $f"; continue; }
+        LD_PRELOAD="$NIXNAN_LIB" TIME_KERNELS=1 bash -c "$(declare -f e5_run); e5_run $c $f" > logs/e5/${tag}_nixnan.log 2>&1
+        LD_PRELOAD="$NIXNAN_LIB" PRINT_ILL_INSTR=1 ENABLE_FUN_DETAIL=1 bash -c "$(declare -f e5_run); e5_run $c $f" > logs/e5/${tag}_detail.log 2>&1
+        echo "   $tag"
+    done
+}
+
 case "${1:-all}" in
     e0) e0 ;;
     e1) e1 ;;
     e2) e2 ;;
     e3) e3 ;;
     e4) e4 ;;
+    e5) e5 ;;
     sqrt) sqrtstudy ;;
     summary) ;;
-    all) e0; e1; e2; e3; e4; sqrtstudy ;;
-    *) sed -n 3,11p "$0"; exit 1 ;;
+    all) e0; e1; e2; e3; e4; e5; sqrtstudy ;;
+    *) sed -n 3,13p "$0"; exit 1 ;;
 esac
 echo
 python3 chol_summary.py

@@ -101,6 +101,44 @@ if "--e4-points" in sys.argv:
         print(*p)
     raise SystemExit
 
+# ---------------------------------------------------------------- E5
+E5_CONFIGS = ["F32", "mixed-F16", "mixed-BF16", "mixed-TF32", "naive-F16"]
+
+def e5_cases(path="logs/e5/sweep.log"):
+    """{(config, kappa, seed): dict(status, fact_err, resid, fwd_err, first_bad_pivot)}"""
+    out = {}
+    if not os.path.exists(path):
+        return out
+    for line in open(path, errors="replace"):
+        m = re.match(r"CASE config=(\S+) kappa=(\S+) seed=(\d+) RESULT .*? status=(\S+) cause=\S+ stored_changed=\d "
+                     r"fact_err=(\S+) fact_err_stored=\S+ resid=(\S+) fwd_err=(\S+) first_bad_pivot=(\S+)", line)
+        if m:
+            g = m.groups()
+            out[(g[0], g[1], int(g[2]))] = dict(status=g[3], fact_err=g[4], resid=g[5], fwd_err=g[6], bad=g[7])
+    return out
+
+def e5_points():
+    """nixnan points: per configuration the first (lowest kappa, lowest seed) case of every status that occurs; the all-ok
+    configurations contribute one case. mixed-BF16 and mixed-TF32 contribute only their non-ok statuses."""
+    cases = e5_cases(); pts = []
+    kap = sorted({k for (_, k, _) in cases}, key=float)
+    for c in E5_CONFIGS:
+        seen = set()
+        for k in kap:
+            for sd in sorted({s for (_, _, s) in cases}):
+                r = cases.get((c, k, sd))
+                if r and r["status"] not in seen:
+                    seen.add(r["status"])
+                    if r["status"] != "ok" or c in ("F32", "mixed-F16", "naive-F16"):
+                        pts.append((c, k, sd))
+    return pts
+
+if "--e5-points" in sys.argv:
+    for p in e5_points():
+        print(*p)
+    raise SystemExit
+
+
 if os.path.exists("logs/e0/budget.tsv"):
     print("E0 budget (limits: native 60 s, nixnan 120 s)")
     print("%-24s %9s %9s %8s %s" % ("run", "native_s", "nixnan_s", "kernels", "verdict"))
@@ -315,3 +353,32 @@ def sqrt_report():
             print("  pivot_kernel SASS (%s): %s" % (b, ", ".join(sorted({re.sub(r"^@!?P\d ", "", l.split(";")[0].split("*/")[1].strip()).split()[0] for l in open(f) if "*/" in l}))))
 
 sqrt_report()
+
+
+def e5_report():
+    cases = e5_cases()
+    if not cases:
+        return
+    import statistics
+    kap = sorted({k for (_, k, _) in cases}, key=float)
+    ab = {"ok": "ok", "inaccurate": "inacc", "breakdown": "BRK", "nan": "NaN"}
+    print("\nE5: random Q diag(sigma) Q^T, n=256, 5 seeds per cell. Cell = status counts; second line = median forward error (finite runs)")
+    print("%-11s" % "config" + "".join("%-22s" % ("kappa " + k) for k in kap))
+    for c in E5_CONFIGS:
+        row1, row2 = "%-11s" % c, "%-11s" % ""
+        for k in kap:
+            rs = [cases[(c, k, s)] for s in range(5) if (c, k, s) in cases]
+            cnt = {}
+            for r in rs:
+                cnt[r["status"]] = cnt.get(r["status"], 0) + 1
+            row1 += "%-22s" % " ".join("%d %s" % (n, ab.get(st, st)) for st, n in sorted(cnt.items(), key=lambda t: -t[1]))
+            fw = [float(r["fwd_err"]) for r in rs if r["fwd_err"] not in ("nan", "inf")]
+            row2 += "%-22s" % ("%.1e" % statistics.median(fw) if fw else "-")
+        print(row1); print(row2)
+    print("E5 nixnan on chosen points (counters unique(repeats); native status in brackets)")
+    for c, k, s in e5_points():
+        f = "logs/e5/%s_k%s_s%d_nixnan.log" % (c, k, s)
+        if os.path.exists(f):
+            print("  %-11s kappa %-4s seed %d [%s]: %s" % (c, k, s, cases[(c, k, s)]["status"], nixnan(f)))
+
+e5_report()

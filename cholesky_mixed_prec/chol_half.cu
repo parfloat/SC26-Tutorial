@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#include "csv_matrix.h"
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
 
@@ -76,6 +77,9 @@ __global__ void backward_kernel(const T *L, const T *y, T *x, int n)
     }
 }
 
+static std::vector<double> g_csv;            // --csv: matrix from a file instead of A_delta
+static const char *g_name = "A_delta";
+
 static void run_case(int n, int e)
 {
     const double delta = ldexp(1.0, -e);
@@ -84,7 +88,7 @@ static void run_case(int n, int e)
     double chg = 0;
     for (int i = 0; i < n; ++i)
         for (int j = 0; j < n; ++j) {
-            A0[IDX(i, j, n)] = 1.0 + (i == j ? delta : 0.0);
+            A0[IDX(i, j, n)] = g_csv.empty() ? 1.0 + (i == j ? delta : 0.0) : g_csv[IDX(i, j, n)];
             hA[IDX(i, j, n)] = TO_T((float)A0[IDX(i, j, n)]);
             As[IDX(i, j, n)] = (double)FROM_T(hA[IDX(i, j, n)]);
             chg = fmax(chg, fabs(As[IDX(i, j, n)] - A0[IDX(i, j, n)]));
@@ -140,19 +144,25 @@ static void run_case(int n, int e)
     }
     const char *status = bad != INT_MAX ? "breakdown" : !finite ? "nan" : (fe > 1e3 * EPS_T || fw > 0.1) ? "inaccurate" : "ok";
     const char *cause = !strcmp(status, "ok") ? "-" : chg > 0 ? "storage" : "arithmetic";
-    printf("RESULT matrix=A_delta config=%s store=%s path=unblocked n=%d log2delta=%d kappa=%.3e status=%s cause=%s stored_changed=%d "
+    printf("RESULT matrix=%s config=%s store=%s path=unblocked n=%d log2delta=%d kappa=%.3e status=%s cause=%s stored_changed=%d "
            "fact_err=%.3e fact_err_stored=%.3e resid=%.3e fwd_err=%.3e first_bad_pivot=%d t_ms=0\n",
-           CFG, CFG[0] == 'B' ? "bf16" : "f16", n, -e, (n + delta) / delta, status, cause, chg > 0, fe, fs, rs, fw, bad == INT_MAX ? -1 : bad);
+           g_name, CFG, CFG[0] == 'B' ? "bf16" : "f16", n, g_csv.empty() ? -e : 0, g_csv.empty() ? (n + delta) / delta : NAN, status, cause, chg > 0, fe, fs, rs, fw, bad == INT_MAX ? -1 : bad);
 }
 
 int main(int argc, char **argv)
 {
     int n = 256, e = 12, lo = 0, hi = -1;
+    const char *csvp = nullptr;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--n") && i + 1 < argc) n = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--csv") && i + 1 < argc) csvp = argv[++i];
         else if (!strcmp(argv[i], "--log2delta") && i + 1 < argc) e = -atoi(argv[++i]);
         else if (!strcmp(argv[i], "--sweep") && i + 2 < argc) { lo = atoi(argv[++i]); hi = atoi(argv[++i]); }
-        else { fprintf(stderr, "usage: %s [--n N] [--log2delta E | --sweep LO HI]\n", argv[0]); return 1; }
+        else { fprintf(stderr, "usage: %s [--csv FILE] [--n N] [--log2delta E | --sweep LO HI]\n", argv[0]); return 1; }
+    }
+    if (csvp) {
+        if (!read_csv_matrix(csvp, g_csv, n)) return 1;
+        g_name = strrchr(csvp, '/') ? strrchr(csvp, '/') + 1 : csvp;
     }
     if (hi >= lo) for (int k = lo; k <= hi; ++k) run_case(n, k);
     else run_case(n, e);

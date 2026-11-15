@@ -7,3 +7,4 @@ bin_chol/
 *.toc
 *.vrb
 !logs/**/*.log
+matrices_q/
