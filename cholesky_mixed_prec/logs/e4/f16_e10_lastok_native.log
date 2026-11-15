@@ -1,0 +1,1 @@
+RESULT matrix=A_delta config=F32TC store=f32 path=blocked-tc-f16 n=256 log2delta=-10 kappa=2.621e+05 status=ok cause=- stored_changed=0 fact_err=9.913e-07 fact_err_stored=9.913e-07 resid=1.201e-06 fwd_err=8.325e-02 first_bad_pivot=-1 t_ms=0

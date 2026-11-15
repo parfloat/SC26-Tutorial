@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 #
-# run_chol_story.sh -- Cholesky mixed-precision study (see EXPERIMENT_PLAN.md). Implemented so far: E0, E1 (on M0 and M1), E2 and E3.
+# run_chol_story.sh -- Cholesky mixed-precision study (see EXPERIMENT_PLAN.md). Implemented so far: E0, E1 (on M0 and M1), E2, E3 and E4.
 #
 #   ./run_chol_story.sh e0       budget: wall time of every planned run, native and under nixnan (limits: 60 s / 120 s)
 #   ./run_chol_story.sh e1       reference: M0 and M1 (n=256) factor in FP64 and FP32; errors and nixnan counters
 #   ./run_chol_story.sh e2       where does each storage format / precision break? delta sweep, CPU cross-check, nixnan on chosen points
 #   ./run_chol_story.sh e3       naive reduced precision: FP16/BF16 storage (FP32 arithmetic) and true FP16/BF16 arithmetic;
 #                                nixnan report + per-instruction trace (PRINT_ILL_INSTR) at the failing and the silent points
-#   ./run_chol_story.sh all      e0, e1, e2, e3, then the summary          (default)
+#   ./run_chol_story.sh e4       blocked Cholesky, FP32 panel, TENSOR-CORE trailing update (WMMA FP16 / BF16 / TF32, FP32 accumulate)
+#   ./run_chol_story.sh all      e0, e1, e2, e3, e4, then the summary          (default)
 #   ./run_chol_story.sh summary  re-print the tables from the saved logs
 #
 # Logs: logs/e0/, logs/e1/.   Env: NIXNAN_LIB=<nixnan.so> (default ../external/nixnan/nixnan.so)  ARCH=sm_86
@@ -18,7 +19,7 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NIXNAN_LIB="${NIXNAN_LIB:-$PWD/../external/nixnan/nixnan.so}"
 ARCH="${ARCH:-sm_86}"
 NATIVE_LIMIT=60; NIXNAN_LIMIT=120
-mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3
+mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3 logs/e4
 MATS=(M0 M1)   # from gen_chol_matrices.py (matrices/matrices.tsv has their definitions and kappa)
 unset LD_LIBRARY_PATH   # a stale CUDA dir here can shadow the toolkit nvcc built against
 [[ -f "$NIXNAN_LIB" ]] || { echo "error: nixnan.so not found at $NIXNAN_LIB (set NIXNAN_LIB)" >&2; exit 1; }
@@ -127,13 +128,33 @@ e3() {
     done
 }
 
+e4() {
+    echo "== E4: blocked Cholesky with a tensor-core trailing update (A_delta, n=256, NB=32)"
+    if [[ ! -x bin_chol/chol_tc || chol_tc.cu -nt bin_chol/chol_tc ]]; then
+        echo "-- building bin_chol/chol_tc"; nvcc -std=c++17 -g -O2 -lineinfo -arch="$ARCH" -o bin_chol/chol_tc chol_tc.cu || exit 1
+    fi
+    rm -f logs/e4/*
+    cuobjdump -sass bin_chol/chol_tc | grep -oE "HMMA[.A-Z0-9_]*" | sort | uniq -c > logs/e4/sass_hmma.txt
+    echo "-- SASS tensor-core instructions:"; sed 's/^/   /' logs/e4/sass_hmma.txt
+    ./bin_chol/chol_tc --sweep 2 26 --fmts f16,bf16,tf32 > logs/e4/sweep_tc.log 2>&1
+    echo "-- nixnan on chosen points (native, default report, PRINT_ILL_INSTR trace)"
+    python3 chol_summary.py --e4-points | while read -r fmt e kind; do
+        tag=${fmt}_e${e}_$kind
+        ./bin_chol/chol_tc --fmt $fmt --log2delta -$e > logs/e4/${tag}_native.log 2>&1
+        LD_PRELOAD="$NIXNAN_LIB" ./bin_chol/chol_tc --fmt $fmt --log2delta -$e > logs/e4/${tag}_nixnan.log 2>&1
+        LD_PRELOAD="$NIXNAN_LIB" PRINT_ILL_INSTR=1 ENABLE_FUN_DETAIL=1 ./bin_chol/chol_tc --fmt $fmt --log2delta -$e > logs/e4/${tag}_detail.log 2>&1
+        echo "   $tag"
+    done
+}
+
 case "${1:-all}" in
     e0) e0 ;;
     e1) e1 ;;
     e2) e2 ;;
     e3) e3 ;;
+    e4) e4 ;;
     summary) ;;
-    all) e0; e1; e2; e3 ;;
+    all) e0; e1; e2; e3; e4 ;;
     *) sed -n 3,11p "$0"; exit 1 ;;
 esac
 echo

@@ -1,6 +1,6 @@
 # Experimental plan: Cholesky on a badly conditioned matrix, mixed precision, under nixnan
 
-Status: **E0, E1 (Section 9), E2 (Section 10) and E3 (Section 11) are implemented and run; E4–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
+Status: **E0, E1 (Section 9), E2 (Section 10), E3 (Section 11) and E4 (Section 12) are implemented and run; E5–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 "checked" come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 
 Source: `cg-and-cholesky-nixnan.pdf` in this directory (6 pages). It is a ChatGPT transcript, not a reference: it
@@ -311,3 +311,59 @@ SASS of the FP16 build: 39 `HFMA2`, 3 `MUFU.RCP`, 1 `MUFU.SQRT`, 3 `FFMA`, 3 `FM
 ### Deviations and caveats
 - E3b covers the unblocked path only (the blocked path would need tile kernels in half arithmetic).
 - Not done: the "variant: δ slightly above the threshold" for FP32-arithmetic storage: E2 shows FP16 at δ=2⁻¹⁰ is `ok` there (stored exactly, FP32 arithmetic), so the silent behaviour only appears with narrow arithmetic (E3b).
+
+## 12. Results: E4, tensor-core trailing update (RTX 3090, sm_86; `A_δ`, n=256, NB=32)
+
+Code: `chol_tc.cu` (new), `run_chol_story.sh e4` (about 1 minute), `chol_summary.py` (E4 report). Logs: `logs/e4/` (`sweep_tc.log`, `sass_hmma.txt`, and per point `*_native.log`, `*_nixnan.log`, `*_detail.log`).
+Design: blocked right-looking Cholesky; `potrf_tile` and `trsm_panel` in **FP32**; the trailing update `A_RR ← A_RR − L_Rk L_Rkᵀ` is **WMMA on tensor cores with FP32 accumulate**, one warp per 16×16 tile:
+FP16 (`__half`) and BF16 inputs through a rounded copy of the panel (`convert_panel_kernel`), TF32 inputs read from the FP32 panel and converted with `__float_to_tf32` (ties away from zero);
+FP32 forward/backward substitution on the FP32 factor. The pivot is still unguarded.
+
+### Checks that were open in the plan
+- **SASS contains the expected tensor-core instructions** (`cuobjdump -sass`): `HMMA.16816.F32` ×4 (FP16), `HMMA.16816.F32.BF16` ×4, `HMMA.1684.F32.TF32` ×16.
+- **Range:** all panel entries have magnitude ≤ 1 here, far below the FP16 maximum 65504; no overflow in the narrow-format conversion is possible on this matrix.
+- **Cost:** a nixnan run takes about 3.5 s (7 distinct kernels, FP16 path), inside the budget.
+
+### Sweep (δ = 2⁻ᵉ, `logs/e4/sweep_tc.log`)
+
+| e (κ₂) | FP16 update | BF16 update | TF32 update |
+|---|---|---|---|
+| 2…7 (1e3…3e4) | inacc (forward error 0.05–0.78; 0.0642 at e=3 is `ok`) | inacc (0.17–1.44) | as FP16 |
+| 8…10 (6.6e4…2.6e5) | inacc / `ok` at e=10 (fwd 0.083) | **breakdown, first bad pivot 33** | inacc / `ok` at e=10 (0.088) |
+| 11…21 (5.2e5…5.4e8) | **breakdown, first bad pivot 33** | breakdown (33) | breakdown (33) |
+| 22, 23 | finite garbage (forward error 18.5 and 16.0), no pivot ≤ 0 | same | same |
+| 24…26 | breakdown, bad pivot 1 (FP32 storage of `A_δ` itself loses δ) | same | same |
+
+- **The failure moves to the second block.** Every breakdown has **first bad pivot 33 (block step k=1)**, not 1 as with naive storage (E3): the pivots of block 0 are fine; the update with the
+  rounded panel is what damages the Schur complement, and the damage shows at the next diagonal tile. Mixed precision postpones the failure to where the rounded update is first used.
+- **The thresholds match the naive ones except TF32:** FP16 e=11 (E2: 11), BF16 e=8 (E2: 8), TF32 e=11 (E2: 12).
+  Explanation, consistent with the data: the dominant panel entry is `L_{i0} = 1/√(1+δ) ≈ 1 − δ/2`, and I checked on the CPU that it rounds to **exactly 1.0** at e=8 (BF16) and e=11 (FP16, TF32),
+  and not before. Because `L_{i0}` is not an exact tie, TF32's ties-away rule no longer matters, which is why TF32 now breaks with FP16 (it survived one step longer as *storage* of `1+δ` in E2).
+  I did not prove that this rounding is the only cause of the breakdown.
+- **Without refinement the mixed-precision factorization is inaccurate long before it breaks:** forward error 0.05–1 already at κ₂ = 1e3, and 0.66 on M0 (e=6, κ₂ = 1.6e4) for all three formats.
+  The factor is only useful as a preconditioner (the iterative-refinement route in `../mpir_gpu`). My 0.1 threshold therefore labels most low-e points `inacc`; the `ok` at e=3 and e=10 are borderline (forward error 0.064 and 0.083).
+- **Non-monotone again:** at e=22 and 23 the panel entry rounds to exactly 1 and the run finishes with forward error 16–18.5 and no pivot ≤ 0 (the same 15.97 value as in E2/E3 at e=23).
+
+### nixnan (`logs/e4/*_nixnan.log`, `*_detail.log`)
+
+| point | status | nixnan report |
+|---|---|---|
+| FP16 or BF16 update, δ=2⁻¹² | breakdown, bad pivot 33 (k=1) | **FP16 (resp. BF16) NaN 8 (1,616 repeats)**, FP32 NaN 514 (316,906), memory NaN 4 (1,620) |
+| TF32 update, δ=2⁻¹² | breakdown, bad pivot 33 | FP32 NaN 570 (328,218), memory NaN 4 (1,620); **no FP16/BF16 section** |
+| M0 (δ=2⁻⁶), any format | inaccurate, forward error 0.61–0.66 | **no exceptions** |
+| last non-breakdown δ (FP16, TF32: 2⁻¹⁰; BF16: 2⁻⁷) | ok / inacc | **no exceptions** |
+
+- **The first exception is the real defect this time:** `MUFU.RSQ` in `potrf_tile_kernel`, reported as **NaN** (square root of a negative Schur-complement diagonal), not the benign `sqrt(0)` expansion of E3.
+  This is the scenario in the PDF: a negative pivot gives a NaN.
+- **Chain:** `potrf_tile` (151 lines) → `trsm_panel` (147) → `tc_update` (30) → `forward` (147) → `backward` (51). The tensor-core kernel only sees NaN *after* the factorization has already failed.
+- **NixNan does instrument the HMMA instructions:** 14 report lines with `HMMA.16816.F32 …`: **NaN in operands 1 and 2 (the A and B inputs), decoded as f16 (BF16 for the BF16 build)**, which is the FP16 (BF16) section above.
+  For TF32 there are 62 HMMA lines, typed **f32** (TF32 inputs are 32-bit registers), so they land in the FP32 section, with no tensor-core-specific section.
+  Reading the tensor-core report therefore needs the instruction text, not only the section.
+- **Silence again where the matrix is still SPD** (M0 and the last-ok points): nixnan is blind to the 5–66 % forward error.
+- The parsers had to learn the kernel name format `void tc_update_kernel<__half>`, which nixnan prints without its template arguments (`in function void tc_update_kernel`).
+
+### Caveats
+- `A_δ` is special (one dominant panel column): the clean link between the rounding of `L_{i0}` and the breakdown is a property of this matrix; E5 is the real test.
+- Only FP32 accumulate was run; FP16 accumulate (`HMMA.16816.F16`, as in `lu_solve_gpu_tc`) would break much earlier and is not covered.
+- NB=32 only; the number of mma steps per tile (2 for FP16/BF16, 4 for TF32) was not varied.
+- The slide deck and report (`Chol_Slides.pdf`, `chol_report.pdf`) still describe E0–E3 only.

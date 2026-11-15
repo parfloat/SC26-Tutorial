@@ -77,6 +77,30 @@ if "--e3-points" in sys.argv:
         print(*p)
     raise SystemExit
 
+
+# ---------------------------------------------------------------- E4
+def e4_points():
+    """tensor-core points per format: the demo delta 2^-12 (breakdown), the last delta below the first breakdown, and M0's delta 2^-6"""
+    pts = []
+    d = {}
+    if os.path.exists("logs/e4/sweep_tc.log"):
+        for line in open("logs/e4/sweep_tc.log", errors="replace"):
+            m = re.search(r"path=blocked-tc-(\w+) n=\d+ log2delta=(-?\d+) kappa=\S+ status=(\S+)", line)
+            if m:
+                d.setdefault(m.group(1), {})[-int(m.group(2))] = m.group(3)
+    for f in ("f16", "bf16", "tf32"):
+        brk = [e for e in sorted(d.get(f, {})) if d[f][e] == "breakdown"]
+        pts.append((f, 12, "breakdown"))
+        if brk and brk[0] > 2:
+            pts.append((f, brk[0] - 1, "lastok"))
+        pts.append((f, 6, "M0"))
+    return sorted(set(pts), key=lambda p: (p[0], p[1]))
+
+if "--e4-points" in sys.argv:
+    for p in e4_points():
+        print(*p)
+    raise SystemExit
+
 if os.path.exists("logs/e0/budget.tsv"):
     print("E0 budget (limits: native 60 s, nixnan 120 s)")
     print("%-24s %9s %9s %8s %s" % ("run", "native_s", "nixnan_s", "kernels", "verdict"))
@@ -181,7 +205,7 @@ e2_report()
 def detail(path):
     """first exception, and kernels in order of first appearance with counts, from a PRINT_ILL_INSTR log"""
     first, order, kinds, types = None, [], {}, {}
-    pat = re.compile(r"error \[([^\]]+)\] detected in operand (\d+) of instruction (.*?) ; in function (\w+)(?: at (\S+):(\d+))? of type (\w+)")
+    pat = re.compile(r"error \[([^\]]+)\] detected in operand (\d+) of instruction (.*?) ; in function (?:void )?(\w+)(?: at (\S+):(\d+))? of type (\w+)")
     for line in open(path, errors="replace"):
         m = pat.search(line)
         if not m:
@@ -230,3 +254,40 @@ def e3_report():
                 print("    no exception lines")
 
 e3_report()
+
+
+def e4_report():
+    if not os.path.exists("logs/e4/sweep_tc.log"):
+        return
+    print("\nE4: tensor-core trailing update (WMMA inputs FP16 / BF16 / TF32, FP32 accumulate; FP32 panel), A_delta n=256, NB=32")
+    if os.path.exists("logs/e4/sass_hmma.txt"):
+        print("  SASS: " + "; ".join(l.split(None, 1)[1] + " x" + l.split()[0] for l in open("logs/e4/sass_hmma.txt").read().splitlines()))
+    d = {}
+    for line in open("logs/e4/sweep_tc.log", errors="replace"):
+        m = re.search(r"path=blocked-tc-(\w+) n=\d+ log2delta=(-?\d+) kappa=(\S+) status=(\S+) .*fact_err=(\S+) fact_err_stored=\S+ resid=\S+ fwd_err=(\S+) first_bad_pivot=(\S+)", line)
+        if m:
+            f, e, k, st, fe, fw, bp = m.groups()
+            d.setdefault(-int(e), {})["kappa"] = k
+            d[-int(e)][f] = (st, fe, fw, bp)
+    print("  %3s %10s | %-22s | %-22s | %-22s   (status, factorization error, forward error; BRK = first bad pivot)" % ("e", "kappa", "f16", "bf16", "tf32"))
+    for e in sorted(d):
+        cells = []
+        for f in ("f16", "bf16", "tf32"):
+            st, fe, fw, bp = d[e][f]
+            cells.append("%-5s %-8s %-8s" % (CODE.get(st, st), "BRK@" + bp if st == "breakdown" else fe, "" if st == "breakdown" else fw))
+        print("  %3d %10s | %s" % (e, d[e]["kappa"], " | ".join("%-22s" % c for c in cells)))
+    print("\n  nixnan on chosen points:")
+    for f in sorted(glob.glob("logs/e4/*_native.log")):
+        tag = os.path.basename(f)[:-len("_native.log")]
+        r = re.search(r"path=blocked-tc-(\w+) n=\d+ log2delta=(-?\d+) kappa=(\S+) status=(\S+) .*fact_err=(\S+) fact_err_stored=\S+ resid=\S+ fwd_err=(\S+) first_bad_pivot=(\S+)", open(f).read())
+        nx = f.replace("_native", "_nixnan"); dt = f.replace("_native", "_detail")
+        print("  %s: status %s, fwd %s, bad pivot %s%s" % (tag, r.group(4), r.group(6), r.group(7),
+              " (block step k=%d)" % (int(r.group(7)) // 32) if r.group(7) != "-1" else ""))
+        print("      report: %s" % (nixnan(nx) if os.path.exists(nx) and has_report(nx) else "-"))
+        if os.path.exists(dt):
+            first, chain, kinds, types, total = detail(dt)
+            if first:
+                hm = sum(1 for l in open(dt, errors="replace") if "error [" in l and "HMMA" in l)
+                print("      first exception: [%s] %s in %s; chain: %s; HMMA lines: %d" % (first[0], first[1], first[2], " -> ".join("%s:%d" % (k, n) for k, n in chain), hm))
+
+e4_report()

@@ -150,7 +150,7 @@ write("tab_e2_nixnan.tex", "\\begin{tabular}{llllp{7.3cm}}\n\\toprule\nstorage &
 
 # ---------------------------------------------------------------- E3
 def detail(path):
-    pat = re.compile(r"error \[([^\]]+)\] detected in operand (\d+) of instruction (.*?) ; in function (\w+)(?: at (\S+):(\d+))? of type (\w+)")
+    pat = re.compile(r"error \[([^\]]+)\] detected in operand (\d+) of instruction (.*?) ; in function (?:void )?(\w+)(?: at (\S+):(\d+))? of type (\w+)")
     first, order, kinds, types, withline = None, [], {}, {}, 0
     for line in open(path, errors="replace"):
         m = pat.search(line)
