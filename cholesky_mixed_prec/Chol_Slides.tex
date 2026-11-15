@@ -44,17 +44,20 @@ pivot, and the factorization hits $L_{jj}=\sqrt{S_{jj}}$ with $S_{jj}\le 0$: a N
 \item \textbf{And its opposite:} a bad condition number does not guarantee an exception. Often the answer is finite and wrong.
 \end{itemize}
 \vspace{2mm}\centering
-\begin{tikzpicture}[node distance=5mm]
-  \node[greenbox, text width=2.2cm] (e0) {E0\\run-time budget};
-  \node[greenbox, right=of e0, text width=2.2cm] (e1) {E1\\FP64/FP32 reference};
-  \node[greenbox, right=of e1, text width=2.2cm] (e2) {E2\\where does each format break?};
-  \node[greenbox, right=of e2, text width=2.2cm] (e3) {E3\\naive reduced precision};
-  \node[greenbox, right=of e3, text width=2.2cm] (e4) {E4\\tensor-core update};
-  \node[dashbox, right=of e4, text width=2.2cm] (e5) {E5--E7\\random matrices, histogram, guard};
-  \foreach \u/\v in {e0/e1,e1/e2,e2/e3,e3/e4,e4/e5} \draw[flowarrow] (\u) -- (\v);
+\begin{tikzpicture}[node distance=3mm]
+  \tikzset{rb/.style={greenbox, text width=1.55cm, font=\tiny, minimum height=1.3cm}}
+  \node[rb] (e0) {E0\\run-time budget};
+  \node[rb, right=of e0] (e1) {E1\\FP64/FP32 reference};
+  \node[rb, right=of e1] (e2) {E2\\where each format breaks};
+  \node[rb, right=of e2] (e3) {E3\\naive reduced precision};
+  \node[rb, right=of e3] (e4) {E4\\tensor-core update};
+  \node[rb, right=of e4] (e5) {E5\\random matrices};
+  \node[rb, right=of e5] (e6) {E6\\histogram view};
+  \node[rb, right=of e6] (e7) {E7\\pivot guard};
+  \foreach \u/\v in {e0/e1,e1/e2,e2/e3,e3/e4,e4/e5,e5/e6,e6/e7} \draw[flowarrow] (\u) -- (\v);
 \end{tikzpicture}
 
-{\scriptsize green = done, with logs and tables in this deck; dashed = planned}
+{\scriptsize all eight experiments are done; logs and tables are in the report}
 \end{frame}
 
 % ------------------------------------------------------------------ 2
@@ -449,16 +452,118 @@ M0 ($2^{-6}$), last-ok $\delta$ & \textbf{no exceptions}\\
 \end{column}\end{columns}
 \end{frame}
 
+% ------------------------------------------------------------------ E5
+\begin{frame}{E5: random matrices, five configurations}
+\centering\scriptsize
+\input{docs_gen/tab_e5_grid.tex}
+
+\vspace{2mm}\raggedright\footnotesize
+\begin{itemize}
+\item $A=Q\,\mathrm{diag}(\sigma)Q^T$, $n=256$, $\kappa=10^{2}\ldots10^{7}$, 5 seeds: 150 runs, each under a second.
+\item \textbf{Same order as on $A_\delta$:} FP32 never fails; FP16/TF32 updates break at $10^{6}$, BF16 at $10^{5}$, naive FP16 arithmetic at $10^{4}$.
+\item \textbf{Every breakdown was caught by the code's own pivot test.} The silent failures are the \textit{inaccurate} cells, not NaNs.
+\item The ``inaccurate'' label (forward error $>0.1$, or factor error $>1000\,\epsilon$) is mine.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{E5 under NixNan: silent where it matters}
+\centering\fontsize{6.5}{8}\selectfont
+\input{docs_gen/tab_e5_nixnan.tex}
+
+\vspace{2mm}\raggedright\footnotesize
+\begin{itemize}
+\item \textbf{Inaccurate, no exception:} mixed BF16 at $10^{2}$ and mixed TF32 at $10^{3}$ (forward error $9\times10^{-3}$).
+\item Mixed FP16: 8 subnormals on the \texttt{HMMA} inputs at $10^{2}$ (ok) and at $10^{3}$ (inaccurate): same count, no separation.
+\item NaNs appear only where the factorization has already failed (about 513--569 unique FP32 NaN).
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------------ E6
+\begin{frame}{E6: the histogram as a danger-zone view}
+\centering\scriptsize
+\begin{tabular}{cc}
+\textbf{FP32 arithmetic (E3a)} & \textbf{true FP16 arithmetic (E3b)}\\[1mm]
+\input{docs_gen/tab_e6_s1.tex} & \input{docs_gen/tab_e6_s3.tex}
+\end{tabular}
+
+\vspace{1mm}\raggedright\footnotesize
+\begin{itemize}
+\item \texttt{HISTOGRAM=1 BIN\_SPEC\_FILE}: operands of the Schur-update kernel per exponent bin (reports $\times$ 64).
+\item \textbf{Healthy: millions in the low binades. Failing: none.} Only exponent 0 and the zero bin: the Schur complement is exactly $0$, it never approaches it.
+\item The zero bin (with \texttt{record\_inst}) names the instruction: \texttt{rank1\_kernel FFMA R3, R8, -R11, R3} (1016 reports).
+\item Caution: an operand census (it counts \texttt{RZ} too), and the zero bin is also full in healthy FP16 runs: look for the \emph{empty} low binades.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{E6: what the options cost, and three pitfalls}
+\centering\scriptsize
+\input{docs_gen/tab_e6_cost.tex}
+
+\vspace{2mm}\raggedright\footnotesize
+\begin{itemize}
+\item \textbf{Whitelist needs the full demangled name} (\texttt{rank1\_kernel(float*, int, int)}); the bare name instruments nothing and the empty report looks like a clean run.
+\item \textbf{\texttt{LD\_PRELOAD=nixnan.so timeout 100 ./prog}} preloads into \texttt{timeout}: nothing is instrumented, silently. Use \texttt{timeout 100 env LD\_PRELOAD=... ./prog}.
+\item \texttt{count=1} floods ($\sim10^{5}$ lines); use 64 or more. \texttt{INSTR\_MEM=1} changed nothing here.
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------------ E7
+\begin{frame}{E7: detect instead of crash}
+\footnotesize
+\centering
+\begin{tikzpicture}[node distance=5mm]
+  \node[bluebox, text width=2.4cm] (s) {pivot $S_{jj}$\\rel $=S_{jj}/A_{jj}^{orig}$};
+  \node[orangebox, right=of s, text width=2.4cm] (t) {rel $>\tau$ ?\\ $\tau=c\,u$};
+  \node[greenbox, right=of t, text width=2.2cm] (y) {yes: $\sqrt{}$, go on};
+  \node[redbox, below=5mm of y, text width=3.6cm] (n) {no: record pivot index,\\\textbf{return before $\sqrt{}$}\\host stops, prints it};
+  \draw[flowarrow] (s)--(t); \draw[flowarrow] (t)--(y) node[midway, above, font=\tiny]{}; \draw[flowarrow] (t) |- (n);
+\end{tikzpicture}
+
+\vspace{2mm}\raggedright
+\begin{itemize}
+\item No Inf, no NaN is ever created: on guarded runs \textbf{NixNan reports no NaN}.
+\item $\tau=c\,u$, $u$ of the narrowest format: $2^{-24}$ (FP32), $2^{-11}$ (FP16, TF32), $2^{-8}$ (BF16). Measured: forward error $\approx0.5\,u/\mathrm{rel}$ (mixed), $10\,u/\mathrm{rel}$ (naive FP16): \textbf{$c$ is the accuracy you ask for}.
+\item Relative to the diagonal, not an absolute constant: the lesson of the LU $\epsilon$-clamp study.
+\item Built with \texttt{-DGUARD}; wall time unchanged (0.3 s, per-step host sync).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{E7: the guard against NixNan, same inputs ($\tau=100u$)}
+\centering\scriptsize
+\input{docs_gen/tab_e7_slide.tex}
+
+\vspace{2mm}\raggedright\footnotesize
+\begin{itemize}
+\item \textbf{Earlier than the exception:} mixed FP16 $10^{6}$: pivot 83 vs.\ first non-positive pivot 193; $A_\delta$: pivot 1 (the true small pivot) vs.\ 33.
+\item \textbf{Sees what NixNan cannot:} mixed BF16 $10^{2}$, mixed TF32 $10^{3}$ stopped; NixNan silent. No trip on the accurate FP32 run ($10^{7}$).
+\item It repairs nothing: wider format or iterative refinement is the remedy.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{E7: choosing $\tau$ is an accuracy decision}
+\centering\scriptsize
+\input{docs_gen/tab_e7_tau.tex}
+
+\vspace{1mm}{\footnotesize non-ok flagged / non-ok, ok flagged / ok (150 E5 runs)}
+
+\vspace{2mm}\raggedright\footnotesize
+\begin{itemize}
+\item \textbf{$c=100$ looks perfect, but the grid has a gap} between $\kappa=100$ and $1000$.
+\item Held-out $\kappa=150$--$700$ (3 new seeds, mixed FP16): $c=100$ misses \textbf{13 of 14} runs the 1000-$\epsilon$ rule calls inaccurate (forward error $2$--$7\times10^{-3}$); $c=300$ catches 13 of 14, and also flags naive-FP16 runs with 3--9\% error.
+\item $\tau$ was picked after seeing E5; one family, FP16 only in the held-out check.
+\end{itemize}
+\end{frame}
+
 % ------------------------------------------------------------------ 11
 \begin{frame}{What each check can see}
 \centering\small
-\begin{tabular}{lcc}
+\begin{tabular}{p{4.3cm}p{4.3cm}p{4.6cm}}
 \toprule
  & silent case (finite, wrong) & breakdown (pivot $\le0$)\\
 \midrule
 NixNan (NaN / Inf / div-by-zero) & \cellcolor{red!25}blind & \cellcolor{green!15}finds it: kernel, instruction, precision\\
 Forward error or residual & \cellcolor{green!15}finds it & \cellcolor{green!15}NaN: finds it\\
-Pivot / condition check before dividing & \cellcolor{green!15}finds it, before the solve & \cellcolor{green!15}finds it, before the solve\\
+Relative pivot guard (E7) & \cellcolor{green!15}finds it, if $\tau$ fits the accuracy wanted & \cellcolor{green!15}finds it earlier, before any NaN\\
 \bottomrule
 \end{tabular}
 
@@ -466,7 +571,7 @@ Pivot / condition check before dividing & \cellcolor{green!15}finds it, before t
 \begin{tikzpicture}[node distance=10mm]
   \node[redbox, text width=3.6cm] (v1) {silent case\\forward error 16, no report};
   \node[orangebox, right=of v1, text width=4.0cm] (v2) {breakdown\\NaN; NixNan points at the chain};
-  \node[greenbox, right=of v2, text width=4.0cm] (v3) {guard (E7, planned)\\relative pivot test, report and stop};
+  \node[greenbox, right=of v2, text width=4.0cm] (v3) {guard (E7)\\relative pivot test, report and stop};
   \draw[flowarrow] (v1) -- (v2); \draw[flowarrow] (v2) -- (v3);
 \end{tikzpicture}
 
@@ -481,31 +586,26 @@ Pivot / condition check before dividing & \cellcolor{green!15}finds it, before t
 \begin{frame}{Caveats}
 \small
 \begin{itemize}
-\item \textbf{$A_\delta$ is special} (rank one plus a shift): it shows how the failure looks, not how often it happens. Randomised matrices (E5) are the real test.
+\item \textbf{$A_\delta$ is special}; E5 (one random family, $n=256$, 5 seeds: counts, not intervals) confirms the order of failure, not the exact thresholds.
+\item E6 is an operand census (binned per kernel), BF16/TF32 not run. E7: $\tau$ chosen after seeing E5; held-out check covers FP16 only.
 \item \textbf{FP32 accuracy thresholds depend on the implementation:} LAPACK \texttt{spotrf} reports ``not positive definite'' at $e=16$--22 where our kernels do not; the storage breakdown (e.g.\ FP16 at $e=11$) agrees exactly.
 \item Narrow formats are \textbf{emulated by host rounding}; the tensor-core path (device conversion, WMMA inputs) is E4.
-\item The ``inaccurate'' status uses my threshold (forward error $>0.1$); it moves the \textit{inacc} boundary, not the breakdown one.
-\item TF32's threshold depends on the rounding mode of the tensor-core inputs (ties away vs. to even).
+\item The ``inaccurate'' status uses my thresholds (forward error $>0.1$, factor error $>1000\,\epsilon$); they move the \textit{inacc} boundary, not the breakdown one.
 \item E4 ran FP32 accumulate only (FP16 accumulate would break earlier) and $NB=32$; the clean link between the rounded panel entry and the breakdown is a property of $A_\delta$.
 \item One GPU (RTX 3090, sm\_86, CUDA 12.4); nixnan counts reflect how the compiler expands division and square root on this machine (IEEE \texttt{sqrtf} vs.\ \texttt{MUFU.SQRT}).
 \end{itemize}
 \end{frame}
 
 % ------------------------------------------------------------------ 13
-\begin{frame}{Next: random matrices, histogram, a guard}
-\small\centering
-\begin{tikzpicture}[node distance=4mm]
-  \node[dashbox, text width=3.6cm] (e5) {E5\\random $Q\Lambda Q^T$, $\kappa$ sweep, 5 seeds: silent vs.\ exceptional (the real test of the $A_\delta$ results)};
-  \node[dashbox, right=of e5, text width=3.6cm] (e6) {E6\\HISTOGRAM / BIN\_SPEC: watch the Schur complement approach 0};
-  \node[dashbox, right=of e6, text width=3.6cm] (e7) {E7\\explicit pivot guard vs.\ NixNan};
-\end{tikzpicture}
-
-\vspace{5mm}\raggedright\small
-\begin{itemize}
-\item E4 is done: the trailing update compiles to \texttt{HMMA.16816.F32} (\texttt{.F32.BF16}, \texttt{HMMA.1684.F32.TF32}) and the first exception is tied to block step $k=1$.
-\item E6 reuses the exponent-binade view from the LU study as a ``danger zone'' monitor.
-\item Every run stays within the budget: 1 minute native, 2 minutes with nixnan.
-\end{itemize}
+\begin{frame}{Take-aways}
+\small\raggedright
+\begin{enumerate}
+\item \textbf{Lowering precision can destroy positive definiteness:} the stored matrix is no longer SPD. The failure is a zero or negative pivot, then Inf and NaN.
+\item \textbf{NixNan finds the exceptions} (kernel, instruction, precision, tensor-core operands) but read it carefully: discarded \texttt{rsqrt(0)}, FP16 division in FP32, conversions invisible.
+\item \textbf{It is blind to most of the inaccurate region:} finite, wrong answers with no exception (E3, E5). Check the error as well.
+\item \textbf{HISTOGRAM shows the danger zone:} empty low binades next to a full zero bin; mind the whitelist and \texttt{LD\_PRELOAD} pitfalls.
+\item \textbf{A relative pivot guard stops before any NaN} and sees the inaccurate runs; $\tau=c\,u$ is the accuracy you ask for. Repair needs a wider format or iterative refinement.
+\end{enumerate}
 \vfill\centering{\footnotesize Reproduce: \texttt{./run\_chol\_story.sh} \quad Full details: \texttt{chol\_report.pdf} \quad Plan and results: \texttt{EXPERIMENT\_PLAN.md}}
 \end{frame}
 

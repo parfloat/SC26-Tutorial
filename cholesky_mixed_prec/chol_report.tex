@@ -39,7 +39,7 @@
 % ================================================================== 1
 \section{Executive Summary}
 
-This report documents the first five experiments (E0--E4) of a mixed-precision Cholesky study for the SC26 tutorial. The tutorial
+This report documents the experiments E0--E7 of a mixed-precision Cholesky study for the SC26 tutorial. The tutorial
 point is: \emph{if the precision of a Cholesky factorization is reduced without regard to the condition number, rounding can destroy the
 small positive Schur-complement pivot that the algorithm needs; the factorization then reaches
 $L_{jj}=\sqrt{S_{jj}}$ with $S_{jj}\le 0$ and produces Inf and NaN, which NixNan can locate.} All experiments ran on one NVIDIA GeForce RTX 3090
@@ -64,12 +64,17 @@ the copy in \texttt{external/nixnan} (commit \texttt{ce35185}, 2026-09-26).
   \item \textbf{Tensor cores (E4).} A blocked Cholesky with an FP32 panel and a WMMA trailing update (FP16, BF16 or TF32 inputs, FP32 accumulate) breaks at the same $\delta$ as the naive storage
   (BF16 $2^{-8}$, FP16 and TF32 $2^{-11}$) but \emph{later in the factorization}: first bad pivot 33 (block step 1). NixNan instruments the \texttt{HMMA} instructions (NaN on the A and B input operands), but the
   first report is the genuine NaN at the square root of a negative Schur diagonal; the tensor cores only see NaN after the factorization has failed. Without refinement the mixed-precision factor is inaccurate (forward error 0.05--1) long before it breaks.
+  \item \textbf{Random matrices (E5).} On $Q\,\mathrm{diag}(\sigma)Q^T$ ($n=256$, $\kappa=10^{2}$--$10^{7}$, 5 seeds) the order is the same as on $A_\delta$: FP32 never fails; mixed precision with FP16 or TF32 inputs is inaccurate from $\kappa=10^{3}$ and breaks down at $10^{6}$; BF16 is inaccurate already at $10^{2}$ and breaks down at $10^{5}$; naive FP16 arithmetic breaks down from $10^{4}$.
+  Every breakdown was caught by the code's own pivot test. The inaccurate runs are the silent ones, and NixNan reports nothing for two of the three kinds of them (mixed BF16 at $10^{2}$, mixed TF32 at $10^{3}$) and only panel subnormals for mixed FP16.
+  \item \textbf{The histogram view (E6).} With \texttt{HISTOGRAM=1} a healthy run has millions of operands in the binades $2^{-14}$--$2^{-8}$ of the Schur-update kernel; the failing run has none, only exponent~0 and exactly-zero values, and the zero bin names the instruction.
+  The histogram is an operand census, not a Schur-complement monitor. \texttt{FUNCTION\_WHITELIST} cuts a run from 2.9 to 0.8~s but needs the full demangled name.
+  \item \textbf{An explicit pivot guard (E7).} Testing the relative pivot before the square root stops the factorization with the pivot index, before any NaN exists: on the guarded runs NixNan reports no NaN. It also stops the inaccurate runs NixNan cannot see.
+  The threshold $\tau=c\,u$ encodes the accuracy the user wants; $c=100$ separated the E5 runs perfectly, but a held-out check ($\kappa=150$--$700$) shows that this was a gap in the grid and that $c=300$ is needed for the 1000-$\epsilon$ criterion.
   \item \textbf{Cost.} Custom kernels (5 distinct kernels per run) cost 3~s under NixNan; the existing cuSOLVER/cuBLAS-based \texttt{mpir\_gpu}
   costs 88~s. All experiments stay inside the planned budget of 1~minute native, 2~minutes with NixNan.
 \end{enumerate}
 
-Scope: this report covers E0--E4. Random matrices (E5), histogram views (E6) and an explicit pivot guard (E7) are planned and
-not run (Section~\ref{sec:next}).
+Scope: E0--E7 as planned. Open points are listed in Section~\ref{sec:next}.
 
 % ================================================================== 2
 \section{Background and the Question}
@@ -375,6 +380,91 @@ Chain (kernel: report lines): \input{docs_gen/chain_e4_f16.tex}. For the TF32 up
   \item Cost: a NixNan run takes about 3.5~s (7 distinct kernels).
 \end{itemize}
 
+
+\subsection{E5: random matrices, ``sometimes silent, sometimes exceptional''}\label{sec:e5}
+
+Matrices $A=Q\,\mathrm{diag}(\sigma)\,Q^T$ with $\sigma_j=\kappa^{-j/(n-1)}$ and $Q$ from the QR of a seeded Gaussian (the recipe of \texttt{mpir\_gpu}), $n=256$, $\kappa\in\{10^{2},\ldots,10^{7}\}$, seeds 0--4; $b=A\mathbf{1}$.
+Five configurations: FP32 (blocked), the three tensor-core updates of E4 (mixed FP16, BF16, TF32) and naive FP16 arithmetic (E3b). 150 native runs, each well under a second; NixNan on the first example of each status (11 points).
+Cell = status counts over the 5 seeds, and the median forward error:
+
+\begin{center}\scriptsize\input{docs_gen/tab_e5_grid.tex}\end{center}
+
+\begin{itemize}
+  \item The thresholds found on $A_\delta$ carry over: FP32 does not fail; mixed FP16 and TF32 break at $10^{6}$, mixed BF16 at $10^{5}$, naive FP16 arithmetic at $10^{4}$ (3 of 5 seeds; the other two are inaccurate: seed-dependent at the threshold).
+  \item \textbf{All breakdowns are caught by the code's own pivot test} (a pivot $\le0$ is recorded). Status \emph{nan} (non-finite output nobody noticed) did not occur: the silent failures are the \emph{inaccurate} runs.
+  \item The 0.1 forward-error threshold is mine: FP32 at $\kappa=10^{7}$ has forward error $4.4\times10^{-2}$ and counts as ok only because of it.
+\end{itemize}
+
+NixNan on the chosen points (counters: unique (repeats)):
+
+\begin{center}\scriptsize\input{docs_gen/tab_e5_nixnan.tex}\end{center}
+
+\begin{itemize}
+  \item \textbf{NixNan sees little of the inaccurate region.} Mixed BF16 at $10^{2}$ and mixed TF32 at $10^{3}$ are inaccurate (forward error $9\times10^{-3}$ each) with no exception at all. Mixed FP16 reports 8 FP16 subnormals on the \texttt{HMMA} inputs at $10^{2}$ (ok) and at $10^{3}$ (inaccurate): the same count, so it does not separate them. Naive FP16 reports tens of thousands of subnormals while still ok.
+  \item NaN reports appear where the factorization has failed (513--569 unique FP32 NaN, 4 NaN stores in the tensor-core runs).
+  \item Same lesson as the LU $\epsilon$-clamp study: NixNan reports exceptions, not accuracy.
+  \item These runs use the \texttt{-DGUARD} builds (Section~\ref{sec:e7}), which add FP instructions; NixNan's counts are therefore a little larger than in a plain build (FP32 NaN 505 became 513 for mixed FP16 at $10^{6}$). The statuses are identical.
+\end{itemize}
+
+\subsection{E6: the histogram ``danger-zone'' view, and what the options cost}\label{sec:e6}
+
+\texttt{HISTOGRAM=1} with a \texttt{BIN\_SPEC\_FILE} counts, per kernel, how many FP operands fall in chosen exponent bins and reports every \texttt{count}-th occurrence.
+I used one bin per binade around the pivot size (FP32: zero, $[-126,-30]$, $[-29,-14]$, $-13$, $-12$, $[-11,-8]$, $[-7,-1]$, 0, $[1,10]$; FP16 analogous), the zero bin with \texttt{(record\_inst)} so that each hit names its SASS instruction, \texttt{count}$=64$.
+Healthy ($\delta=2^{-6}$) against failing ($\delta=2^{-12}$), the Schur-update kernel \texttt{rank1\_kernel} (FP32 arithmetic on FP16-rounded $A$; approximate operand counts, reports $\times$ 64):
+
+\begin{center}\scriptsize\input{docs_gen/tab_e6_s1.tex}\quad\input{docs_gen/tab_e6_s3.tex}\end{center}
+
+(left: FP32 arithmetic, E3a; right: true FP16 arithmetic, E3b, FP16 bins.)
+
+\begin{itemize}
+  \item \textbf{The failing run has no population in the low binades.} The values do not approach zero gradually; the Schur complement is exactly $0$ from step 1 (the rank-one matrix), so only exponent 0 and the zero bin are occupied. The same holds for the true-FP16 run and for \texttt{tc\_update\_kernel} in the tensor-core run.
+  \item \textbf{The zero bin names the instruction} (FP32, failing run):
+\begin{center}\scriptsize\input{docs_gen/e6_zero_attr.tex}\end{center}
+  The first is the update $a_{ij}-l_il_j$ landing on exactly 0. The second multiplies by the reciprocal with an \texttt{RZ} addend, so it counts an input that is zero by construction. The zero bin holds exponent field 0, i.e.\ zeros \emph{and} subnormals, and is occupied in healthy runs too (8.4M in healthy true-FP16): the signature is a full zero bin \emph{next to empty low binades}, not the zero bin alone.
+  \item \textbf{It is an operand census, not a view of the Schur complement}: every source and destination operand of every instrumented instruction is binned. The pivot kernel reports nothing in the failing runs because it never reaches 64 occurrences in one bin.
+  \item The exception report is unchanged by the histogram (249 exception lines with and without).
+\end{itemize}
+
+Cost of the options (FP32 run, $\delta=2^{-12}$; wall seconds; histogram reports / exception lines):
+
+\begin{center}\scriptsize\input{docs_gen/tab_e6_cost.tex}\end{center}
+
+\begin{itemize}
+  \item Start-up dominates (about 0.3~s per distinct kernel); the histogram adds 0.5~s here. \texttt{SAMPLING=4} cut the reports (3185 to 2277) without a visible time saving.
+  \item \texttt{FUNCTION\_WHITELIST} is the only option that changed the time (2.9 to 0.8~s), but the file must contain the \emph{full demangled name} (\texttt{rank1\_kernel(float*, int, int)}); the bare name \texttt{rank1\_kernel} instrumented nothing and produced an empty report, which looks like a clean run.
+  \item \texttt{INSTR\_MEM=1} changed nothing (same exception lines, same time): the NaN-store reports are already in the default report. I did not read the code path.
+  \item \texttt{LD\_PRELOAD=nixnan.so timeout 100 ./prog} loads the tool into \texttt{timeout}, not into the program: nothing is instrumented and nothing says so. Use \texttt{timeout 100 env LD\_PRELOAD=... ./prog}.
+  \item With \texttt{count}$=1$ the run printed about $10^{5}$ lines and exceeded the time limit once. The test is \texttt{prev \% count == 0 \&\& prev != 0}, so with \texttt{count}$=1$ the first occurrence is not reported (I did not check whether that is intended).
+\end{itemize}
+
+\subsection{E7: detect instead of crash}\label{sec:e7}
+
+\textbf{The guard.} At each pivot the kernel computes $\mathrm{rel}=S_{jj}/A_{jj}^{\mathrm{orig}}$ and keeps the minimum. With \texttt{--guard TAU} a pivot with \texttt{!(rel > TAU)} (NaN included) is recorded and the kernel returns \emph{before the square root}, so no Inf or NaN is created. The host reads the flag after each block step and prints
+\texttt{GUARD pivot i: relative pivot r <= tau t}. It is compiled only with \texttt{-DGUARD}; the default builds used for E0--E4, E6 and the \texttt{sqrt} study are unchanged (their SASS was compared with the earlier build: identical). The per-step host synchronisation did not change the wall time (0.3~s with and without, FP32 unblocked, best of 3).
+
+\textbf{The threshold.} $\mathrm{rel}$ is a property of the matrix (about $1/\kappa$, equal for the FP32 and the mixed runs of one matrix), so the threshold must scale with the unit roundoff $u$ of the narrowest format that enters the arithmetic: $\tau=c\,u$ with $u=2^{-24}$ (FP32), $2^{-11}$ (FP16, TF32), $2^{-8}$ (BF16).
+Empirically the forward error is about $0.5\,u/\mathrm{rel}$ for the mixed runs and about $10\,u/\mathrm{rel}$ for naive FP16 arithmetic, so $c$ is the accuracy the user wants: the guard accepts forward errors up to about $0.5/c$ (mixed) or $10/c$ (naive). This fit is mine, not a bound.
+Evaluation on the 150 E5 runs from the recorded minimum (cell: non-ok runs flagged / non-ok runs, ok runs flagged / ok runs):
+
+\begin{center}\scriptsize\input{docs_gen/tab_e7_tau.tex}\end{center}
+
+\textbf{This table is too good.} At $c=100$ all 105 non-ok runs are flagged and none of the 15 ok low-precision runs, but the E5 grid has nothing between $\kappa=100$ (relative pivot about $400u$) and $\kappa=1000$ (about $90u$). A held-out check ($\kappa=150$--$700$, three new seeds, mixed and naive FP16) shows what $c=100$ does in that gap:
+
+\begin{center}\scriptsize\input{docs_gen/tab_e7_heldout.tex}\end{center}
+
+At $c=100$ the guard misses 13 of the 14 mixed-FP16 runs that the 1000-$\epsilon$ rule labels inaccurate (forward error $1.7\times10^{-3}$--$7\times10^{-3}$); $c=300$ catches 13 of 14, and also flags naive-FP16 runs labelled ok whose forward error is 3--9\%. There is no ``right'' $c$: it is the accuracy requirement, and my status labels are not a ground truth for it.
+
+\textbf{Live comparison with NixNan} ($\tau=100u$, native status without the guard; the NixNan default report without and with the guard):
+
+\begin{center}\scriptsize\input{docs_gen/tab_e7_live.tex}\end{center}
+
+\begin{itemize}
+  \item \textbf{The guard fires before the exception:} mixed FP16 at $\kappa=10^{6}$ at pivot 83 against a first non-positive pivot 193; naive FP16 at $10^{4}$ at 147 against 253; on $A_\delta$ with the FP16 update at pivot 1 (relative pivot $4.9\times10^{-4}$, the true small pivot of this ill-conditioned matrix) against 33.
+  \item \textbf{On the guarded runs NixNan reports no NaN.} The remaining reports are the FP16 subnormals of the panel: the guard removes the symptom NixNan sees, not those reports.
+  \item \textbf{It sees what NixNan cannot:} mixed BF16 at $10^{2}$ and mixed TF32 at $10^{3}$ (inaccurate, no NixNan exception) are stopped at pivots 133 and 247. It does not trip on the accurate FP32 run at $\kappa=10^{7}$ (relative pivot $1.4\times10^{-5}>100u=6\times10^{-6}$) nor on mixed FP16 at $10^{2}$.
+  \item \textbf{It repairs nothing.} It turns ``NaN, or a quietly wrong answer'' into ``stopped at pivot $i$: ill-conditioned for this precision''. The remedy is a wider format or iterative refinement (\texttt{mpir\_gpu}).
+\end{itemize}
+
 % ================================================================== 6
 \section{Lessons for the Tutorial}
 
@@ -386,25 +476,29 @@ Chain (kernel: report lines): \input{docs_gen/chain_e4_f16.tex}. For the TF32 up
   \item Tell the audience to read both the FP16/BF16 and the FP32 sections for half-precision code, and the instruction text for tensor-core code (TF32 inputs are typed f32).
   \item Explain the first line honestly: with IEEE \texttt{sqrtf} it can be a discarded \texttt{rsqrt(0)}; the genuine failure is the division by the zero pivot, or the NaN at the sqrt of a negative pivot.
   \item Show the tensor-core run: same thresholds as naive storage, failure at block step 1, \texttt{HMMA} inputs reported as NaN only after the factorization failed.
+  \item Show the random-matrix grid: the same order of failure, and the large inaccurate region in which NixNan is silent or reports only subnormals.
+  \item Show the histogram as a danger-zone view: empty low binades next to a full zero bin; mention the whitelist and \texttt{LD\_PRELOAD} pitfalls.
+  \item Finish with the guard: a relative pivot test before the square root stops at pivot $i$ with no NaN; the threshold is an accuracy requirement ($\tau=c\,u$), not a constant.
 \end{enumerate}
 
 % ================================================================== 7
 \section{Limits and Next Steps}\label{sec:next}
 
 \begin{itemize}
-  \item $A_\delta$ is a special matrix; random $Q\Lambda Q^T$ matrices (E5) are needed to say how often the failure occurs.
+  \item E5 uses one random family ($Q\Lambda Q^T$, geometric spectrum, $n=256$, 5 seeds): counts, not confidence intervals; $A_\delta$ remains a special matrix.
   \item In E2/E3 the narrow formats are emulated by host rounding; E4 uses the real tensor-core path but FP32 accumulate only (FP16 accumulate, \texttt{HMMA.16816.F16}, would break earlier) and $NB=32$ only.
   \item True half arithmetic exists only for the unblocked path.
   \item The 0.1 forward-error threshold behind ``inaccurate'' is mine.
   \item One GPU (sm\_86); NixNan counts reflect how the compiler expands division and square root on this machine.
   \item The explanation of the E4 thresholds (rounding of the panel entry $L_{i0}$) is consistent with the data and was checked on the CPU, but I did not prove that it is the only cause.
-  \item Planned: E6 (exponent-binade histogram as a ``danger zone'' monitor) and E7 (an explicit relative pivot test compared with NixNan).
+  \item E6: operand-level census; BF16 and TF32 not run; for the tensor-core scenario only FP32 bins were set. E7: $\tau$ was chosen after seeing E5; the held-out check covers mixed and naive FP16 only; the reference for the relative test (original diagonal) is one choice among several.
+  \item I did not survey how existing libraries report this condition for mixed-precision factorizations (LAPACK \texttt{potrf} returns \texttt{info}$>0$ when a pivot is not positive, as seen in the E2 cross-check).
 \end{itemize}
 
 % ================================================================== 8
 \section*{Reproduction}
 
-From \texttt{cholesky\_mixed\_prec/}: \texttt{./run\_chol\_story.sh} (modes \texttt{e0}, \texttt{e1}, \texttt{e2}, \texttt{e3}, \texttt{e4}, \texttt{sqrt}, \texttt{all}, \texttt{summary}; about 5 minutes in total), then
+From \texttt{cholesky\_mixed\_prec/}: \texttt{./run\_chol\_story.sh} (modes \texttt{e0}--\texttt{e7}, \texttt{sqrt}, \texttt{all}, \texttt{summary}; about 15 minutes in total; \texttt{e7} needs the matrices generated by \texttt{e5}), then
 \texttt{python3 make\_chol\_docs.py} regenerates \texttt{docs\_gen/}, and \texttt{pdflatex} on \texttt{chol\_report.tex} and \texttt{Chol\_Slides.tex} rebuilds this report and the slides.
 
 \begin{center}\small
@@ -415,12 +509,14 @@ file & content\\
 \texttt{chol\_study.cu} & FP64/FP32 kernels, storage formats, sweep mode\\
 \texttt{chol\_half.cu} & true FP16/BF16 arithmetic (unblocked)\\
 \texttt{chol\_tc.cu} & blocked path with WMMA tensor-core update (E4)\\
+\texttt{csv\_matrix.h} & CSV reader shared by the three programs (E5)\\
+\textit{(\texttt{-DGUARD})} & \texttt{bin\_chol/g\_chol\_*}: pivot statistic and \texttt{--guard} (E5, E7)\\
 \texttt{gen\_chol\_matrices.py} & M0, M1 and random matrices\\
 \texttt{run\_chol\_story.sh}, \texttt{chol\_summary.py} & experiments and summary tables\\
 \texttt{e2\_emulate.py} & CPU cross-check with LAPACK\\
 \texttt{make\_chol\_docs.py} & tables and excerpts for this report and the slides\\
 \texttt{EXPERIMENT\_PLAN.md} & plan, checked claims, results as written during the work\\
-\texttt{logs/} & every log; \texttt{matrices/}: M0, M1\\
+\texttt{logs/} & every log; \texttt{matrices/}: M0, M1; \texttt{matrices\_q/} (git-ignored): E5 matrices\\
 \bottomrule
 \end{tabular}
 \end{center}

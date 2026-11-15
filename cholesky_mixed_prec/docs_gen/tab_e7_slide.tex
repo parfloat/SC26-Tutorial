@@ -1,0 +1,15 @@
+\begin{tabular}{llll}
+\toprule
+case & without guard & guard stops at & NixNan FP32+FP16 NaN\\
+\midrule
+$A_\delta$, FP16 update, $2^{-12}$ & breakdown (pivot 33) & \textbf{pivot 1} & NaN 534 $\to$ no NaN\\
+FP32, $10^{7}$ & ok & no trip & no NaN $\to$ no NaN\\
+mixed BF16, $10^{2}$ & inaccurate & \textbf{pivot 133} & no NaN $\to$ no NaN\\
+mixed FP16, $10^{2}$ & ok & no trip & no NaN $\to$ no NaN\\
+mixed FP16, $10^{4}$ & inaccurate & \textbf{pivot 147} & no NaN $\to$ no NaN\\
+mixed FP16, $10^{6}$ & breakdown (pivot 193) & \textbf{pivot 83} & NaN 527 $\to$ no NaN\\
+mixed TF32, $10^{3}$ & inaccurate & \textbf{pivot 247} & no NaN $\to$ no NaN\\
+naive FP16, $10^{3}$ & inaccurate & \textbf{pivot 251} & no NaN $\to$ no NaN\\
+naive FP16, $10^{4}$ & breakdown (pivot 253) & \textbf{pivot 147} & NaN 61 $\to$ no NaN\\
+\bottomrule
+\end{tabular}

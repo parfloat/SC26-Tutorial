@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# run_chol_story.sh -- Cholesky mixed-precision study (see EXPERIMENT_PLAN.md). Implemented so far: E0, E1 (on M0 and M1), E2, E3 and E4.
+# run_chol_story.sh -- Cholesky mixed-precision study (see EXPERIMENT_PLAN.md). Implemented: E0-E7 and the sqrt study.
 #
 #   ./run_chol_story.sh e0       budget: wall time of every planned run, native and under nixnan (limits: 60 s / 120 s)
 #   ./run_chol_story.sh e1       reference: M0 and M1 (n=256) factor in FP64 and FP32; errors and nixnan counters

@@ -398,7 +398,7 @@ if os.path.exists("logs/e6/s1_e6_hist.log"):
     for sc, bins in (("s1", ["zero", "-126..-30", "-29..-14", "-13", "-12", "-11..-8", "-7..-1", "0", "1..10"]),
                      ("s3", ["zero", "-14..-11", "-10..-8", "-7..-1", "0", "1..10"])):
         h, f = e6_bins("logs/e6/%s_e6_hist.log" % sc), e6_bins("logs/e6/%s_e12_hist.log" % sc)
-        lab = lambda b: "zero/subnormal field" if b == "zero" else "$2^{%s}$" % b.replace("..", "\\ldots 2^{")+("}" if ".." in b else "")
+        lab = lambda b: "zero/subnormal field" if b == "zero" else ("$2^{%s}$" % b if ".." not in b else "$2^{%s}\\ldots2^{%s}$" % tuple(b.split("..")))
         t = "\\begin{tabular}{lrr}\n\\toprule\nexponent bin (%s) & $\\delta=2^{-6}$ & $\\delta=2^{-12}$\\\\\n\\midrule\n" % ("FP32" if sc == "s1" else "FP16")
         for b in bins:
             t += "%s & %s & %s\\\\\n" % (lab(b), fmt_cnt(h.get(("rank1_kernel", b), 0)), fmt_cnt(f.get(("rank1_kernel", b), 0)))
@@ -476,5 +476,21 @@ if glob.glob("logs/e7/*_plain_native.log"):
         gtxt = ("\\textbf{stop at pivot %s} (rel %s)" % (gm.group(1), sci(gm.group(2), 1))) if gm else "no trip"
         rows += "%s & %s & %s & %s & %s\\\\\n" % (name, st, gtxt, counts_tex(nxp) if has_report(nxp) else "?", counts_tex(nxg) if has_report(nxg) else "?")
     write("tab_e7_live.tex", "\\begin{tabular}{p{3.0cm}p{2.5cm}p{2.5cm}p{3.6cm}p{2.6cm}}\n\\toprule\ncase & without guard & guard, $\\tau=100u$ & nixnan, no guard & nixnan, guard\\\\\n\\midrule\n" + rows + "\\bottomrule\n\\end{tabular}\n")
+
+if glob.glob("logs/e7/*_plain_native.log"):
+    rows = ""
+    def nan_u(f):
+        return sum(u for sec, k, u, r in nixnan_counts(f) if k == "NaN" and "mem" not in sec) if has_report(f) else None
+    for plain in sorted(glob.glob("logs/e7/*_plain_native.log")):
+        tag = os.path.basename(plain)[:-len("_plain_native.log")]
+        txt = open(plain, errors="replace").read(); g = open(plain.replace("_plain_", "_guard_"), errors="replace").read()
+        pm = re.search(r"status=(\S+).*?fwd_err=(\S+) first_bad_pivot=(\S+)", txt); gm = re.search(r"GUARD pivot (\d+): relative pivot (\S+) <= tau ([^\s;]+)", g)
+        parts = tag.split("_")
+        name = "$A_\\delta$, FP16 update, $2^{-12}$" if tag.startswith("Adelta") else "%s, $10^{%d}$" % (E5_LABEL.get(parts[0], parts[0]), round(__import__("math").log10(float(parts[1][1:]))))
+        a, b = nan_u(plain.replace("_native", "_nixnan")), nan_u(plain.replace("_plain_native", "_guard_nixnan"))
+        nx = "%s $\\to$ %s" % (("NaN %d" % a) if a else "no NaN", ("NaN %d" % b) if b else "no NaN")
+        rows += "%s & %s & %s & %s\\\\\n" % (name, pm.group(1) + ((" (pivot %s)" % pm.group(3)) if pm.group(3) != "-1" else ""),
+                                              ("\\textbf{pivot %s}" % gm.group(1)) if gm else "no trip", nx)
+    write("tab_e7_slide.tex", "\\begin{tabular}{llll}\n\\toprule\ncase & without guard & guard stops at & NixNan FP32+FP16 NaN\\\\\n\\midrule\n" + rows + "\\bottomrule\n\\end{tabular}\n")
 
 print("wrote", len(os.listdir(OUT)), "files in", OUT)
