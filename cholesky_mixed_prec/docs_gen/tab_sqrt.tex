@@ -1,0 +1,10 @@
+\begin{tabular}{p{2.5cm}p{2.3cm}p{1.6cm}p{4.0cm}p{3.6cm}}
+\toprule
+case & sqrt compiled as & sqrt instruction & report at the sqrt site & first report in the run\\
+\midrule
+E3a: FP16 storage, pivot is $0$ & IEEE \texttt{sqrtf} & \texttt{MUFU.RSQ} & div0 (operand 1 = the $0$ input), infinity (operand 0 = $\mathrm{rsqrt}(0)$) & \texttt{MUFU.RSQ [div0]} in \texttt{pivot\_kernel}\\
+E3a: FP16 storage, pivot is $0$ & \texttt{-prec-sqrt=false} & \texttt{MUFU.SQRT} & none at $\sqrt0$ (only NaN-input propagation later) & \texttt{MUFU.RCP [div0]} in \texttt{scale\_kernel}\\
+E4: tensor-core update, pivot is $<0$ & IEEE \texttt{sqrtf} & \texttt{MUFU.RSQ} & NaN (operand 0 = the result) & \texttt{MUFU.RSQ [NaN]} in \texttt{potrf\_tile\_kernel}\\
+E4: tensor-core update, pivot is $<0$ & \texttt{-prec-sqrt=false} & \texttt{MUFU.SQRT} & NaN (operand 0 = the result) & \texttt{MUFU.SQRT [NaN]} in \texttt{potrf\_tile\_kernel}\\
+\bottomrule
+\end{tabular}

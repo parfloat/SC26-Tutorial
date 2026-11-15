@@ -49,8 +49,9 @@ pivot, and the factorization hits $L_{jj}=\sqrt{S_{jj}}$ with $S_{jj}\le 0$: a N
   \node[greenbox, right=of e0, text width=2.2cm] (e1) {E1\\FP64/FP32 reference};
   \node[greenbox, right=of e1, text width=2.2cm] (e2) {E2\\where does each format break?};
   \node[greenbox, right=of e2, text width=2.2cm] (e3) {E3\\naive reduced precision};
-  \node[dashbox, right=of e3, text width=2.2cm] (e4) {E4--E7\\tensor cores, random matrices};
-  \foreach \u/\v in {e0/e1,e1/e2,e2/e3,e3/e4} \draw[flowarrow] (\u) -- (\v);
+  \node[greenbox, right=of e3, text width=2.2cm] (e4) {E4\\tensor-core update};
+  \node[dashbox, right=of e4, text width=2.2cm] (e5) {E5--E7\\random matrices, histogram, guard};
+  \foreach \u/\v in {e0/e1,e1/e2,e2/e3,e3/e4,e4/e5} \draw[flowarrow] (\u) -- (\v);
 \end{tikzpicture}
 
 {\scriptsize green = done, with logs and tables in this deck; dashed = planned}
@@ -245,22 +246,42 @@ BF16 storage: identical counts. Blocked path: NaN 566, Inf 17, Div0 5.
 \end{frame}
 
 % ------------------------------------------------------------------ 8
-\begin{frame}[fragile]{The first report is not the defect}
+\begin{frame}[fragile]{The first report: a discarded \texttt{rsqrt(0)}}
 \scriptsize
-\fcolorbox{black}{gray!10}{\parbox{0.95\textwidth}{\ttfamily
-error [div0]     operand 1 of MUFU.RSQ R7, R0     in pivot\_kernel \ \ \ of type f32\\
-error [infinity] operand 0 of MUFU.RSQ R7, R0     in pivot\_kernel \ \ \ of type f32\\
-error [div0]     operand 1 of MUFU.RCP R2, R7     in scale\_kernel \ \ \ of type f32\\
-error [infinity] operand 0 of MUFU.RCP R2, R7     in scale\_kernel \ \ \ of type f32\\
-error [NaN]      operand 0 of FFMA R3, -R7, R2, 1 in scale\_kernel \ \ \ of type f32}}
-
-\vspace{3mm}\footnotesize
+\begin{columns}[T]\begin{column}{0.50\textwidth}
+\textbf{\texttt{pivot\_kernel}, IEEE \texttt{sqrtf} (SASS, trimmed):}\\[1mm]
+\fcolorbox{black}{gray!10}{\parbox{0.97\textwidth}{\ttfamily\tiny
+00a0 MUFU.RSQ R7, R0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ ; rsqrt(x), \textbf{for every x, first}\\
+00b0 IADD3 R4, R0, -0xd000000\\
+00c0 ISETP.GT.U32 P0, R4, 0x727fffff ; x in the fast range?\\
+00d0 @P1 BRA ... \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ; (record bad pivot)\\
+0170 @!P0 BRA 01c0 \ \ \ \ \ \ \ \ \ \ \ \ \ ; in range: fast path\\
+01c0 FMUL.FTZ R5, R0, R7 \ \ \ \ \ \ \ ; \ \ x*rsqrt(x), uses R7\\
+01e0 FFMA ... Newton step \ \ \ \ \ \ \ \ \ \ ; \\
+0190 CALL 0220 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ; else: slow path\\
+0220 LOP3 P0, RZ, R0, 0x7fffffff \ ; $x=\pm0$ ?\\
+0230 @!P0 MOV R4, R0 \ \ \ \ \ \ \ \ \ \ \ \ ; $\sqrt{\pm0}=\pm0$, R7 unused\\
+0260 @!P0 MOV R4, 0x7fffffff \ \ \ \ \ ; $x<0$: NaN}}
+\end{column}\begin{column}{0.48\textwidth}
+\footnotesize
 \begin{itemize}
-\item \texttt{sqrt(0)} is compiled to a \texttt{MUFU.RSQ} expansion. \texttt{rsqrt(0)=Inf} inside it is flagged, yet the final result $0$ is \textbf{correct}.
-\item The \textbf{first real failure} is the next kernel: \texttt{MUFU.RCP} of the zero pivot in \texttt{scale\_kernel} (operand 1 is the zero input, operand 0 the Inf result), then NaN from the \texttt{FFMA} fix-up.
-\item Same lesson as the \texttt{FFMA}-as-register-move artifact in the LU study: a SASS-level detector reports what the compiled code does. \textbf{Separate the library expansion from the operation that matters.}
-\item \texttt{file:line} appears only for the substitution kernels; for \texttt{pivot}, \texttt{scale}, \texttt{rank1} the report has the kernel and the SASS but no source line (cause not found; the cubin has a line table).
+\item For $x=0$ the hardware computes $\mathrm{rsqrt}(+0)=+\infty$ (an IEEE division by zero), NixNan flags it (\texttt{div0} on operand 1, the zero input; \texttt{infinity} on operand 0), and the slow path then returns $0$: the Inf is \textbf{never used}.
+\item At source level $\sqrt0=0$ is exact. This is a \textbf{false positive of kind div0/Inf, not a NaN}: the instruction really raised it, the program's result is unaffected.
+\item With \texttt{MUFU.SQRT} (\texttt{-prec-sqrt=false}, and FP16/BF16 \texttt{hsqrt}) there is no such report.
 \end{itemize}
+\end{column}\end{columns}
+
+\vspace{1mm}\centering\scriptsize
+\begin{tabular}{llll}
+\toprule
+case & sqrt compiled as & report at the sqrt & first report in the run\\
+\midrule
+E3a, pivot $=0$ & \texttt{MUFU.RSQ} (IEEE) & div0 + Inf (discarded) & \texttt{MUFU.RSQ} div0, \texttt{pivot\_kernel}\\
+E3a, pivot $=0$ & \texttt{MUFU.SQRT} & none & \texttt{MUFU.RCP} div0, \texttt{scale\_kernel} (genuine)\\
+E4, pivot $<0$ & \texttt{MUFU.RSQ} (IEEE) & NaN (genuine) & \texttt{MUFU.RSQ} NaN, \texttt{potrf\_tile}\\
+E4, pivot $<0$ & \texttt{MUFU.SQRT} & NaN (genuine) & \texttt{MUFU.SQRT} NaN, \texttt{potrf\_tile}\\
+\bottomrule
+\end{tabular}
 \end{frame}
 
 % ------------------------------------------------------------------ 9
@@ -332,6 +353,102 @@ BF16, $2^{-7}$ ($\kappa_2=3.3\times10^{4}$) & $3.1\times10^{-5}$ & \cellcolor{re
 \end{itemize}
 \end{frame}
 
+% ------------------------------------------------------------------ E4
+\begin{frame}{E4: blocked Cholesky with a tensor-core update}
+\footnotesize
+\centering
+\begin{tikzpicture}[node distance=4mm]
+  \node[bluebox, text width=2.2cm] (p) {\texttt{potrf\_tile}\\FP32, $32{\times}32$};
+  \node[bluebox, right=of p, text width=2.2cm] (t) {\texttt{trsm\_panel}\\FP32, $L_{Rk}=A_{Rk}L_{kk}^{-T}$};
+  \node[orangebox, right=of t, text width=2.2cm] (c) {round panel\\FP16 / BF16\\(TF32: in-kernel)};
+  \node[redbox, right=of c, text width=3.0cm] (u) {\texttt{tc\_update}\\WMMA, \texttt{HMMA.16816.F32}\\$A_{RR}\mathrel{-}=L_{Rk}L_{Rk}^T$, FP32 accumulate};
+  \foreach \a/\b in {p/t,t/c,c/u} \draw[flowarrow] (\a) -- (\b);
+  \draw[flowarrow] (u.south) -- ++(0,-0.5) -| node[pos=0.25, below, font=\tiny] {next block $k$} (p.south);
+\end{tikzpicture}
+
+\vspace{4mm}\raggedright
+\begin{columns}[T]\begin{column}{0.52\textwidth}
+\begin{itemize}
+\item $A$ and $L$ stay in \textbf{FP32}; only the update inputs are rounded. Pivots and substitutions in FP32, still no guard.
+\item One warp per $16{\times}16$ tile of the trailing matrix; $NB=32$.
+\item Three input formats: FP16, BF16, TF32 (ties away from zero).
+\end{itemize}
+\end{column}\begin{column}{0.44\textwidth}
+SASS (\texttt{cuobjdump -sass}):\\[1mm]
+\begin{tabular}{lr}
+\toprule
+instruction & count\\
+\midrule
+\texttt{HMMA.16816.F32} & 4\\
+\texttt{HMMA.16816.F32.BF16} & 4\\
+\texttt{HMMA.1684.F32.TF32} & 16\\
+\bottomrule
+\end{tabular}
+
+\vspace{1mm}\scriptsize Panel entries are $\le1$ here: no FP16 overflow possible.
+\end{column}\end{columns}
+\end{frame}
+
+\begin{frame}{E4: where does it break, and where?}
+\scriptsize
+\begin{tabular}{lllll}
+\toprule
+update & breaks from & first bad pivot & forward error before that & storage (E2) broke at\\
+\midrule
+FP16 & $e=11$ ($\kappa_2=5.2\times10^{5}$) & \textbf{33} (block $k=1$) & 0.05--0.78 & $e=11$\\
+BF16 & $e=8$ ($6.6\times10^{4}$) & \textbf{33} & 0.17--1.4 & $e=8$\\
+TF32 & $e=11$ & \textbf{33} & 0.05--0.78 & $e=12$\\
+\bottomrule
+\end{tabular}
+
+\vspace{3mm}\footnotesize
+\begin{itemize}
+\item \textbf{The failure moves to the second block:} naive storage broke at pivot 1 (E3); here block 0 factors, and the rounded update damages the Schur complement that block 1 then needs.
+\item \textbf{Why these thresholds:} the dominant panel entry $L_{i0}=1/\sqrt{1+\delta}\approx1-\delta/2$ rounds to \textbf{exactly 1.0} at $e=8$ (BF16) and $e=11$ (FP16, TF32), and not before (checked). Consistent with the breakdown; not proven to be its only cause.
+\item \textbf{Without refinement it is inaccurate long before:} forward error 0.05--1 already at $\kappa_2=10^{3}$, and \textbf{0.66 on M0} ($\kappa_2=1.6\times10^{4}$): the factor is a preconditioner, not a solver (iterative refinement is the route).
+\item Non-monotone: $e=22,23$ round the panel to 1.0 and finish with forward error 16--18, no pivot $\le0$, no report.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{E4 under NixNan: the HMMA instructions are watched}
+\footnotesize
+\begin{tikzpicture}[node distance=3.5mm]
+  \node[redbox, text width=2.2cm] (a) {\texttt{potrf\_tile}\\151 lines\\NaN at $\sqrt{<0}$};
+  \node[redbox, right=of a, text width=2.0cm] (b) {\texttt{trsm\_panel}\\147 lines\\NaN in $L_{Rk}$};
+  \node[redbox, right=of b, text width=2.2cm] (c) {\texttt{tc\_update}\\30 lines\\NaN in \texttt{HMMA}};
+  \node[redbox, right=of c, text width=2.0cm] (d) {\texttt{forward}\\147 lines};
+  \node[redbox, right=of d, text width=2.0cm] (e) {\texttt{backward}\\51 lines};
+  \foreach \u/\v in {a/b,b/c,c/d,d/e} \draw[flowarrow] (\u) -- (\v);
+\end{tikzpicture}
+
+\vspace{2mm}\scriptsize
+\fcolorbox{black}{gray!10}{\parbox{0.97\textwidth}{\ttfamily\tiny
+error [NaN] operand 1 of HMMA.16816.F32 R8, R12.reuse, R8, RZ \ \ in tc\_update\_kernel, type f16\\
+error [NaN] operand 2 of HMMA.16816.F32 R8, R12.reuse, R8, RZ \ \ in tc\_update\_kernel, type f16\\
+error [NaN] operand 0 of HMMA.16816.F32 R8, R12.reuse, R8, RZ \ \ in tc\_update\_kernel, type f32}}
+
+\vspace{2mm}\footnotesize
+\begin{columns}[T]\begin{column}{0.5\textwidth}
+\begin{tabular}{lp{4.2cm}}
+\toprule
+$\delta=2^{-12}$ & nixnan report\\
+\midrule
+FP16 update & FP16 NaN 8, FP32 NaN 514, mem NaN 4\\
+BF16 update & BF16 NaN 8, FP32 NaN 514\\
+TF32 update & FP32 NaN 570; \textbf{no FP16/BF16 section}\\
+M0 ($2^{-6}$), last-ok $\delta$ & \textbf{no exceptions}\\
+\bottomrule
+\end{tabular}
+\end{column}\begin{column}{0.46\textwidth}
+\begin{itemize}
+\item \textbf{The first report is genuine this time:} NaN at the \texttt{sqrt} of a negative Schur diagonal.
+\item HMMA operands 1, 2 are the \textbf{A, B inputs} (f16/bf16; f32 for TF32), operand 0 the FP32 accumulator.
+\item The tensor core sees NaN \textbf{only after} the factorization has failed.
+\item Where the matrix is still SPD (M0): forward error 0.6, nixnan silent.
+\end{itemize}
+\end{column}\end{columns}
+\end{frame}
+
 % ------------------------------------------------------------------ 11
 \begin{frame}{What each check can see}
 \centering\small
@@ -369,23 +486,23 @@ Pivot / condition check before dividing & \cellcolor{green!15}finds it, before t
 \item Narrow formats are \textbf{emulated by host rounding}; the tensor-core path (device conversion, WMMA inputs) is E4.
 \item The ``inaccurate'' status uses my threshold (forward error $>0.1$); it moves the \textit{inacc} boundary, not the breakdown one.
 \item TF32's threshold depends on the rounding mode of the tensor-core inputs (ties away vs. to even).
-\item One GPU (RTX 3090, sm\_86, CUDA 12.4); nixnan counts reflect how the compiler expands division and square root on this machine.
+\item E4 ran FP32 accumulate only (FP16 accumulate would break earlier) and $NB=32$; the clean link between the rounded panel entry and the breakdown is a property of $A_\delta$.
+\item One GPU (RTX 3090, sm\_86, CUDA 12.4); nixnan counts reflect how the compiler expands division and square root on this machine (IEEE \texttt{sqrtf} vs.\ \texttt{MUFU.SQRT}).
 \end{itemize}
 \end{frame}
 
 % ------------------------------------------------------------------ 13
-\begin{frame}{Next: tensor cores, random matrices, a guard}
+\begin{frame}{Next: random matrices, histogram, a guard}
 \small\centering
 \begin{tikzpicture}[node distance=4mm]
-  \node[dashbox, text width=3.0cm] (e4) {E4\\blocked, FP32 panel, WMMA FP16/BF16/TF32 update, FP32 accumulate};
-  \node[dashbox, right=of e4, text width=3.0cm] (e5) {E5\\random $Q\Lambda Q^T$, $\kappa$ sweep, 5 seeds: silent vs.\ exceptional};
-  \node[dashbox, right=of e5, text width=3.0cm] (e6) {E6\\HISTOGRAM / BIN\_SPEC: watch the Schur complement approach 0};
-  \node[dashbox, right=of e6, text width=3.0cm] (e7) {E7\\explicit pivot guard vs.\ NixNan};
+  \node[dashbox, text width=3.6cm] (e5) {E5\\random $Q\Lambda Q^T$, $\kappa$ sweep, 5 seeds: silent vs.\ exceptional (the real test of the $A_\delta$ results)};
+  \node[dashbox, right=of e5, text width=3.6cm] (e6) {E6\\HISTOGRAM / BIN\_SPEC: watch the Schur complement approach 0};
+  \node[dashbox, right=of e6, text width=3.6cm] (e7) {E7\\explicit pivot guard vs.\ NixNan};
 \end{tikzpicture}
 
 \vspace{5mm}\raggedright\small
 \begin{itemize}
-\item E4 checks that the trailing update compiles to \texttt{HMMA.16816.F32} (\texttt{.F32.BF16}, \texttt{HMMA.1684.F32.TF32}) and relates the first exception to the block step $k$.
+\item E4 is done: the trailing update compiles to \texttt{HMMA.16816.F32} (\texttt{.F32.BF16}, \texttt{HMMA.1684.F32.TF32}) and the first exception is tied to block step $k=1$.
 \item E6 reuses the exponent-binade view from the LU study as a ``danger zone'' monitor.
 \item Every run stays within the budget: 1 minute native, 2 minutes with nixnan.
 \end{itemize}

@@ -8,7 +8,8 @@
 #   ./run_chol_story.sh e3       naive reduced precision: FP16/BF16 storage (FP32 arithmetic) and true FP16/BF16 arithmetic;
 #                                nixnan report + per-instruction trace (PRINT_ILL_INSTR) at the failing and the silent points
 #   ./run_chol_story.sh e4       blocked Cholesky, FP32 panel, TENSOR-CORE trailing update (WMMA FP16 / BF16 / TF32, FP32 accumulate)
-#   ./run_chol_story.sh all      e0, e1, e2, e3, e4, then the summary          (default)
+#   ./run_chol_story.sh sqrt     what does nixnan report for sqrt(0)? IEEE sqrtf (MUFU.RSQ sequence) vs -prec-sqrt=false (MUFU.SQRT)
+#   ./run_chol_story.sh all      e0, e1, e2, e3, e4, sqrt, then the summary          (default)
 #   ./run_chol_story.sh summary  re-print the tables from the saved logs
 #
 # Logs: logs/e0/, logs/e1/.   Env: NIXNAN_LIB=<nixnan.so> (default ../external/nixnan/nixnan.so)  ARCH=sm_86
@@ -19,7 +20,7 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NIXNAN_LIB="${NIXNAN_LIB:-$PWD/../external/nixnan/nixnan.so}"
 ARCH="${ARCH:-sm_86}"
 NATIVE_LIMIT=60; NIXNAN_LIMIT=120
-mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3 logs/e4
+mkdir -p bin_chol logs/e0 logs/e1 logs/e2 logs/e3 logs/e4 logs/sqrt
 MATS=(M0 M1)   # from gen_chol_matrices.py (matrices/matrices.tsv has their definitions and kappa)
 unset LD_LIBRARY_PATH   # a stale CUDA dir here can shadow the toolkit nvcc built against
 [[ -f "$NIXNAN_LIB" ]] || { echo "error: nixnan.so not found at $NIXNAN_LIB (set NIXNAN_LIB)" >&2; exit 1; }
@@ -147,14 +148,44 @@ e4() {
     done
 }
 
+# pivot_sass <binary> <out>: the SASS of pivot_kernel (the sqrt), without the address arithmetic
+pivot_sass() {
+    cuobjdump -sass "$1" | awk '/Function : .*pivot_kernel/{p=1} /Function : .*scale_kernel/{p=0} p' \
+      | grep -E "^\s+/\*[0-9a-f]{4}\*/" | sed -E 's/\s*\/\* 0x[0-9a-f]+ \*\/\s*$//; s/^\s+//' > "$2"
+}
+
+sqrtstudy() {
+    echo "== sqrt: what does nixnan report for sqrt(0)? IEEE sqrtf vs -prec-sqrt=false (MUFU.SQRT)"
+    build f32
+    [[ -x bin_chol/chol_f32_fsqrt && bin_chol/chol_f32_fsqrt -nt chol_study.cu ]] || \
+        nvcc -std=c++17 -g -O2 -lineinfo -arch="$ARCH" -DREAL=float -prec-sqrt=false -o bin_chol/chol_f32_fsqrt chol_study.cu || exit 1
+    if [[ ! -x bin_chol/chol_tc ]]; then nvcc -std=c++17 -g -O2 -lineinfo -arch="$ARCH" -o bin_chol/chol_tc chol_tc.cu || exit 1; fi
+    [[ -x bin_chol/chol_tc_fsqrt && bin_chol/chol_tc_fsqrt -nt chol_tc.cu ]] || \
+        nvcc -std=c++17 -g -O2 -lineinfo -arch="$ARCH" -prec-sqrt=false -o bin_chol/chol_tc_fsqrt chol_tc.cu || exit 1
+    rm -f logs/sqrt/*
+    pivot_sass bin_chol/chol_f32 logs/sqrt/sass_pivot_ieee.txt
+    pivot_sass bin_chol/chol_f32_fsqrt logs/sqrt/sass_pivot_fast.txt
+    for b in ieee fast; do
+        [[ $b == ieee ]] && f32=chol_f32 tc=chol_tc || { f32=chol_f32_fsqrt; tc=chol_tc_fsqrt; }
+        for k in e3a e4; do
+            if [[ $k == e3a ]]; then cmd=(./bin_chol/$f32 --log2delta -12 --store f16 --path unblocked); else cmd=(./bin_chol/$tc --fmt f16 --log2delta -12); fi
+            "${cmd[@]}" > logs/sqrt/${k}_${b}_native.log 2>&1
+            LD_PRELOAD="$NIXNAN_LIB" "${cmd[@]}" > logs/sqrt/${k}_${b}_nixnan.log 2>&1
+            LD_PRELOAD="$NIXNAN_LIB" PRINT_ILL_INSTR=1 ENABLE_FUN_DETAIL=1 "${cmd[@]}" > logs/sqrt/${k}_${b}_detail.log 2>&1
+            echo "   ${k}_$b"
+        done
+    done
+}
+
 case "${1:-all}" in
     e0) e0 ;;
     e1) e1 ;;
     e2) e2 ;;
     e3) e3 ;;
     e4) e4 ;;
+    sqrt) sqrtstudy ;;
     summary) ;;
-    all) e0; e1; e2; e3; e4 ;;
+    all) e0; e1; e2; e3; e4; sqrtstudy ;;
     *) sed -n 3,11p "$0"; exit 1 ;;
 esac
 echo

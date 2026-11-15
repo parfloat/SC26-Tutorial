@@ -39,7 +39,7 @@
 % ================================================================== 1
 \section{Executive Summary}
 
-This report documents the first four experiments (E0--E3) of a mixed-precision Cholesky study for the SC26 tutorial. The tutorial
+This report documents the first five experiments (E0--E4) of a mixed-precision Cholesky study for the SC26 tutorial. The tutorial
 point is: \emph{if the precision of a Cholesky factorization is reduced without regard to the condition number, rounding can destroy the
 small positive Schur-complement pivot that the algorithm needs; the factorization then reaches
 $L_{jj}=\sqrt{S_{jj}}$ with $S_{jj}\le 0$ and produces Inf and NaN, which NixNan can locate.} All experiments ran on one NVIDIA GeForce RTX 3090
@@ -57,14 +57,18 @@ the copy in \texttt{external/nixnan} (commit \texttt{ce35185}, 2026-09-26).
   \item \textbf{A bad condition number does not guarantee an exception.} With true FP16 arithmetic at $\delta=2^{-10}$ and BF16 arithmetic at $\delta=2^{-7}$
   the factorization error is small, no pivot is non-positive, \textbf{NixNan reports no exception}, and the solution is garbage (forward error $16$).
   NixNan finds exceptions, not ill-conditioning.
-  \item \textbf{Reading a NixNan report needs care} (Section~\ref{sec:nixnan}): the first report is the compiler's expansion of $\sqrt0$,
-  not the defect; FP16/BF16 division and square root run in FP32, so one source operation shows up in two precision sections;
+  \item \textbf{Reading a NixNan report needs care} (Section~\ref{sec:nixnan}): in the naive FP32 run the first report is a \emph{discarded} \texttt{rsqrt(0)}
+  (the IEEE \texttt{sqrtf} sequence computes \texttt{MUFU.RSQ} first and range-tests afterwards), a div0/Inf report that never reaches a result, not a NaN and not the defect;
+  with \texttt{MUFU.SQRT} it is absent. FP16/BF16 division and square root run in FP32, so one source operation shows up in two precision sections;
   conversion opcodes are not instrumented; and some kernels' reports carry no source line.
+  \item \textbf{Tensor cores (E4).} A blocked Cholesky with an FP32 panel and a WMMA trailing update (FP16, BF16 or TF32 inputs, FP32 accumulate) breaks at the same $\delta$ as the naive storage
+  (BF16 $2^{-8}$, FP16 and TF32 $2^{-11}$) but \emph{later in the factorization}: first bad pivot 33 (block step 1). NixNan instruments the \texttt{HMMA} instructions (NaN on the A and B input operands), but the
+  first report is the genuine NaN at the square root of a negative Schur diagonal; the tensor cores only see NaN after the factorization has failed. Without refinement the mixed-precision factor is inaccurate (forward error 0.05--1) long before it breaks.
   \item \textbf{Cost.} Custom kernels (5 distinct kernels per run) cost 3~s under NixNan; the existing cuSOLVER/cuBLAS-based \texttt{mpir\_gpu}
   costs 88~s. All experiments stay inside the planned budget of 1~minute native, 2~minutes with NixNan.
 \end{enumerate}
 
-Scope: this report covers E0--E3. Tensor-core updates (E4), random matrices (E5), histogram views (E6) and an explicit pivot guard (E7) are planned and
+Scope: this report covers E0--E4. Random matrices (E5), histogram views (E6) and an explicit pivot guard (E7) are planned and
 not run (Section~\ref{sec:next}).
 
 % ================================================================== 2
@@ -122,6 +126,11 @@ Right-looking Cholesky without pivoting, $A=LL^T$, in custom CUDA (file \texttt{
 
 \small Unblocked path. Five distinct kernels; the blocked path replaces the loop body by \texttt{potrf\_tile}, \texttt{trsm\_panel}, \texttt{syrk}.
 \end{center}
+
+\textbf{Tensor-core path} (file \texttt{chol\_tc.cu}, E4): the blocked path with $A$ and $L$ in FP32, \texttt{potrf\_tile} and \texttt{trsm\_panel} in FP32, and the trailing update
+$A_{RR}\leftarrow A_{RR}-L_{Rk}L_{Rk}^T$ on tensor cores through WMMA, one warp per $16\times16$ tile, with FP32 accumulate. FP16 and BF16 inputs come from a rounded copy of the panel
+(\texttt{convert\_panel\_kernel}; \texttt{wmma} $16{\times}16{\times}16$, \texttt{HMMA.16816.F32} and \texttt{.F32.BF16}); TF32 inputs are read from the FP32 panel and converted with \texttt{\_\_float\_to\_tf32}
+(\texttt{wmma} $16{\times}16{\times}8$, \texttt{HMMA.1684.F32.TF32}). Substitutions are FP32.
 
 The kernels do \textbf{not} guard the pivot. A non-positive pivot is only \emph{recorded} (\texttt{atomicMin} of its index, read back by the host);
 the arithmetic goes on, so the bad pivot becomes Inf/NaN exactly as in unguarded code. In the arithmetic of the narrow formats (file \texttt{chol\_half.cu}, unblocked path only)
@@ -228,15 +237,33 @@ The library-based \texttt{mpir\_gpu/ir\_gpu} (cuSOLVER/cuBLAS), same size, ran i
 \subsection{What the NixNan output does and does not mean}\label{sec:caveats}
 
 \begin{enumerate}
-  \item \textbf{The first report may be a benign expansion.} $\sqrt{0}$ in FP32 compiles to a \texttt{MUFU.RSQ} sequence; $\mathrm{rsqrt}(0)=\mathrm{Inf}$ inside it is flagged
-  (\texttt{div0} on operand 1, \texttt{infinity} on operand 0) although the final result 0 is correct. The failure that matters is the next kernel's division by that zero pivot
-  (\texttt{MUFU.RCP}, then NaN from the \texttt{FFMA} fix-up). Compare the \texttt{FFMA}-as-register-move artifact in the LU study.
+  \item \textbf{The first report may be a discarded speculative operation.} IEEE \texttt{sqrtf} compiles to the sequence below (SASS of \texttt{pivot\_kernel}, trimmed). \texttt{MUFU.RSQ} runs for every
+  input \emph{before} the argument is range-tested; the fast path (Newton refinement of the reciprocal square root) is taken only if the input is in range, otherwise a slow path returns the right special value
+  ($\pm0\mapsto\pm0$, negative $\mapsto$ NaN). For $x=0$ the hardware really computes $\mathrm{rsqrt}(+0)=+\infty$, an IEEE division by zero, and NixNan reports it
+  (\texttt{div0} on operand 1, the zero input; \texttt{infinity} on operand 0). The slow path then returns $0$: the infinity is \textbf{never used}, the program's result $\sqrt0=0$ is exact.
+  It is a \emph{false positive of kind div0/Inf at the source level, not a NaN}: nothing at this site produces a NaN.
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/sass_sqrt_ieee.txt}
+
+  With \texttt{MUFU.SQRT} the sequence is a single instruction (plus denormal scaling) and nothing is reported at $\sqrt0$:
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/sass_sqrt_fast.txt}
+
+  I built the same sources with \texttt{-prec-sqrt=false} and re-ran E3a and E4 under NixNan (\texttt{./run\_chol\_story.sh sqrt}, \texttt{logs/sqrt/}):
+
+\begin{center}\scriptsize\input{docs_gen/tab_sqrt.tex}\end{center}
+
+  Consequences. In E3a with IEEE \texttt{sqrtf} the first report is this discarded \texttt{rsqrt(0)}; without it (\texttt{MUFU.SQRT}, and the FP16/BF16 \texttt{hsqrt} of E3b) the first report is \texttt{MUFU.RCP} in \texttt{scale\_kernel},
+  the division by the zero pivot, which is \textbf{genuine} (its Inf or NaN reaches the output). For the square root of a \emph{negative} pivot (E4) the NaN at the sqrt is genuine in both builds. The remaining sqrt-site lines in the logs
+  (NaN on operand 1 and 0 of the sqrt, \texttt{@P0 FADD.FTZ ... , 1}) are NaN \emph{inputs} propagated from earlier kernels, also genuine. Compare the \texttt{FFMA}-as-register-move artifact in the LU study:
+  a SASS-level detector reports what the compiled code does, including speculative instructions.
   \item \textbf{One source operation, two precision sections.} FP16 and BF16 \texttt{\_\_hdiv} and \texttt{hsqrt} execute in FP32: the SASS of the FP16 build contains 39 \texttt{HFMA2}, 3 \texttt{MUFU.RCP},
   1 \texttt{MUFU.SQRT}, 6 \texttt{FFMA}, 3 \texttt{FMUL}, 7 \texttt{F2FP.PACK\_AB}, 3+4 \texttt{HSETP2}, 7 \texttt{HADD2}. The \texttt{HFMA2} updates are reported in the FP16 (or BF16) section, the division in the FP32 section.
   \item \textbf{Conversions are not instrumented.} The narrow-format rounding in E3a happens on the host, and NixNan does not instrument conversion opcodes (\texttt{F2F}, \texttt{F2FP}) in any case; the exception appears on the
   first arithmetic instruction that uses the converted value.
   \item \textbf{Memory sections:} the FP32-arithmetic runs report one memory NaN site (94\,655 repeats, unblocked). The FP16-arithmetic run reports none, consistent with nixnan's known gap that 16-bit stores (\texttt{STG.E.U16}) are not instrumented; I did not check the store opcode in this program.
   \item \textbf{Source lines are partial.} \texttt{file:line} is printed for the substitution kernels but not for \texttt{pivot\_kernel}, \texttt{scale\_kernel}, \texttt{rank1\_kernel} (nor the tile kernels). The cubin contains a line table (\texttt{nvdisasm -g}); the cause on the NixNan side was not found. Attribution is therefore by kernel and SASS instruction.
+  \item \textbf{HMMA instructions are instrumented.} Exceptions in \texttt{HMMA} are reported per operand: operands 1 and 2 are the A and B inputs, operand 0 the accumulator (Section~\ref{sec:e4}). The type NixNan decodes decides the section: f16 (bf16) inputs land in the FP16 (BF16) section, TF32 inputs are 32-bit registers typed f32 and land in the FP32 section.
   \item \textbf{Silence is not correctness.} Where no pivot is non-positive and no value overflows, NixNan reports nothing even if the answer is wrong (Section~\ref{sec:e3}).
 \end{enumerate}
 
@@ -307,6 +334,47 @@ BF16 arithmetic\\[1mm]\input{docs_gen/tab_e3_sweep_hbf16.tex}
   \item BF16's ``inaccurate'' for every $e\le7$ is partly my 0.1 threshold: BF16 arithmetic gives forward errors of $0.6$--$1$ even at $\kappa_2\approx10^3$.
 \end{itemize}
 
+\subsection{E4: blocked Cholesky with a tensor-core trailing update}\label{sec:e4}
+
+Setup as in Section~3.1: FP32 panel, WMMA update with FP32 accumulate, $NB=32$, $A_\delta$, $n=256$. SASS (\texttt{cuobjdump -sass}): \input{docs_gen/sass_hmma.tex}. All panel entries are $\le1$, so no FP16 overflow is possible on this matrix.
+Sweep of $\delta=2^{-e}$ (status; forward error for non-breakdown points; BRK@$i$ = first bad pivot $i$):
+
+\begin{center}\scriptsize\input{docs_gen/tab_e4_grid.tex}\end{center}
+
+\begin{itemize}
+  \item \textbf{Where it breaks.} BF16 from $e=8$, FP16 and TF32 from $e=11$: the same $\delta$ as naive FP16/BF16 storage in E2 (TF32 storage broke at 12). Every breakdown has \textbf{first bad pivot 33, block step $k=1$},
+  not 1 as with naive storage (E3): block 0 factors, and the update with the rounded panel damages the Schur complement that block 1 needs.
+  \item \textbf{Why these thresholds (checked, not proven sufficient).} The dominant panel entry is $L_{i0}=1/\sqrt{1+\delta}\approx1-\delta/2$. On the CPU it rounds to exactly $1.0$ at $e=8$ (BF16) and $e=11$ (FP16 and TF32), and not before.
+  $L_{i0}$ is not an exact tie, so TF32's ties-away rule no longer matters, which is why TF32 now breaks with FP16.
+  \item \textbf{Inaccurate long before it breaks.} Without refinement the mixed-precision factorization has forward error $0.05$--$1$ already at $\kappa_2=10^{3}$ and $0.66$ on M0 ($\delta=2^{-6}$, $\kappa_2=1.6\times10^{4}$) for all three formats.
+  Used alone it is a preconditioner; iterative refinement (\texttt{mpir\_gpu}) is the route to accuracy. The 0.1 threshold labels most low-$e$ points ``inacc''; the two ``ok'' points ($e=3$ and 10) have forward errors $0.064$ and $0.083$.
+  \item \textbf{Non-monotone again:} at $e=22,23$ the panel entry rounds to exactly 1 and the run finishes with forward error $16$--$18$, no pivot $\le0$ and no NixNan report.
+\end{itemize}
+
+NixNan on chosen points (native, default report and \texttt{PRINT\_ILL\_INSTR} trace; ``HMMA lines'' counts trace lines whose instruction is an \texttt{HMMA}):
+
+\begin{center}\scriptsize\input{docs_gen/tab_e4_nixnan.tex}\end{center}
+
+Default report, FP16 update, $\delta=2^{-12}$ (all-zero sections dropped):
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/report_e4_f16.txt}
+
+First lines of the trace for the same run (the first report is the genuine NaN at the square root of a negative Schur diagonal; compare E3a, where the first report was the discarded \texttt{rsqrt(0)}), and the first \texttt{HMMA} lines:
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/detail_e4_f16.txt}
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/detail_e4_f16_hmma.txt}
+
+Chain (kernel: report lines): \input{docs_gen/chain_e4_f16.tex}. For the TF32 update the \texttt{HMMA} operands are typed f32:
+
+\lstinputlisting[basicstyle=\ttfamily\tiny]{docs_gen/detail_e4_tf32_hmma.txt}
+
+\begin{itemize}
+  \item The tensor-core kernel only sees NaN \emph{after} the factorization has failed: the first block's update is clean, the failure appears at the next diagonal tile (pivot 33), and the NaN panel then enters the next \texttt{HMMA}s.
+  \item Report sections: the FP16 (BF16) update shows FP16 (BF16) NaN 8 (the \texttt{HMMA} inputs) beside FP32 NaN 514; the TF32 update has no FP16/BF16 section at all.
+  \item Where the matrix is still SPD (M0 and the last non-breakdown $\delta$) NixNan reports nothing although the forward error is 5--66\%.
+  \item Cost: a NixNan run takes about 3.5~s (7 distinct kernels).
+\end{itemize}
+
 % ================================================================== 6
 \section{Lessons for the Tutorial}
 
@@ -315,7 +383,9 @@ BF16 arithmetic\\[1mm]\input{docs_gen/tab_e3_sweep_hbf16.tex}
   \item Say that the failure is precision-induced loss of positive definiteness: the matrix, as stored, is no longer SPD.
   \item Show the chain (pivot $\to$ scale $\to$ update $\to$ substitutions) and note that the first NixNan line is the $\sqrt0$ expansion.
   \item Show the silent run next to it: finite, wrong, no report. NixNan finds exceptions; a forward-error or pivot check finds ill-conditioning.
-  \item Tell the audience to read both the FP16/BF16 and the FP32 sections for half-precision code.
+  \item Tell the audience to read both the FP16/BF16 and the FP32 sections for half-precision code, and the instruction text for tensor-core code (TF32 inputs are typed f32).
+  \item Explain the first line honestly: with IEEE \texttt{sqrtf} it can be a discarded \texttt{rsqrt(0)}; the genuine failure is the division by the zero pivot, or the NaN at the sqrt of a negative pivot.
+  \item Show the tensor-core run: same thresholds as naive storage, failure at block step 1, \texttt{HMMA} inputs reported as NaN only after the factorization failed.
 \end{enumerate}
 
 % ================================================================== 7
@@ -323,17 +393,18 @@ BF16 arithmetic\\[1mm]\input{docs_gen/tab_e3_sweep_hbf16.tex}
 
 \begin{itemize}
   \item $A_\delta$ is a special matrix; random $Q\Lambda Q^T$ matrices (E5) are needed to say how often the failure occurs.
-  \item The narrow formats are emulated by host rounding; the device-conversion and tensor-core path (E4: FP32 panel, WMMA FP16/BF16/TF32 update with FP32 accumulate, check for \texttt{HMMA.16816.F32}, \texttt{.F32.BF16}, \texttt{HMMA.1684.F32.TF32}) is not yet run.
+  \item In E2/E3 the narrow formats are emulated by host rounding; E4 uses the real tensor-core path but FP32 accumulate only (FP16 accumulate, \texttt{HMMA.16816.F16}, would break earlier) and $NB=32$ only.
   \item True half arithmetic exists only for the unblocked path.
   \item The 0.1 forward-error threshold behind ``inaccurate'' is mine.
   \item One GPU (sm\_86); NixNan counts reflect how the compiler expands division and square root on this machine.
+  \item The explanation of the E4 thresholds (rounding of the panel entry $L_{i0}$) is consistent with the data and was checked on the CPU, but I did not prove that it is the only cause.
   \item Planned: E6 (exponent-binade histogram as a ``danger zone'' monitor) and E7 (an explicit relative pivot test compared with NixNan).
 \end{itemize}
 
 % ================================================================== 8
 \section*{Reproduction}
 
-From \texttt{cholesky\_mixed\_prec/}: \texttt{./run\_chol\_story.sh} (modes \texttt{e0}, \texttt{e1}, \texttt{e2}, \texttt{e3}, \texttt{all}, \texttt{summary}; about 3 minutes in total), then
+From \texttt{cholesky\_mixed\_prec/}: \texttt{./run\_chol\_story.sh} (modes \texttt{e0}, \texttt{e1}, \texttt{e2}, \texttt{e3}, \texttt{e4}, \texttt{sqrt}, \texttt{all}, \texttt{summary}; about 5 minutes in total), then
 \texttt{python3 make\_chol\_docs.py} regenerates \texttt{docs\_gen/}, and \texttt{pdflatex} on \texttt{chol\_report.tex} and \texttt{Chol\_Slides.tex} rebuilds this report and the slides.
 
 \begin{center}\small
@@ -343,6 +414,7 @@ file & content\\
 \midrule
 \texttt{chol\_study.cu} & FP64/FP32 kernels, storage formats, sweep mode\\
 \texttt{chol\_half.cu} & true FP16/BF16 arithmetic (unblocked)\\
+\texttt{chol\_tc.cu} & blocked path with WMMA tensor-core update (E4)\\
 \texttt{gen\_chol\_matrices.py} & M0, M1 and random matrices\\
 \texttt{run\_chol\_story.sh}, \texttt{chol\_summary.py} & experiments and summary tables\\
 \texttt{e2\_emulate.py} & CPU cross-check with LAPACK\\

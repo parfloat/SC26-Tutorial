@@ -240,4 +240,89 @@ for l in tk:
     if k not in seen:
         seen.add(k); firsts.append(l)
 excerpt("time_kernels.txt", "".join(firsts) + "...\n" + tk[-1])
+
+# ---------------------------------------------------------------- E4
+def e4_rows():
+    d = {}
+    if os.path.exists("logs/e4/sweep_tc.log"):
+        for line in open("logs/e4/sweep_tc.log", errors="replace"):
+            m = re.search(r"path=blocked-tc-(\w+) n=\d+ log2delta=(-?\d+) kappa=(\S+) status=(\S+) .*fact_err=(\S+) fact_err_stored=\S+ resid=\S+ fwd_err=(\S+) first_bad_pivot=(\S+)", line)
+            if m:
+                f, e, k, st, fe, fw, bp = m.groups()
+                d.setdefault(-int(e), {"kappa": k})[f] = (st, fe, fw, bp)
+    return d
+d4 = e4_rows()
+if d4:
+    t = "\\begin{tabular}{rr|ccc}\n\\toprule\n$e$ & $\\kappa_2$ & FP16 update & BF16 update & TF32 update\\\\\n\\midrule\n"
+    for e in sorted(d4):
+        t += "%d & %s" % (e, sci(d4[e]["kappa"], 1))
+        for f in ("f16", "bf16", "tf32"):
+            st, fe, fw, bp = d4[e][f]
+            lab, col = COL.get(st, ("?", "white"))
+            extra = ("@%s" % bp) if st == "breakdown" else (" %s" % sci(fw, 1) if fw != "nan" else "")
+            t += " & \\cellcolor{%s}%s%s" % (col, lab, extra)
+        t += "\\\\\n"
+    t += "\\bottomrule\n\\end{tabular}\n"
+    write("tab_e4_grid.tex", t)
+
+rows = ""
+for f in sorted(glob.glob("logs/e4/*_native.log")):
+    tag = os.path.basename(f)[:-len("_native.log")]
+    r = re.search(r"path=blocked-tc-(\w+) n=\d+ log2delta=(-?\d+) kappa=(\S+) status=(\S+) .*fact_err=(\S+) fact_err_stored=\S+ resid=\S+ fwd_err=(\S+) first_bad_pivot=(\S+)", open(f).read())
+    nx = f.replace("_native", "_nixnan"); dt = f.replace("_native", "_detail")
+    first, chain, kinds, types, total, _ = detail(dt)
+    hm = sum(1 for l in open(dt, errors="replace") if "error [" in l and "HMMA" in l)
+    st = r.group(4) + (" (bad pivot %s, $k=%d$)" % (r.group(7), int(r.group(7)) // 32) if r.group(7) != "-1" else ", fwd %s" % sci(r.group(6), 1))
+    rows += "%s & $2^{-%s}$ & %s & %s & %d\\\\\n" % ({"f16": "FP16", "bf16": "BF16", "tf32": "TF32"}[r.group(1)], tag.split("_e")[1].split("_")[0], st, counts_tex(nx), hm)
+write("tab_e4_nixnan.tex", "\\begin{tabular}{llp{3.6cm}p{5.6cm}r}\n\\toprule\nupdate & $\\delta$ & status & nixnan report & HMMA lines\\\\\n\\midrule\n" + rows + "\\bottomrule\n\\end{tabular}\n")
+
+if os.path.exists("logs/e4/f16_e12_breakdown_nixnan.log"):
+    excerpt("report_e4_f16.txt", nonzero_sections(report_block("logs/e4/f16_e12_breakdown_nixnan.log")))
+    excerpt("report_e4_tf32.txt", nonzero_sections(report_block("logs/e4/tf32_e12_breakdown_nixnan.log")))
+    lines = [l.replace("#nixnan: ", "") for l in open("logs/e4/f16_e12_breakdown_detail.log", errors="replace") if "error [" in l]
+    excerpt("detail_e4_f16.txt", "".join(lines[:6]))
+    excerpt("detail_e4_f16_hmma.txt", "".join([l for l in lines if "HMMA" in l][:6]))
+    lines = [l.replace("#nixnan: ", "") for l in open("logs/e4/tf32_e12_breakdown_detail.log", errors="replace") if "error [" in l and "HMMA" in l]
+    excerpt("detail_e4_tf32_hmma.txt", "".join(lines[:4]))
+    first, chain, kinds, types, total, _ = detail("logs/e4/f16_e12_breakdown_detail.log")
+    write("chain_e4_f16.tex", " $\\to$ ".join("\\texttt{%s}: %d" % (tex_escape(k), n) for k, n in chain) + "; %d lines" % total)
+    write("sass_hmma.tex", ", ".join("%s $\\times$%s" % (tex_escape(l.split(None, 1)[1]) if False else "\\texttt{%s}" % tex_escape(l.split()[1]), l.split()[0]) for l in open("logs/e4/sass_hmma.txt").read().splitlines()))
+
+# ---------------------------------------------------------------- sqrt study
+def sqrt_sites(path):
+    out = []
+    for line in open(path, errors="replace"):
+        m = re.search(r"error \[(\w+)\] detected in operand (\d) of instruction ((?:@\S+ )?MUFU\.(?:RSQ|SQRT)[^;]*) ; in function (?:void )?(pivot_kernel|potrf_tile_kernel)", line)
+        if m:
+            out.append((m.group(1), m.group(2), m.group(3).strip()))
+    return out
+if glob.glob("logs/sqrt/*_detail.log"):
+    rows = ""
+    for k, case in (("e3a", "E3a: FP16 storage, pivot is $0$"), ("e4", "E4: tensor-core update, pivot is $<0$")):
+        for b, name in (("ieee", "IEEE \\texttt{sqrtf}"), ("fast", "\\texttt{-prec-sqrt=false}")):
+            dt = "logs/sqrt/%s_%s_detail.log" % (k, b)
+            if not os.path.exists(dt):
+                continue
+            first, chain, kinds, types, total, _ = detail(dt)
+            sites = sqrt_sites(dt)
+            instr = "\\texttt{%s}" % tex_escape(sites[0][2].split(" R")[0].replace("@P0 ", "")) if sites else "--"
+            at0 = [x for x in sites[:2] if k == "e3a" and b == "ieee"]
+            if k == "e3a" and b == "ieee":
+                at_sqrt = "div0 (operand 1 = the $0$ input), infinity (operand 0 = $\\mathrm{rsqrt}(0)$)"
+            elif k == "e3a":
+                at_sqrt = "none at $\\sqrt0$ (only NaN-input propagation later)"
+            else:
+                at_sqrt = "NaN (operand 0 = the result)"
+            rows += "%s & %s & %s & %s & \\texttt{%s} in \\texttt{%s}\\\\\n" % (case, name, instr, at_sqrt, tex_escape(first[1].split(" R")[0]) + " [" + first[0].replace("infinity", "Inf") + "]", tex_escape(first[2]))
+    write("tab_sqrt.tex", "\\begin{tabular}{p{2.5cm}p{2.3cm}p{1.6cm}p{4.0cm}p{3.6cm}}\n\\toprule\ncase & sqrt compiled as & sqrt instruction & report at the sqrt site & first report in the run\\\\\n\\midrule\n" + rows + "\\bottomrule\n\\end{tabular}\n")
+    def keep(path, lo, hi):
+        L = [l for l in open(path).read().splitlines() if l.strip()]
+        return L
+    ieee = [l for l in open("logs/sqrt/sass_pivot_ieee.txt").read().splitlines()]
+    start = next(i for i, l in enumerate(ieee) if "LDG.E R0" in l)
+    excerpt("sass_sqrt_ieee.txt", "\n".join(re.sub(r"\s{2,}", " ", l) for l in ieee[start + 1:] if "NOP" not in l and "BRA 0x3a0" not in l))
+    fast = open("logs/sqrt/sass_pivot_fast.txt").read().splitlines()
+    start = next(i for i, l in enumerate(fast) if "LDG.E R0" in l)
+    excerpt("sass_sqrt_fast.txt", "\n".join(re.sub(r"\s{2,}", " ", l) for l in fast[start + 1:] if "NOP" not in l))
+
 print("wrote", len(os.listdir(OUT)), "files in", OUT)

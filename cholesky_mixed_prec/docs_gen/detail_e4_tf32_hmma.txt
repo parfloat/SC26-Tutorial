@@ -1,0 +1,4 @@
+error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R12, R8.reuse, R32, RZ ; in function tc_update_tf32_kernel of type f32
+error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R12, R8.reuse, R32, RZ ; in function tc_update_tf32_kernel of type f32
+error [NaN] detected in operand 2 of instruction HMMA.1684.F32.TF32 R8, R8, R31, RZ ; in function tc_update_tf32_kernel of type f32
+error [NaN] detected in operand 1 of instruction HMMA.1684.F32.TF32 R12, R22, R30, R12 ; in function tc_update_tf32_kernel of type f32

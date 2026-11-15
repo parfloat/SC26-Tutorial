@@ -1,0 +1,15 @@
+\begin{tabular}{llp{3.6cm}p{5.6cm}r}
+\toprule
+update & $\delta$ & status & nixnan report & HMMA lines\\
+\midrule
+BF16 & $2^{-12}$ & breakdown (bad pivot 33, $k=1$) & BF16 NaN 8 (1\,616), FP32 NaN 514 (316\,906), FP32 Memory NaN 4 (1\,620) & 14\\
+BF16 & $2^{-6}$ & inaccurate, fwd $6.1\!\times\!10^{-1}$ & no exceptions & 0\\
+BF16 & $2^{-7}$ & inaccurate, fwd $2.6\!\times\!10^{-1}$ & no exceptions & 0\\
+FP16 & $2^{-10}$ & ok, fwd $8.3\!\times\!10^{-2}$ & no exceptions & 0\\
+FP16 & $2^{-12}$ & breakdown (bad pivot 33, $k=1$) & FP16 NaN 8 (1\,616), FP32 NaN 514 (316\,906), FP32 Memory NaN 4 (1\,620) & 14\\
+FP16 & $2^{-6}$ & inaccurate, fwd $6.6\!\times\!10^{-1}$ & no exceptions & 0\\
+TF32 & $2^{-10}$ & ok, fwd $8.8\!\times\!10^{-2}$ & no exceptions & 0\\
+TF32 & $2^{-12}$ & breakdown (bad pivot 33, $k=1$) & FP32 NaN 570 (328\,218), FP32 Memory NaN 4 (1\,620) & 62\\
+TF32 & $2^{-6}$ & inaccurate, fwd $6.6\!\times\!10^{-1}$ & no exceptions & 0\\
+\bottomrule
+\end{tabular}

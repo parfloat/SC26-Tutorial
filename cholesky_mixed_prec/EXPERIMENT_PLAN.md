@@ -7,7 +7,7 @@ Source: `cg-and-cholesky-nixnan.pdf` in this directory (6 pages). It is a ChatGP
 explains CG, asks whether CG suits tensor cores, then explains Cholesky and ends with a proposal for a nixnan
 tutorial example. This plan keeps that proposal's idea and tests each claim instead of assuming it.
 
-Documents for E0--E3: slides `Chol_Slides.pdf` (source `Chol_Slides.tex`), full report `chol_report.pdf` (source `chol_report.tex`, includes the NixNan details); both are built from the logs through `make_chol_docs.py` (fragments in `docs_gen/`).
+Documents for E0--E4 and the sqrt study: slides `Chol_Slides.pdf` (source `Chol_Slides.tex`), full report `chol_report.pdf` (source `chol_report.tex`, includes the NixNan details); both are built from the logs through `make_chol_docs.py` (fragments in `docs_gen/`).
 
 ## 1. What the tutorial should show
 
@@ -278,9 +278,11 @@ kernels of `chol_study.cu` with `--store f16|bf16`, `run_chol_story.sh e3` (abou
 
 - **The story in the PDF is confirmed, with one subtlety.** The stored matrix is `11ᵀ`; the second pivot is exactly 0; the division by it (`MUFU.RCP` of 0, then `FFMA`/`FMUL` fix-ups)
   gives Inf and then NaN, which `rank1`, the panel/update kernels and both substitutions propagate to the end.
-- **The first report is not the defect.** `sqrt(0)` is computed by a `MUFU.RSQ` expansion, and `rsqrt(0) = Inf` inside it is flagged (`div0`, `infinity`) although the final result 0 is
-  correct. The **first real failure** is the next kernel, `scale_kernel`/`trsm_panel_kernel`: the division by that 0 pivot. Reading the report, one must tell the
-  benign expansion artifact from the exception that matters (same lesson as the `FFMA`-register-move artifact on the LU slides).
+- **The first report is a discarded `rsqrt(0)`, not the defect (corrected explanation; the first version of this bullet only said "benign expansion").** IEEE `sqrtf` compiles to a sequence that executes `MUFU.RSQ` for every input *before* range-testing it (SASS of `pivot_kernel`: `MUFU.RSQ R7, R0` at 0x00a0, then `ISETP.GT.U32 … 0x727fffff`); in-range inputs take the Newton-refinement fast path,
+  others call a slow path that returns the special value (±0 → ±0, negative → NaN). For `x = 0` the hardware really computes `rsqrt(+0) = +Inf` (an IEEE division by zero), nixnan reports it (`div0` on operand 1, the zero input; `infinity` on operand 0), and the slow path returns 0, so the Inf is never used.
+  At source level `sqrt(0) = 0` is exact: a **false positive of kind div0/Inf, not a NaN** (nothing at this site produces a NaN). Verified by building with `-prec-sqrt=false` (`MUFU.SQRT`, one instruction) and re-running under nixnan (`./run_chol_story.sh sqrt`, `logs/sqrt/`):
+  the `pivot_kernel` div0/Inf lines at `sqrt(0)` disappear (6 → 2 lines, the 2 left are NaN inputs from earlier kernels) and the first report becomes `MUFU.RCP` div0 in `scale_kernel`, the **genuine** division by the zero pivot. In E4, `sqrt` of a *negative* pivot reports NaN at the sqrt instruction in both builds (genuine).
+  The FP16/BF16 build of E3b (`hsqrt` → `MUFU.SQRT`) never had the false positive. The remaining pivot-kernel lines in the IEEE build (`NaN` on `MUFU.RSQ` operands 1 and 0, `@P0 FADD.FTZ …, 1`) are NaN inputs propagated from earlier kernels.
 - **Source lines:** only the forward and backward substitution kernels carry `file:line` in the report (153 and 56 lines); the reports in `pivot`, `scale`, `rank1` (and the tile kernels) have none.
   The cubin does contain a line table (`nvdisasm -g`), and I did not find why nixnan cannot use it for those kernels. Attribution therefore goes by **kernel and SASS instruction**.
 - The exceptions are all FP32: the host does the FP16/BF16 rounding, and nixnan does not instrument conversion opcodes anyway.
@@ -366,4 +368,4 @@ FP32 forward/backward substitution on the FP32 factor. The pivot is still unguar
 - `A_δ` is special (one dominant panel column): the clean link between the rounding of `L_{i0}` and the breakdown is a property of this matrix; E5 is the real test.
 - Only FP32 accumulate was run; FP16 accumulate (`HMMA.16816.F16`, as in `lu_solve_gpu_tc`) would break much earlier and is not covered.
 - NB=32 only; the number of mma steps per tile (2 for FP16/BF16, 4 for TF32) was not varied.
-- The slide deck and report (`Chol_Slides.pdf`, `chol_report.pdf`) still describe E0–E3 only.
+- The slide deck and report (`Chol_Slides.pdf`, `chol_report.pdf`) now cover E0–E4 and the sqrt study (`run_chol_story.sh sqrt`, `logs/sqrt/`).

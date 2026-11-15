@@ -291,3 +291,27 @@ def e4_report():
                 print("      first exception: [%s] %s in %s; chain: %s; HMMA lines: %d" % (first[0], first[1], first[2], " -> ".join("%s:%d" % (k, n) for k, n in chain), hm))
 
 e4_report()
+
+
+def sqrt_report():
+    if not glob.glob("logs/sqrt/*_detail.log"):
+        return
+    print("\nsqrt study: IEEE sqrtf (MUFU.RSQ + range test + slow path) vs -prec-sqrt=false (MUFU.SQRT)")
+    for k, what in (("e3a", "E3a: FP16 storage, pivot 1 is exactly 0 -> sqrt(0)"), ("e4", "E4: tensor-core update, a Schur diagonal is negative -> sqrt(<0)")):
+        for b in ("ieee", "fast"):
+            dt = "logs/sqrt/%s_%s_detail.log" % (k, b)
+            if not os.path.exists(dt):
+                continue
+            first, chain, kinds, types, total = detail(dt)
+            sq = []
+            for line in open(dt, errors="replace"):
+                m = re.search(r"error \[(\w+)\] detected in operand (\d) of instruction ((?:@\S+ )?(?:MUFU\.(?:RSQ|SQRT)|FADD\.FTZ R\d+, R\d+, 1)[^;]*) ; in function (?:void )?(pivot_kernel|potrf_tile_kernel)", line)
+                if m:
+                    sq.append("%s/op%s %s" % (m.group(1), m.group(2), m.group(3).strip()))
+            print("  %-4s %-5s first: [%s] %s in %s; %d lines; sqrt-site lines: %s" % (k, b, first[0], first[1], first[2], total, "; ".join(sq[:6]) or "none"))
+    for b in ("ieee", "fast"):
+        f = "logs/sqrt/sass_pivot_%s.txt" % b
+        if os.path.exists(f):
+            print("  pivot_kernel SASS (%s): %s" % (b, ", ".join(sorted({re.sub(r"^@!?P\d ", "", l.split(";")[0].split("*/")[1].strip()).split()[0] for l in open(f) if "*/" in l}))))
+
+sqrt_report()

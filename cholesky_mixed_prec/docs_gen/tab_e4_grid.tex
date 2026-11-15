@@ -1,0 +1,31 @@
+\begin{tabular}{rr|ccc}
+\toprule
+$e$ & $\kappa_2$ & FP16 update & BF16 update & TF32 update\\
+\midrule
+2 & $1.0\!\times\!10^{3}$ & \cellcolor{orange!30}inacc $5.0\!\times\!10^{-2}$ & \cellcolor{orange!30}inacc $1.7\!\times\!10^{-1}$ & \cellcolor{orange!30}inacc $5.0\!\times\!10^{-2}$\\
+3 & $2.0\!\times\!10^{3}$ & \cellcolor{green!15}ok $6.4\!\times\!10^{-2}$ & \cellcolor{orange!30}inacc $1.0\!\times\!10^{0}$ & \cellcolor{green!15}ok $6.4\!\times\!10^{-2}$\\
+4 & $4.1\!\times\!10^{3}$ & \cellcolor{orange!30}inacc $1.5\!\times\!10^{-1}$ & \cellcolor{orange!30}inacc $1.4\!\times\!10^{0}$ & \cellcolor{orange!30}inacc $1.5\!\times\!10^{-1}$\\
+5 & $8.2\!\times\!10^{3}$ & \cellcolor{orange!30}inacc $7.8\!\times\!10^{-1}$ & \cellcolor{orange!30}inacc $1.0\!\times\!10^{0}$ & \cellcolor{orange!30}inacc $7.8\!\times\!10^{-1}$\\
+6 & $1.6\!\times\!10^{4}$ & \cellcolor{orange!30}inacc $6.6\!\times\!10^{-1}$ & \cellcolor{orange!30}inacc $6.1\!\times\!10^{-1}$ & \cellcolor{orange!30}inacc $6.6\!\times\!10^{-1}$\\
+7 & $3.3\!\times\!10^{4}$ & \cellcolor{orange!30}inacc $3.7\!\times\!10^{-1}$ & \cellcolor{orange!30}inacc $2.6\!\times\!10^{-1}$ & \cellcolor{orange!30}inacc $3.7\!\times\!10^{-1}$\\
+8 & $6.6\!\times\!10^{4}$ & \cellcolor{orange!30}inacc $2.1\!\times\!10^{-1}$ & \cellcolor{red!25}BRK@33 & \cellcolor{orange!30}inacc $2.1\!\times\!10^{-1}$\\
+9 & $1.3\!\times\!10^{5}$ & \cellcolor{orange!30}inacc $1.3\!\times\!10^{-1}$ & \cellcolor{red!25}BRK@33 & \cellcolor{orange!30}inacc $1.3\!\times\!10^{-1}$\\
+10 & $2.6\!\times\!10^{5}$ & \cellcolor{green!15}ok $8.3\!\times\!10^{-2}$ & \cellcolor{red!25}BRK@33 & \cellcolor{green!15}ok $8.8\!\times\!10^{-2}$\\
+11 & $5.2\!\times\!10^{5}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+12 & $1.0\!\times\!10^{6}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+13 & $2.1\!\times\!10^{6}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+14 & $4.2\!\times\!10^{6}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+15 & $8.4\!\times\!10^{6}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+16 & $1.7\!\times\!10^{7}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+17 & $3.4\!\times\!10^{7}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+18 & $6.7\!\times\!10^{7}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+19 & $1.3\!\times\!10^{8}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+20 & $2.7\!\times\!10^{8}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+21 & $5.4\!\times\!10^{8}$ & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33 & \cellcolor{red!25}BRK@33\\
+22 & $1.1\!\times\!10^{9}$ & \cellcolor{orange!30}inacc $1.9\!\times\!10^{1}$ & \cellcolor{orange!30}inacc $1.9\!\times\!10^{1}$ & \cellcolor{orange!30}inacc $1.9\!\times\!10^{1}$\\
+23 & $2.1\!\times\!10^{9}$ & \cellcolor{orange!30}inacc $1.6\!\times\!10^{1}$ & \cellcolor{orange!30}inacc $1.6\!\times\!10^{1}$ & \cellcolor{orange!30}inacc $1.6\!\times\!10^{1}$\\
+24 & $4.3\!\times\!10^{9}$ & \cellcolor{red!25}BRK@1 & \cellcolor{red!25}BRK@1 & \cellcolor{red!25}BRK@1\\
+25 & $8.6\!\times\!10^{9}$ & \cellcolor{red!25}BRK@1 & \cellcolor{red!25}BRK@1 & \cellcolor{red!25}BRK@1\\
+26 & $1.7\!\times\!10^{10}$ & \cellcolor{red!25}BRK@1 & \cellcolor{red!25}BRK@1 & \cellcolor{red!25}BRK@1\\
+\bottomrule
+\end{tabular}
