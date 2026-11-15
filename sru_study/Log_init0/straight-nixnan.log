@@ -49,58 +49,8 @@ If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
 #nixnan: Instrumenting all functions
-#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
-#nixnan: running kernel [ampere_sgemm_32x128_nn] ...
-#nixnan: running kernel [void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)] ...
-#nixnan: running kernel [void at::native::(anonymous namespace)::CatArrayBatchedCopy_aligned16_contig<at::native::(anonymous namespace)::OpaqueType<4u>, unsigned int, 2, 128, 1>(at::native::(anonymous namespace)::OpaqueType<4u>*, at::native::(anonymous namespace)::CatArrInputTensorMetadata<at::native::(anonymous namespace)::OpaqueType<4u>, unsigned int, 128, 1>, at::native::(anonymous namespace)::TensorSizeStride<unsigned int, 4u>, int, unsigned int)] ...
-#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 3> >(int, at::native::BinaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 3>)] ...
-#nixnan: running kernel [void at::native::reduce_kernel<512, 1, at::native::ReduceOp<bool, at::native::func_wrapper_t<bool, at::native::or_kernel_cuda(at::TensorIterator&)::{lambda()#1}::operator()() const::{lambda()#12}::operator()() const::{lambda(bool, bool)#1}>, unsigned int, bool, 4> >(at::native::ReduceOp<bool, at::native::func_wrapper_t<bool, at::native::or_kernel_cuda(at::TensorIterator&)::{lambda()#1}::operator()() const::{lambda()#12}::operator()() const::{lambda(bool, bool)#1}>, unsigned int, bool, 4>)] ...
-#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::AbsFunctor<float>, at::detail::Array<char*, 2> >(int, at::native::AbsFunctor<float>, at::detail::Array<char*, 2>)] ...
-#nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::AUnaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 2> >(int, at::native::AUnaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 2>)] ...
-input has NaN: False  Inf: False
-output NaN: False
-c_states NaN: False
-#nixnan: Finalizing GPU context...
+Command "nvdisasm -b SM86 /tmp/nvbit_code_q8W4hL > /tmp/nvbit_sass_qMAi2y;" exited with signal 2(2). Is the command in your PATH?
 
-#nixnan: ------------ nixnan Report -----------
-
-#nixnan: --- FP16 Operations ---
-#nixnan: NaN:                    0 (0 repeats)
-#nixnan: Infinity:               0 (0 repeats)
-#nixnan: -Infinity:              0 (0 repeats)
-#nixnan: Subnormal:              0 (0 repeats)
-#nixnan: Division by 0:          0 (0 repeats)
-
-#nixnan: --- BF16 Operations ---
-#nixnan: NaN:                    0 (0 repeats)
-#nixnan: Infinity:               0 (0 repeats)
-#nixnan: -Infinity:              0 (0 repeats)
-#nixnan: Subnormal:              0 (0 repeats)
-#nixnan: Division by 0:          0 (0 repeats)
-
-#nixnan: --- FP32 Operations ---
-#nixnan: NaN:                    0 (0 repeats)
-#nixnan: Infinity:               0 (0 repeats)
-#nixnan: -Infinity:              0 (0 repeats)
-#nixnan: Subnormal:              0 (0 repeats)
-#nixnan: Division by 0:          0 (0 repeats)
-
-#nixnan: --- FP64 Operations ---
-#nixnan: NaN:                    0 (0 repeats)
-#nixnan: Infinity:               0 (0 repeats)
-#nixnan: -Infinity:              0 (0 repeats)
-#nixnan: Subnormal:              0 (0 repeats)
-#nixnan: Division by 0:          0 (0 repeats)
-
-#nixnan: --- FP16 Memory  Operations ---
-#nixnan: NaN:                    0 (0 repeats)
-#nixnan: --- BF16 Memory  Operations ---
-#nixnan: NaN:                    0 (0 repeats)
-#nixnan: --- FP32 Memory  Operations ---
-#nixnan: NaN:                    0 (0 repeats)
-#nixnan: --- FP64 Memory  Operations ---
-#nixnan: NaN:                    0 (0 repeats)
-
-real	3m57.827s
-user	7m40.377s
-sys	0m17.580s
+real	0m41.424s
+user	1m22.056s
+sys	0m3.890s

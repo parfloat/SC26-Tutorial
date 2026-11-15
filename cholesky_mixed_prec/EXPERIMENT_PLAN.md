@@ -202,7 +202,7 @@ Four columns: for each matrix, the factorization error ‖A−LLᵀ‖/‖A‖ a
 
 - All 8 runs: status `ok`, no bad pivot, **no nixnan exception** in any precision section or in memory. Both matrices are valid, and the kernels are right.
 - The forward error is the more sensitive metric and depends on the path: for F32 it differs by 2–3 orders of magnitude between `unblocked` and `blocked` (M1: 7.5e-6 vs 1.8e-2) while
-  the factorization errors are all small. For M1 the forward error grows with κ as expected for the blocked path (5.6e-4 → 1.8e-2 for κ 1.6e4 → 1.0e6); the unblocked path does not show that growth here (8.8e-6 → 7.5e-6).
+  the factorization errors are all small. Going from M0 to M1 the forward error of the blocked path grows with κ (5.6e-4 → 1.8e-2 for κ 1.6e4 → 1.0e6); the unblocked path does not show that growth here (8.8e-6 → 7.5e-6).
   I have not investigated why; likely a property of this particular matrix and summation order. E2 should report the forward error alongside the status.
 - The status `ok`/`inaccurate` in `chol_study.cu` uses only the factorization error (`inaccurate` above 1000·ε).
 

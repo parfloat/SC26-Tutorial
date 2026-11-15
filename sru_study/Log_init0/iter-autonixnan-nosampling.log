@@ -1,7 +1,7 @@
 ======================================================================
 Phase 1: Collecting kernel names (LOG_KERNELS)
 ======================================================================
-  8 unique kernel(s) found (20 total launches), baseline 9.392s:
+  8 unique kernel(s) found (20 total launches), baseline 9.339s:
        6 call(s)  void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)
        2 call(s)  ampere_sgemm_32x128_nn
        2 call(s)  void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)
@@ -18,7 +18,7 @@ Phase 2: Per-kernel whitelisted runs (SAMPLING=0, INSTRUMENT_EXCEPTIONS=1)
 ----------------------------------------------------------------------
 [1/8] Whitelisting: void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)
 ----------------------------------------------------------------------
-  elapsed: 9.843s
+  elapsed: 9.844s
 ------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
 NVBit core environment variables (mostly for nvbit-devs):
 ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
@@ -61,7 +61,7 @@ bin just reports every "count" occurrences forever, as before.
          LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
           MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
         TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
-  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_dyrnbwqu.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist__ptwgvv9.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
   FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
 #nixnan: ----------------------------------------------------------------------------------
 /home/ganesh/.local/lib/python3.10/site-packages/torch/utils/cpp_extension.py:1967: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
@@ -69,7 +69,7 @@ If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
   warnings.warn(
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
-#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_dyrnbwqu.txt
+#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist__ptwgvv9.txt
 #nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
 #nixnan: running kernel [ampere_sgemm_32x128_nn] ...
 #nixnan: running kernel [void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)] ...
@@ -125,7 +125,7 @@ c_states NaN: False
 ----------------------------------------------------------------------
 [2/8] Whitelisting: ampere_sgemm_32x128_nn
 ----------------------------------------------------------------------
-  elapsed: 9.942s
+  elapsed: 9.837s
 ------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
 NVBit core environment variables (mostly for nvbit-devs):
 ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
@@ -168,7 +168,7 @@ bin just reports every "count" occurrences forever, as before.
          LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
           MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
         TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
-  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_8uirdufc.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_3ufsfjw5.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
   FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
 #nixnan: ----------------------------------------------------------------------------------
 /home/ganesh/.local/lib/python3.10/site-packages/torch/utils/cpp_extension.py:1967: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
@@ -176,7 +176,7 @@ If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
   warnings.warn(
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
-#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_8uirdufc.txt
+#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_3ufsfjw5.txt
 #nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
 #nixnan: running kernel [ampere_sgemm_32x128_nn] ...
 #nixnan: running kernel [void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)] ...
@@ -232,7 +232,7 @@ c_states NaN: False
 ----------------------------------------------------------------------
 [3/8] Whitelisting: void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)
 ----------------------------------------------------------------------
-  elapsed: 9.945s
+  elapsed: 9.843s
 ------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
 NVBit core environment variables (mostly for nvbit-devs):
 ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
@@ -275,7 +275,7 @@ bin just reports every "count" occurrences forever, as before.
          LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
           MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
         TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
-  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_89jbl8xt.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_lhhb8eqz.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
   FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
 #nixnan: ----------------------------------------------------------------------------------
 /home/ganesh/.local/lib/python3.10/site-packages/torch/utils/cpp_extension.py:1967: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
@@ -283,7 +283,7 @@ If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
   warnings.warn(
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
-#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_89jbl8xt.txt
+#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_lhhb8eqz.txt
 #nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
 #nixnan: running kernel [ampere_sgemm_32x128_nn] ...
 #nixnan: running kernel [void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)] ...
@@ -339,7 +339,7 @@ c_states NaN: False
 ----------------------------------------------------------------------
 [4/8] Whitelisting: void at::native::(anonymous namespace)::CatArrayBatchedCopy_aligned16_contig<at::native::(anonymous namespace)::OpaqueType<4u>, unsigned int, 2, 128, 1>(at::native::(anonymous namespace)::OpaqueType<4u>*, at::native::(anonymous namespace)::CatArrInputTensorMetadata<at::native::(anonymous namespace)::OpaqueType<4u>, unsigned int, 128, 1>, at::native::(anonymous namespace)::TensorSizeStride<unsigned int, 4u>, int, unsigned int)
 ----------------------------------------------------------------------
-  elapsed: 10.042s
+  elapsed: 9.741s
 ------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
 NVBit core environment variables (mostly for nvbit-devs):
 ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
@@ -382,7 +382,7 @@ bin just reports every "count" occurrences forever, as before.
          LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
           MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
         TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
-  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist__425aihx.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_inhp2sg7.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
   FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
 #nixnan: ----------------------------------------------------------------------------------
 /home/ganesh/.local/lib/python3.10/site-packages/torch/utils/cpp_extension.py:1967: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
@@ -390,7 +390,7 @@ If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
   warnings.warn(
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
-#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist__425aihx.txt
+#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_inhp2sg7.txt
 #nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
 #nixnan: running kernel [ampere_sgemm_32x128_nn] ...
 #nixnan: running kernel [void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)] ...
@@ -446,7 +446,7 @@ c_states NaN: False
 ----------------------------------------------------------------------
 [5/8] Whitelisting: void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 3> >(int, at::native::BinaryFunctor<float, float, bool, at::native::(anonymous namespace)::CompareEqFunctor<float> >, at::detail::Array<char*, 3>)
 ----------------------------------------------------------------------
-  elapsed: 9.844s
+  elapsed: 9.788s
 ------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
 NVBit core environment variables (mostly for nvbit-devs):
 ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
@@ -489,7 +489,7 @@ bin just reports every "count" occurrences forever, as before.
          LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
           MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
         TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
-  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_co02abmv.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_en2g932f.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
   FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
 #nixnan: ----------------------------------------------------------------------------------
 /home/ganesh/.local/lib/python3.10/site-packages/torch/utils/cpp_extension.py:1967: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
@@ -497,7 +497,7 @@ If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
   warnings.warn(
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
-#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_co02abmv.txt
+#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_en2g932f.txt
 #nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
 #nixnan: running kernel [ampere_sgemm_32x128_nn] ...
 #nixnan: running kernel [void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)] ...
@@ -553,7 +553,7 @@ c_states NaN: False
 ----------------------------------------------------------------------
 [6/8] Whitelisting: void at::native::reduce_kernel<512, 1, at::native::ReduceOp<bool, at::native::func_wrapper_t<bool, at::native::or_kernel_cuda(at::TensorIterator&)::{lambda()#1}::operator()() const::{lambda()#12}::operator()() const::{lambda(bool, bool)#1}>, unsigned int, bool, 4> >(at::native::ReduceOp<bool, at::native::func_wrapper_t<bool, at::native::or_kernel_cuda(at::TensorIterator&)::{lambda()#1}::operator()() const::{lambda()#12}::operator()() const::{lambda(bool, bool)#1}>, unsigned int, bool, 4>)
 ----------------------------------------------------------------------
-  elapsed: 10.094s
+  elapsed: 9.843s
 ------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
 NVBit core environment variables (mostly for nvbit-devs):
 ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
@@ -596,7 +596,7 @@ bin just reports every "count" occurrences forever, as before.
          LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
           MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
         TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
-  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_fcxc__b3.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_op8cwx47.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
   FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
 #nixnan: ----------------------------------------------------------------------------------
 /home/ganesh/.local/lib/python3.10/site-packages/torch/utils/cpp_extension.py:1967: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
@@ -604,7 +604,7 @@ If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
   warnings.warn(
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
-#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_fcxc__b3.txt
+#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_op8cwx47.txt
 #nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
 #nixnan: running kernel [ampere_sgemm_32x128_nn] ...
 #nixnan: running kernel [void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)] ...
@@ -660,7 +660,7 @@ c_states NaN: False
 ----------------------------------------------------------------------
 [7/8] Whitelisting: void at::native::vectorized_elementwise_kernel<4, at::native::AbsFunctor<float>, at::detail::Array<char*, 2> >(int, at::native::AbsFunctor<float>, at::detail::Array<char*, 2>)
 ----------------------------------------------------------------------
-  elapsed: 9.943s
+  elapsed: 9.793s
 ------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
 NVBit core environment variables (mostly for nvbit-devs):
 ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
@@ -703,7 +703,7 @@ bin just reports every "count" occurrences forever, as before.
          LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
           MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
         TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
-  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_pl925utb.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_nodw25yr.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
   FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
 #nixnan: ----------------------------------------------------------------------------------
 /home/ganesh/.local/lib/python3.10/site-packages/torch/utils/cpp_extension.py:1967: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
@@ -711,7 +711,7 @@ If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
   warnings.warn(
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
-#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_pl925utb.txt
+#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_nodw25yr.txt
 #nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
 #nixnan: running kernel [ampere_sgemm_32x128_nn] ...
 #nixnan: running kernel [void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)] ...
@@ -810,7 +810,7 @@ bin just reports every "count" occurrences forever, as before.
          LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
           MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
         TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
-  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_uwi1c7bh.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_WHITELIST = /tmp/iter_nixnan_whitelist_lic6p199.txt - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
   FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
 #nixnan: ----------------------------------------------------------------------------------
 /home/ganesh/.local/lib/python3.10/site-packages/torch/utils/cpp_extension.py:1967: UserWarning: TORCH_CUDA_ARCH_LIST is not set, all archs for visible cards are included for compilation. 
@@ -818,7 +818,7 @@ If this is not desired, please set os.environ['TORCH_CUDA_ARCH_LIST'].
   warnings.warn(
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
-#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_uwi1c7bh.txt
+#nixnan: Only instrumenting functions specified in /tmp/iter_nixnan_whitelist_lic6p199.txt
 #nixnan: running kernel [void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, at::detail::Array<char*, 1> >(int, at::native::FillFunctor<float>, at::detail::Array<char*, 1>)] ...
 #nixnan: running kernel [ampere_sgemm_32x128_nn] ...
 #nixnan: running kernel [void (anonymous namespace)::sru_cuda_forward_kernel_simple<float>(float*, float*, float const*, float const*, float const*, float const*, float const*, float const*, bool const*, int, int, int)] ...
@@ -875,6 +875,6 @@ c_states NaN: False
 Done: 8 kernel(s) visited in succession.
 ======================================================================
 
-real	1m28.980s
-user	3m10.851s
-sys	0m8.559s
+real	1m27.959s
+user	3m9.447s
+sys	0m8.528s
