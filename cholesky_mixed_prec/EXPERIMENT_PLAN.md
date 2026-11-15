@@ -1,6 +1,6 @@
 # Experimental plan: Cholesky on a badly conditioned matrix, mixed precision, under nixnan
 
-Status: **plan only.** Nothing in this file has been implemented or run on the GPU yet. The few numbers marked
+Status: **E0 and E1 are implemented and run (Section 9); E2–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 "checked" come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 
 Source: `cg-and-cholesky-nixnan.pdf` in this directory (6 pages). It is a ChatGPT transcript, not a reference: it
@@ -156,3 +156,48 @@ Planned files in this directory (none exist yet):
 4. **TF32 and the exact rounding of tensor-core inputs** (truncation vs round-to-nearest in `wmma::__float_to_tf32`) change the δ threshold slightly; measure rather than predict.
 5. **The matrix `A_δ` is special** (rank-one plus a shift); results on it say how the failure looks, not how often it occurs. E5 is there for that.
 6. **The PDF is an unverified chat transcript.** Its tutorial proposal contains the correct core idea and one misleading table row (Section 3). Nothing in it should be quoted in the tutorial without the check in this plan.
+
+## 9. Results so far: E0 and E1 (RTX 3090, sm_86, CUDA 12.4)
+
+Code: `chol_study.cu` (FP64/FP32, `unblocked` and `blocked` paths, 5 kernels each: 3 factorization + 2 substitution),
+`run_chol_story.sh` (`e0`, `e1`, `all`, `summary`), `chol_summary.py`. Logs: `logs/e0/`, `logs/e1/`. Reproduce: `./run_chol_story.sh`
+(about 2 minutes, most of it the one `mpir_gpu` timing run).
+
+### E0 — budget: **passes**
+
+| run (FP32, δ=2⁻¹²) | native | nixnan | distinct kernels |
+|---|---|---|---|
+| unblocked, n=64 | 0.4 s | 2.2 s | 5 |
+| blocked, n=64 | 0.3 s | 2.3 s | 5 |
+| unblocked, n=256 | 0.3 s | 2.9 s | 5 |
+| blocked, n=256 | 0.3 s | 2.9 s | 5 |
+
+- The custom-kernel design is far inside the budget (limits 60 s native, 120 s nixnan). The nixnan time is dominated by the one-time
+  instrumentation of the 5 kernels (about 0.3 s each with `TIME_KERNELS=1`); the 768 launches of the unblocked path add little.
+  **n=1024 therefore looks affordable for the custom kernels; not run.**
+- For comparison, the existing library-based `../mpir_gpu/ir_gpu` (cuSOLVER/cuBLAS, n=256, κ=1e3, F32): **native 1.1 s, nixnan 92.5 s**,
+  which is the case the plan wanted to avoid. Its nixnan run printed a complete report and then ended with
+  `terminate called without an active exception` and an abort; I did not investigate that. I did not rebuild `ir_gpu` (the existing
+  binary ran on sm_86), so the plan's question "does it build for sm_86" is only answered as "the existing binary runs".
+- E0 timed FP32 only; FP64 runs are covered by E1 (also seconds).
+
+### E1 — reference: **passes** (`A_δ`, n=256, δ=2⁻¹², κ₂ = 1.049e6)
+
+| run | status | ‖A−LLᵀ‖/‖A‖ | ‖b−Ax‖/‖b‖ | ‖x−1‖/‖1‖ | nixnan |
+|---|---|---|---|---|---|
+| F64 unblocked | ok | 1.1e-16 | 1.3e-15 | 3.1e-13 | no exceptions |
+| F64 blocked | ok | 1.1e-16 | 1.1e-15 | 3.3e-13 | no exceptions |
+| F32 unblocked | ok | 1.3e-9 | 8.1e-9 | 7.5e-6 | no exceptions |
+| F32 blocked | ok | 5.2e-8 | 1.7e-8 | 1.8e-2 | no exceptions |
+
+- No first bad pivot and no nixnan counter in any run, in either precision section or in memory. The matrix is valid and the kernels are right.
+- The FP32 error of the factorization is already below FP32 epsilon times a modest factor, as for LAPACK (checked earlier: 4.3e-7 for SciPy's float32 factorization; the kernels here give 1.3e-9 and 5.2e-8, so they are not identical
+  to LAPACK's operation order).
+- **Observation for E2:** the FP32 forward error differs by three orders of magnitude between the two paths (7.5e-6 vs 1.8e-2), though the
+  factorization error is small in both. At κ≈1e6 the forward error is of order κ·u, so it is the **more sensitive metric**. The status
+  `ok`/`inaccurate` in `chol_study.cu` uses only the factorization error (`inaccurate` above 1000·ε); E2 should also report the forward error.
+
+### Deviations from the plan
+- `gen_chol_matrices.py` was **not** written yet: `A_δ` is built inside `chol_study.cu` (double precision, then rounded), and its κ₂ is analytic
+  ((n+δ)/δ). The generator is needed for the `QΛQᵀ` matrices of E5.
+- E0's "blocked" variant uses SIMT kernels (no tensor cores yet); the WMMA update belongs to E4.

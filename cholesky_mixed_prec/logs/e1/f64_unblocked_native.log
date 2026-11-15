@@ -1,0 +1,1 @@
+RESULT config=F64 path=unblocked n=256 log2delta=-12 kappa=1.049e+06 status=ok fact_err=1.082e-16 resid=1.332e-15 fwd_err=3.107e-13 first_bad_pivot=-1 t_ms=5.477
