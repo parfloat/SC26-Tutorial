@@ -1,0 +1,1 @@
+RESULT matrix=A_delta config=BF16A store=bf16 path=unblocked n=256 log2delta=-7 kappa=3.277e+04 status=inaccurate cause=arithmetic stored_changed=0 fact_err=3.052e-05 fact_err_stored=3.052e-05 resid=4.873e-04 fwd_err=1.597e+01 first_bad_pivot=-1 t_ms=0

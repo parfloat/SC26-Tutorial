@@ -58,6 +58,25 @@ if "--e2-points" in sys.argv:
         print(*p)
     raise SystemExit
 
+
+# ---------------------------------------------------------------- E3
+def e3_points():
+    """true-half-arithmetic points: the demo delta 2^-12 (breakdown) and the last finite-but-wrong delta before the first breakdown"""
+    pts = []
+    for exe, f in (("chol_h16", "logs/e3/sweep_h16.log"), ("chol_hbf16", "logs/e3/sweep_hbf16.log")):
+        d = sweep(f).get(("f16" if exe == "chol_h16" else "bf16", "unblocked"), {})
+        brk = [e for e in sorted(d) if d[e][0] == "breakdown"]
+        silent = [e for e in sorted(d) if d[e][0] == "inaccurate" and (not brk or e < brk[0])]
+        if silent:
+            pts.append((exe, max(silent), "silent"))
+        pts.append((exe, 12, "breakdown"))
+    return pts
+
+if "--e3-points" in sys.argv:
+    for p in e3_points():
+        print(*p)
+    raise SystemExit
+
 if os.path.exists("logs/e0/budget.tsv"):
     print("E0 budget (limits: native 60 s, nixnan 120 s)")
     print("%-24s %9s %9s %8s %s" % ("run", "native_s", "nixnan_s", "kernels", "verdict"))
@@ -157,3 +176,57 @@ def e2_report():
             print("  %-6s %-3s %-10s %-10s %-9s %s" % (m.group(1), m.group(2), m.group(3), r.group(1) if r else "?", r.group(2) if r else "?", nxs))
 
 e2_report()
+
+
+def detail(path):
+    """first exception, and kernels in order of first appearance with counts, from a PRINT_ILL_INSTR log"""
+    first, order, kinds, types = None, [], {}, {}
+    pat = re.compile(r"error \[([^\]]+)\] detected in operand (\d+) of instruction (.*?) ; in function (\w+)(?: at (\S+):(\d+))? of type (\w+)")
+    for line in open(path, errors="replace"):
+        m = pat.search(line)
+        if not m:
+            continue
+        kind, op, ins, fn, f, ln, ty = m.groups()
+        if first is None:
+            first = (kind, ins.strip(), fn, "%s:%s" % (os.path.basename(f), ln) if f else "no line info", ty)
+        order.append(fn)
+        kinds[kind] = kinds.get(kind, 0) + 1
+        types[ty] = types.get(ty, 0) + 1
+    chain, seen = [], {}
+    for fn in order:
+        if fn not in seen:
+            seen[fn] = len(chain); chain.append([fn, 0])
+        chain[seen[fn]][1] += 1
+    return first, chain, kinds, types, len(order)
+
+def e3_report():
+    runs = sorted(glob.glob("logs/e3/*_native.log"))
+    if not runs:
+        return
+    print("\nE3: naive reduced precision.  a = FP16/BF16 storage, FP32 arithmetic;  b = true FP16/BF16 arithmetic (unblocked).")
+    for tag, f in (("FP16 arithmetic sweep (A_delta, n=256)", "logs/e3/sweep_h16.log"), ("BF16 arithmetic sweep", "logs/e3/sweep_hbf16.log")):
+        d = sweep(f)
+        if d:
+            (key, v), = d.items()
+            print("  %-40s %s" % (tag, " ".join("%d:%s" % (e, CODE[v[e][0]]) for e in sorted(v))))
+    print("  (e: delta = 2^-e; ok / inacc / BRK)")
+    for f in runs:
+        tag = os.path.basename(f)[:-len("_native.log")]
+        r = re.search(r"config=(\S+) store=(\S+) path=(\S+) n=\d+ log2delta=(-?\d+) kappa=\S+ status=(\S+) cause=(\S+) stored_changed=\d fact_err=(\S+) "
+                      r"fact_err_stored=\S+ resid=\S+ fwd_err=(\S+) first_bad_pivot=(\S+)", open(f).read())
+        print("\n  %s" % tag)
+        if r:
+            print("    %s store=%s %s delta=2^%s: status %s (%s), fact_err %s, fwd_err %s, first bad pivot %s" % r.groups())
+        nx = f.replace("_native", "_nixnan")
+        print("    nixnan report: %s" % (nixnan(nx) if os.path.exists(nx) and has_report(nx) else "-"))
+        dt = f.replace("_native", "_detail")
+        if os.path.exists(dt):
+            first, chain, kinds, types, total = detail(dt)
+            if first:
+                print("    first exception: [%s] %s in %s (%s) type %s" % first)
+                print("    %d detail lines; by kind %s; by type %s" % (total, dict(sorted(kinds.items())), dict(sorted(types.items()))))
+                print("    chain (kernel: lines): " + " -> ".join("%s: %d" % (k, n) for k, n in chain))
+            else:
+                print("    no exception lines")
+
+e3_report()

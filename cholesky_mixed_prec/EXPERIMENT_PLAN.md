@@ -1,6 +1,6 @@
 # Experimental plan: Cholesky on a badly conditioned matrix, mixed precision, under nixnan
 
-Status: **E0, E1 (Section 9) and E2 (Section 10) are implemented and run; E3–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
+Status: **E0, E1 (Section 9), E2 (Section 10) and E3 (Section 11) are implemented and run; E4–E7 are still plan only.** The numbers marked "checked" in Sections 3 and 6 come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 "checked" come from a quick CPU check (NumPy/SciPy, LAPACK) made while writing the plan.
 
 Source: `cg-and-cholesky-nixnan.pdf` in this directory (6 pages). It is a ChatGPT transcript, not a reference: it
@@ -258,3 +258,54 @@ Status: `ok`; `inacc` = factorization error above 1000·ε or forward error abov
 - The status threshold (forward error 0.1) is mine; moving it moves the `inacc` boundary, not the `BRK` one.
 - The matrix is rounded on the host (the formats are emulated for storage); it is not yet produced by device conversions or tensor-core inputs (E4).
 - FP64 was swept to e=56 only for the f64/f64 combination.
+
+## 11. Results: E3, naive reduced precision (RTX 3090, sm_86; `A_δ`, n=256, unblocked and blocked)
+
+Code: `chol_half.cu` (new: unblocked Cholesky whose arithmetic is **true FP16 or BF16**, built with and without `-DUSE_BF16`), the FP32-arithmetic
+kernels of `chol_study.cu` with `--store f16|bf16`, `run_chol_story.sh e3` (about 1 minute), `chol_summary.py` (trace analysis). Logs: `logs/e3/`
+(`*_native.log`, `*_nixnan.log` = default report, `*_detail.log` = `PRINT_ILL_INSTR=1 ENABLE_FUN_DETAIL=1`, `sweep_h16.log`, `sweep_hbf16.log`).
+
+### E3a: FP16/BF16 *storage*, FP32 arithmetic, δ=2⁻¹² (M1)
+
+| | unblocked | blocked |
+|---|---|---|
+| status | breakdown, **first bad pivot = 1** (second pivot is 0), cause: storage | same |
+| nixnan report (FP16 and BF16 storage identical) | FP32 NaN 231 (675,688 repeats), Inf 13, Div0 4, memory NaN 1 | FP32 NaN 566 (689,040), Inf 17, Div0 5, memory NaN 1 |
+| first exception | `MUFU.RSQ` div0 in `pivot_kernel` | `MUFU.RSQ` div0 in `potrf_tile_kernel` |
+| chain (kernel: report lines) | pivot: 6 → scale: 29 → rank1: 5 → forward: 153 → backward: 56 | potrf_tile: 159 → trsm_panel: 153 → syrk: 68 → forward: 153 → backward: 56 |
+
+- **The story in the PDF is confirmed, with one subtlety.** The stored matrix is `11ᵀ`; the second pivot is exactly 0; the division by it (`MUFU.RCP` of 0, then `FFMA`/`FMUL` fix-ups)
+  gives Inf and then NaN, which `rank1`, the panel/update kernels and both substitutions propagate to the end.
+- **The first report is not the defect.** `sqrt(0)` is computed by a `MUFU.RSQ` expansion, and `rsqrt(0) = Inf` inside it is flagged (`div0`, `infinity`) although the final result 0 is
+  correct. The **first real failure** is the next kernel, `scale_kernel`/`trsm_panel_kernel`: the division by that 0 pivot. Reading the report, one must tell the
+  benign expansion artifact from the exception that matters (same lesson as the `FFMA`-register-move artifact on the LU slides).
+- **Source lines:** only the forward and backward substitution kernels carry `file:line` in the report (153 and 56 lines); the reports in `pivot`, `scale`, `rank1` (and the tile kernels) have none.
+  The cubin does contain a line table (`nvdisasm -g`), and I did not find why nixnan cannot use it for those kernels. Attribution therefore goes by **kernel and SASS instruction**.
+- The exceptions are all FP32: the host does the FP16/BF16 rounding, and nixnan does not instrument conversion opcodes anyway.
+
+### E3b: true FP16 / BF16 arithmetic (every operation rounds to the narrow format), unblocked
+
+SASS of the FP16 build: 39 `HFMA2`, 3 `MUFU.RCP`, 1 `MUFU.SQRT`, 3 `FFMA`, 3 `FMUL`, 7 `F2FP.PACK_AB`, `HSETP2`, `HADD2`. So the update is a genuine FP16 fused multiply-add, but
+**`__hdiv` and `hsqrt` run in FP32** (reciprocal in `MUFU.RCP`, converted back by `F2FP`).
+
+| format | sweep of δ=2⁻ᵉ (ok / inacc / BRK) | at δ=2⁻¹² |
+|---|---|---|
+| FP16 arithmetic | ok for e ≤ 9, **inacc at 10**, BRK from 11 | breakdown (storage), bad pivot 1; nixnan: **FP16 NaN 156 (636,986 repeats)**, FP32 NaN 17, Inf 6, Div0 3 |
+| BF16 arithmetic | inacc already at e=2…7, BRK from 8 | breakdown (storage), bad pivot 1; nixnan: **BF16 NaN 156 (636,986)**, FP32 NaN 73, Inf 12, Div0 3 |
+
+- First report here is in `scale_kernel` (`MUFU.RCP` of the zero pivot), then `rank1` (HFMA2 in the FP16/BF16 section), then `pivot`, forward, backward. The FP16/BF16 NaNs come from the
+  `HFMA2` updates and substitutions; the division itself is FP32. **One source-level operation is reported in two precision sections.**
+- **The silent (finite-but-wrong) points:** δ=2⁻¹⁰ for FP16 arithmetic and δ=2⁻⁷ for BF16 arithmetic.
+  The stored matrix is exact (δ representable), no pivot is ≤ 0, the factorization error is small (3.8e-6 and 3.1e-5), **nixnan reports no exceptions**, and the forward error is **15.97** in both, i.e. x is garbage.
+  The same value 15.97 (= √255) also appeared in the FP32 (e=23) and FP64 (e=52) sweeps of E2; I do not know why it recurs.
+  This is the "small backward error, huge forward error" signature of κ·u ≫ 1 (κ = 2.6e5, u = 2⁻¹⁰ for FP16).
+- **The `inacc` status of BF16 for every e ≤ 7 is partly my threshold:** BF16 arithmetic gives forward errors around 0.6–1 even at κ ≈ 1e3 (u = 2⁻⁸), above the 0.1 cut-off; the sweep says "BF16 arithmetic is never accurate on this matrix", not where it starts to fail.
+
+### What E3 gives the tutorial
+- A deterministic, fast (3 s) failing run: `./bin_chol/chol_f32 --log2delta -12 --store f16 --path unblocked` under `LD_PRELOAD=nixnan.so`, and a quiet one (`--log2delta -12 --store f32`).
+- A silent run for contrast, where only the forward error (or a pivot/residual check) shows the problem.
+- Two caveats to say aloud: the first nixnan line may be the `sqrt(0)` expansion, and FP16 `/` and `sqrt` are FP32 operations.
+
+### Deviations and caveats
+- E3b covers the unblocked path only (the blocked path would need tile kernels in half arithmetic).
+- Not done: the "variant: δ slightly above the threshold" for FP32-arithmetic storage: E2 shows FP16 at δ=2⁻¹⁰ is `ok` there (stored exactly, FP32 arithmetic), so the silent behaviour only appears with narrow arithmetic (E3b).

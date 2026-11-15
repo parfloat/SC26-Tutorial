@@ -1,0 +1,706 @@
+------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
+NVBit core environment variables (mostly for nvbit-devs):
+ACK_CTX_INIT_LIMITATION = 0 - if set, no warning will be printed for nvbit_at_ctx_init()
+            NVDISASM = nvdisasm - override default nvdisasm found in PATH
+            NOBANNER = 0 - if set, does not print this banner
+       NO_EAGER_LOAD = 1 - lazy module loading is now turned on by default. If you see deadlocks in your tool, set NO_EAGER_LOAD to 0
+---------------------------------------------------------------------------------
+         INSTR_BEGIN = 0 - Beginning of the instruction interval where to apply instrumentation
+           INSTR_END = 4294967295 - End of the instruction interval where to apply instrumentation
+        TOOL_VERBOSE = 0 - Enable verbosity inside the tool
+   ENABLE_FUN_DETAIL = 1 - Enable detailed function information for kernel
+     PRINT_ILL_INSTR = 1 - Print the instruction which caused the exception
+            SAMPLING = 0 - Instrument a repeat kernel every SAMPLING times
+INSTRUMENT_EXCEPTIONS = 1 - Enable instrumentation of exceptions
+           INSTR_MEM = 0 - Instrument memory instructions for NaN/Inf detection
+           HISTOGRAM = 0 - Enable FP exponent histogramming
+       BIN_SPEC_FILE =  - Specification for which exponent ranges to report. If the file does not exist, a template specification will be created.
+For example:
+{
+    "count": 128,
+    "doublings": 0,
+    "bf16": [],
+    "f16": [[0,5],[-4,-1]],
+    "f32": [],
+    "f64": []
+}
+will report every 128 occurrences of exponents in the ranges 0 to 5 and -4 to -1 for f16 numbers.
+A key of the form "<fmt> (record_inst)", e.g. "f16 (record_inst)", takes the same range syntax
+and additionally reports the specific instruction/source line that triggered each threshold hit,
+the same way exception reports do -- useful for root-causing how values reached a given range.
+
+If "doublings" is N (N>0), every bin starts reporting every "count" occurrences; each time a
+bin reports, its own threshold doubles (count -> 2*count -> 4*count -> ...). After a bin has
+doubled N times, the NEXT report resets every bin in that kernel back to the starting "count"
+and 0 doublings, then the cycle repeats. "doublings": 0 (the default) disables this -- every
+bin just reports every "count" occurrences forever, as before.
+      NIXNAN_TIMEOUT = 0 - Timeout for the nixnan instrumented process in seconds.
+             LOGFILE =  - Path to the optional log file. Default is to print to stderr. This is useful for the case when an instrumented program is capturing stderr.
+           LINE_INFO = 1 - Disable debug information for source code locations. Having this enabled may cause crashes, so set this to 0 if you encounter issues.
+         LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
+          MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
+        TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
+  FUNCTION_WHITELIST =  - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
+  FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
+#nixnan: ----------------------------------------------------------------------------------
+WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
+#nixnan: Initializing GPU context...
+#nixnan: Instrumenting all functions
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R11, -QNAN  ;
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
+#nixnan: error [div0] detected in operand 1 of instruction MUFU.RSQ R3, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RSQ R3, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [div0] detected in operand 1 of instruction MUFU.RCP R3, R14 ; in function potrf_tile_kernel of type f32
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RCP R3, R14 ; in function potrf_tile_kernel of type f32
+#nixnan: error [infinity] detected in operand 2 of instruction FFMA R12, -R14, R3, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R12, -R14, R3, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [infinity] detected in operand 1 of instruction FFMA R3, R3, R12, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, R3, R12, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [infinity] detected in operand 3 of instruction FFMA R3, R3, R12, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, R3, R12, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R12, R0, R3, RZ ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R12, R0, R3, RZ ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, -R14, R12, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, -R14, R12, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, R3, R11, R12 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, R3, R11, R12 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R3, R3, R11, R12 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, R3, R11, R12 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RSQ R11, -QNAN  ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, R0, -R14, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, R0, -R14, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, R0, -R14, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, -R14, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R3, -R14, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R3, -R14, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction @P0 FFMA R13, -R14, R0, R11 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction @P0 FFMA R13, -R14, R0, R11 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction @P0 FFMA R13, -R14, R0, R11 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R10, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R10, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R10, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R10, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R10, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R10, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R10, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R10, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R10, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R10, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R10, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R10, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R10, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R10, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R10, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R10, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R10, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R10, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R10, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R10, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R10, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R10, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R10, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R10, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R11, R10, -R11, R13 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, R10, -R11, R13 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, R10, -R11, R13 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R10, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R10, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R10, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R10, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R10, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R10, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R11, R10, -R11, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, R10, -R11, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, R10, -R11, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction MUFU.RSQ R3, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RSQ R3, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction @P0 FADD.FTZ R3, R0, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction @P0 FADD.FTZ R3, R0, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP R3, R14 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RCP R3, R14 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R12, -R14, R3, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R12, -R14, R3, 1 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R3, R3, R12, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R3, R3, R12, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R12, R0, R3, RZ ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R11, -R14, R12, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R11, -R14, R12, R0 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FADD.FTZ R11, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FADD.FTZ R11, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FADD.FTZ R11, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R3, R0, -R14, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R3, -R14, R0, R3 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction @P0 FFMA R13, -R14, R0, R11 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R12, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R12, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R12, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R10, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R10, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R10, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R10, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R10, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R10, -R17, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R10, -R13, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R10, -R15, R19 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R11, R10, -R11, R13 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R10, -R13, R15 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R10, -R15, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R11, R10, -R11, R17 ; in function potrf_tile_kernel of type f32
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: running kernel [trsm_panel_kernel(float*, int, int, int)] ...
+#nixnan: error [div0] detected in operand 1 of instruction MUFU.RCP R0, R12 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RCP R0, R12 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [infinity] detected in operand 2 of instruction FFMA R11, -R12, R0, 1 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [infinity] detected in operand 3 of instruction FFMA R0, R0, R11, R0 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [infinity] detected in operand 1 of instruction FFMA R0, R0, R11, R0 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, -R12, R0, 1 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R0, R0, R11, R0 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R10, R0, R21, RZ ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R10, R0, R21, RZ ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R0, R0, R11, R0 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, -R12, R10, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, -R12, R10, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R11, R0, R11, R10 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R11, R0, R11, R10 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, R0, R11, R10 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, R0, R11, R10 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RSQ R0, -QNAN  ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:91 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R0, -R14, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R0, -R14, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R0, -R14, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP R0, R12 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RCP R0, R12 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R11, -R12, R0, 1 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, -R12, R0, 1 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R0, R0, R11, R0 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R0, R0, R11, R0 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R10, R0, R21, RZ ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R11, -R12, R10, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R11, -R12, R10, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:89 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FADD.FTZ R0, R3, R0 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:91 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FADD.FTZ R0, R3, R0 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:91 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FADD.FTZ R0, R3, R0 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:91 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction @P0 FFMA R21, R18, -R15, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction @P0 FFMA R21, R18, -R15, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction @P0 FFMA R21, R18, -R15, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction @P0 FFMA R21, R18, -R15, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R20, R23, -R24, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R20, R23, -R24, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R20, R23, -R24, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R20, R25, -R26, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R20, R25, -R26, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R20, R25, -R26, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R20, R25, -R26, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R27, -R28, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R27, -R28, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R27, -R28, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R27, -R28, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R0, -R14, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R0, -R14, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R0, -R14, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R0, -R14, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R0, -R14, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R23, R23, -R20, R36 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R23, R23, -R20, R36 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R23, R23, -R20, R36 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R23, R22, -R25, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R23, R22, -R25, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R23, R22, -R25, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R23, R24, -R27, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R23, R22, -R25, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R23, R24, -R27, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R23, R24, -R27, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R23, R28, -R29, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R23, R24, -R27, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R23, R28, -R29, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R23, R28, -R29, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R23, R28, -R29, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R26, R26, -R33, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R26, R26, -R33, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R26, R26, -R33, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R21, -R34, R26 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R26, R26, -R33, R23 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R21, -R34, R26 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R21, -R34, R26 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R21, -R34, R26 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R32, -R35, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R32, -R35, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R32, -R35, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R32, -R35, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R20, R20, -R22, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R20, R20, -R22, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R20, R20, -R22, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R20, R20, -R22, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R20, R23, -R24, R20 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R22, R25, -R34, R22 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R22, R25, -R34, R22 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R22, R25, -R34, R22 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R35, R23, -R20, R22 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R35, R23, -R20, R22 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R35, R23, -R20, R22 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R35, R23, -R20, R22 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R27, R26, -R27, R35 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R27, R26, -R27, R35 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R27, R26, -R27, R35 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R27, R26, -R27, R35 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R29, R28, -R29, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R29, R28, -R29, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R29, R28, -R29, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R29, R28, -R29, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R33, R32, -R33, R29 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R33, R32, -R33, R29 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R33, R32, -R33, R29 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R33, R24, -R25, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R33, R24, -R25, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R33, R32, -R33, R29 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R33, R24, -R25, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R33, R20, -R21, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R33, R20, -R21, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R33, R20, -R21, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R33, R20, -R21, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R33, R24, -R25, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R37, R22, -R23, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R37, R22, -R23, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R37, R22, -R23, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R37, R22, -R23, R33 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R27, R26, -R27, R37 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R27, R26, -R27, R37 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R27, R26, -R27, R37 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R27, R26, -R27, R37 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R27, R28, -R29, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R27, R28, -R29, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R27, R28, -R29, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R27, R28, -R29, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R25, R24, -R25, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R25, R24, -R25, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R25, R24, -R25, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R25, R24, -R25, R27 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R20, -R21, R25 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R20, -R21, R25 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R20, -R21, R25 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R32, -R33, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R32, -R33, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R20, -R21, R25 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R32, -R33, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R32, -R33, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R22, -R23, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R22, -R23, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R22, -R23, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R22, -R23, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R34, -R35, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R34, -R35, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R34, -R35, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R34, -R35, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R36, R26, -R28, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R36, R26, -R28, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R36, R26, -R28, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R36, R26, -R28, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R23, R23, -R20, R36 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: running kernel [syrk_kernel(float*, int, int, int)] ...
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R22, R31, R24, R22 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R22, R31, R24, R22 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R32, R33, R32, R22 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R32, R27, R28, R32 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R37, R29, R30, R32 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R32, R27, R28, R32 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R32, R27, R28, R32 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R20, R15, R37 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R37, R29, R30, R32 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R20, R15, R37 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R32, R33, R32, R22 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R37, R29, R30, R32 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R18, R19, R15 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R20, R15, R37 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R16, R17, R15 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R18, R19, R15 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R21, R22, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R18, R19, R15 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R37, R29, R30, R32 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R31, R31, R32, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R32, R33, R32, R22 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R27, R28, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R22, R22, R23, R21 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R30, R29, R34, R30 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R22, R31, R24, R22 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R22, R22, R23, R21 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R30, R30, R35, R31 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R21, R22, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R31, R31, R32, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R30, R29, R34, R30 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R21, R33, R36, R30 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R30, R30, R35, R31 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R27, R28, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R31, R31, R32, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R31, R31, R32, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R25, R26, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R22, R31, R24, R22 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R21, R33, R36, R30 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R21, R33, R36, R30 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R30, R29, R34, R30 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R21, R22, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R32, R27, R28, R32 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R30, R30, R35, R31 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R23, R24, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R16, R17, R15 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R16, R17, R15 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R27, R28, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FADD R21, R0, -R21 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:100 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R23, R24, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R21, R33, R36, R30 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction STG.E [R2.64], R21 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:100 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FADD R21, R0, -R21 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:100 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R30, R30, R35, R31 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R25, R26, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R20, R15, R37 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R25, R26, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R30, R29, R34, R30 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R25, R26, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R22, R22, R23, R21 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R22, R22, R23, R21 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R16, R17, R15 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R23, R24, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R18, R19, R15 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R21, R22, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R27, R28, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R23, R24, R16 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R32, R33, R32, R22 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:99 of type f32
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
+#nixnan: running kernel [trsm_panel_kernel(float*, int, int, int)] ...
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R22, R22, -R24, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R22, R22, -R24, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R22, R22, -R24, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R22, R22, -R24, R21 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R22, R25, -R34, R22 ; in function trsm_panel_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:88 of type f32
+#nixnan: running kernel [syrk_kernel(float*, int, int, int)] ...
+#nixnan: error [NaN] detected in operand 1 of instruction FADD R21, R0, -R21 ; in function syrk_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:100 of type f32
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
+#nixnan: running kernel [trsm_panel_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [syrk_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
+#nixnan: running kernel [trsm_panel_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [syrk_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
+#nixnan: running kernel [trsm_panel_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [syrk_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
+#nixnan: running kernel [trsm_panel_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [syrk_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
+#nixnan: running kernel [trsm_panel_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [syrk_kernel(float*, int, int, int)] ...
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
+#nixnan: running kernel [forward_kernel(float const*, float const*, float*, int)] ...
+#nixnan: error [div0] detected in operand 1 of instruction MUFU.RCP R0, R6 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RCP R0, R6 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [infinity] detected in operand 2 of instruction FFMA R5, -R6, R0, 1 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R5, -R6, R0, 1 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [infinity] detected in operand 1 of instruction FFMA R0, R0, R5, R0 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R0, R0, R5, R0 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [infinity] detected in operand 3 of instruction FFMA R0, R0, R5, R0 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R0, R0, R5, R0 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R4, R0, R17, RZ ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R4, R0, R17, RZ ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R5, -R6, R4, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R5, -R6, R4, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R5, R0, R5, R4 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R5, R0, R5, R4 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R5, R0, R5, R4 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R5, R0, R5, R4 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RSQ R3, -QNAN  ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:113 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R0, -R11, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R0, -R11, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R0, -R11, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP R0, R6 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RCP R0, R6 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R5, -R6, R0, 1 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R5, -R6, R0, 1 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R0, R0, R5, R0 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R0, R0, R5, R0 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R4, R0, R17, RZ ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R5, -R6, R4, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R5, -R6, R4, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:111 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FADD.FTZ R3, R3, R0 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:113 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FADD.FTZ R3, R3, R0 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:113 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FADD.FTZ R3, R3, R0 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:113 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction @P0 FFMA R17, R12, -R14, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction @P0 FFMA R17, R12, -R14, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction @P0 FFMA R17, R12, -R14, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction @P0 FFMA R17, R12, -R14, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R18, -R19, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R18, -R19, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R18, -R19, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R20, -R21, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R20, -R21, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R20, -R21, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R20, -R21, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R22, -R23, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R22, -R23, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R22, -R23, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R22, -R23, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R0, -R11, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R0, -R11, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R0, -R11, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R0, -R11, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R0, -R11, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R18, R21, -R20, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R18, R21, -R20, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R18, R21, -R20, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R18, R23, -R22, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R18, R23, -R22, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R18, R23, -R22, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R18, R23, -R22, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R18, R25, -R24, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R18, R25, -R24, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R18, R25, -R24, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R18, R25, -R24, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R18, R27, -R26, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R18, R27, -R26, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R18, R27, -R26, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R18, R27, -R26, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R18, R29, -R28, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R18, R29, -R28, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R18, R29, -R28, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R18, R29, -R28, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R31, R31, -R30, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R31, R31, -R30, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R31, R31, -R30, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R31, R31, -R30, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R16, -R15, R31 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R16, -R15, R31 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R16, -R15, R31 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R16, -R15, R31 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R15, R16, -R15, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R15, R16, -R15, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R16, -R15, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R15, R16, -R15, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R15, R18, -R19, R15 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R18, R31, -R20, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R18, R31, -R20, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R18, R31, -R20, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R32, R33, -R32, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R32, R33, -R32, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R32, R33, -R32, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R32, R33, -R32, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R32, R23, -R24, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R32, R23, -R24, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R32, R23, -R24, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R32, R23, -R24, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R31, R29, -R30, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R31, R29, -R30, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R31, R29, -R30, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R31, R29, -R30, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R32, R28, -R27, R31 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R32, R28, -R27, R31 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R32, R28, -R27, R31 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R32, R28, -R27, R31 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R34, R25, -R26, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R34, R25, -R26, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R34, R25, -R26, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R34, R25, -R26, R32 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R15, -R16, R34 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R15, -R16, R34 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R15, -R16, R34 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R15, -R16, R34 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R21, -R22, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R21, -R22, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R21, -R22, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R21, -R22, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R19, -R20, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R19, -R20, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R19, -R20, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R19, -R20, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R17, -R18, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R17, -R18, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R17, -R18, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R17, -R18, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R23, -R24, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R23, -R24, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R23, -R24, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R23, -R24, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R29, -R30, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R29, -R30, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R29, -R30, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R29, -R30, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R27, -R28, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R27, -R28, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R27, -R28, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R27, -R28, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R16, R25, -R26, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R16, R25, -R26, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R16, R25, -R26, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R16, R25, -R26, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R17, R31, -R32, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R17, R31, -R32, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R17, R31, -R32, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R17, R31, -R32, R16 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R18, R18, -R19, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R18, R18, -R19, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R18, R18, -R19, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R18, R18, -R19, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R18, R21, -R20, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R18, R18, -R19, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R18, R18, -R19, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R18, R18, -R19, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R18, R18, -R19, R17 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R18, R31, -R20, R18 ; in function forward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:110 of type f32
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
+#nixnan: running kernel [backward_kernel(float const*, float const*, float*, int)] ...
+#nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP R0, R12 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RCP R0, R12 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, -R12, R0, 1 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, -R12, R0, 1 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, -R12, R0, 1 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R0, R0, R13, R0 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R0, R0, R13, R0 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R0, R0, R13, R0 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R0, R0, R13, R0 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R10, R0, R11, RZ ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R10, R0, R11, RZ ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R10, R0, R11, RZ ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, -R12, R10, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, -R12, R10, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, -R12, R10, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, -R12, R10, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R13, R0, R13, R10 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R13, R0, R13, R10 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R13, R0, R13, R10 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R13, R0, R13, R10 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FADD.FTZ R3, R3, R0 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:123 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FADD.FTZ R3, R3, R0 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:123 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FADD.FTZ R3, R3, R0 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:123 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R11, R10, -R14, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, R10, -R14, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R11, R10, -R14, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, R10, -R14, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R11, R10, -R14, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, R10, -R14, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R11, R10, -R14, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, R10, -R14, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction @P1 FFMA R11, -R18, R12, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction @P1 FFMA R11, -R18, R12, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction @P1 FFMA R11, -R18, R12, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction @P1 FFMA R11, -R18, R12, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R22, R10, -R20, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R22, R10, -R20, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R22, R10, -R20, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R22, R10, -R20, R11 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R22, R23, -R16, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R22, R23, -R16, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R22, R23, -R16, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R22, R23, -R16, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R22, R25, -R24, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R22, R25, -R24, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R22, R25, -R24, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R22, R25, -R24, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction FFMA R11, R27, -R26, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R11, R27, -R26, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R11, R27, -R26, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R11, R27, -R26, R22 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:120 of type f32
+#nixnan: error [div0] detected in operand 1 of instruction MUFU.RCP R0, R12 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RCP R0, R12 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [infinity] detected in operand 2 of instruction FFMA R13, -R12, R0, 1 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [infinity] detected in operand 1 of instruction FFMA R0, R0, R13, R0 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+#nixnan: error [infinity] detected in operand 3 of instruction FFMA R0, R0, R13, R0 ; in function backward_kernel at /home/ganesh/repos/SC26-Tutorial/cholesky_mixed_prec/chol_study.cu:121 of type f32
+RESULT matrix=A_delta config=F32 store=bf16 path=blocked n=256 log2delta=-12 kappa=1.049e+06 status=breakdown cause=storage stored_changed=1 fact_err=nan fact_err_stored=nan resid=nan fwd_err=nan first_bad_pivot=1 t_ms=2566.849
+#nixnan: Finalizing GPU context...
+
+#nixnan: ------------ nixnan Report -----------
+
+#nixnan: --- FP16 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- BF16 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP32 Operations ---
+#nixnan: NaN:                  566 (689040 repeats)
+#nixnan: Infinity:              17 (24 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          5 (11 repeats)
+
+#nixnan: --- FP64 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- BF16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- FP32 Memory  Operations ---
+#nixnan: NaN:                    1 (2463 repeats)
+#nixnan: --- FP64 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
