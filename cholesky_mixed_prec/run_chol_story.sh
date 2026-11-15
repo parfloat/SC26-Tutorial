@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# run_chol_story.sh -- Cholesky mixed-precision study (see EXPERIMENT_PLAN.md). Implemented so far: E0 and E1.
+# run_chol_story.sh -- Cholesky mixed-precision study (see EXPERIMENT_PLAN.md). Implemented so far: E0 and E1, on M0 and M1.
 #
 #   ./run_chol_story.sh e0       budget: wall time of every planned run, native and under nixnan (limits: 60 s / 120 s)
-#   ./run_chol_story.sh e1       reference: A_delta (n=256, delta=2^-12) factors in FP64 and FP32, no exceptions
+#   ./run_chol_story.sh e1       reference: M0 and M1 (n=256) factor in FP64 and FP32; errors and nixnan counters
 #   ./run_chol_story.sh all      e0, then e1, then the summary          (default)
 #   ./run_chol_story.sh summary  re-print the tables from the saved logs
 #
@@ -16,6 +16,7 @@ NIXNAN_LIB="${NIXNAN_LIB:-$PWD/../external/nixnan/nixnan.so}"
 ARCH="${ARCH:-sm_86}"
 NATIVE_LIMIT=60; NIXNAN_LIMIT=120
 mkdir -p bin_chol logs/e0 logs/e1
+MATS=(M0 M1)   # from gen_chol_matrices.py (matrices/matrices.tsv has their definitions and kappa)
 unset LD_LIBRARY_PATH   # a stale CUDA dir here can shadow the toolkit nvcc built against
 [[ -f "$NIXNAN_LIB" ]] || { echo "error: nixnan.so not found at $NIXNAN_LIB (set NIXNAN_LIB)" >&2; exit 1; }
 
@@ -27,6 +28,8 @@ build() {   # build <f64|f32>
         nvcc -std=c++17 -O2 -lineinfo -arch="$ARCH" -DREAL=$real -o "$exe" chol_study.cu || exit 1
     fi
 }
+
+[[ -f matrices/M1_n256.csv && -f matrices/M0_n64.csv ]] || python3 gen_chol_matrices.py >/dev/null
 
 now() { date +%s.%N; }
 secs() { awk -v a="$1" -v b="$2" 'BEGIN{printf "%.1f", b-a}'; }
@@ -41,18 +44,18 @@ run_pair() {
 }
 
 e0() {
-    echo "== E0: budget (native < ${NATIVE_LIMIT} s, nixnan < ${NIXNAN_LIMIT} s)"
-    build f32; build f64
+    echo "== E0: budget (native < ${NATIVE_LIMIT} s, nixnan < ${NIXNAN_LIMIT} s), FP32"
+    build f32
     : > logs/e0/budget.tsv
-    printf '%-24s %9s %9s %8s %s\n' run native_s nixnan_s kernels verdict
-    for n in 64 256; do for p in unblocked blocked; do
-        tag=f32_${p}_n$n
-        run_pair logs/e0 "$tag" ./bin_chol/chol_f32 --n $n --log2delta -12 --path $p
+    printf '%-26s %9s %9s %8s %s\n' run native_s nixnan_s kernels verdict
+    for m in "${MATS[@]}"; do for n in 64 256; do for p in unblocked blocked; do
+        tag=${m}_n${n}_f32_${p}
+        run_pair logs/e0 "$tag" ./bin_chol/chol_f32 --csv matrices/${m}_n$n.csv --path $p
         read -r nat nix < logs/e0/$tag.time
         k=$(grep -o "running kernel \[[^]]*\]" logs/e0/${tag}_nixnan.log | sort -u | wc -l)
         v=PASS; awk -v a="$nat" -v b="$nix" -v A=$NATIVE_LIMIT -v B=$NIXNAN_LIMIT 'BEGIN{exit !(a<A && b<B)}' || v=OVER-BUDGET
-        printf '%-24s %9s %9s %8s %s\n' "$tag" "$nat" "$nix" "$k" "$v" | tee -a logs/e0/budget.tsv
-    done; done
+        printf '%-26s %9s %9s %8s %s\n' "$tag" "$nat" "$nix" "$k" "$v" | tee -a logs/e0/budget.tsv
+    done; done; done
     if [[ -x ../mpir_gpu/ir_gpu ]]; then
         echo "-- reference: existing ../mpir_gpu/ir_gpu (cuSOLVER/cuBLAS), n=256 kappa=1e3 F32"
         (cd ../mpir_gpu
@@ -63,12 +66,13 @@ e0() {
 }
 
 e1() {
-    echo "== E1: reference, A_delta n=256 delta=2^-12 (kappa = 1.05e6)"
-    for c in f64 f32; do build $c; for p in unblocked blocked; do
-        tag=${c}_$p
-        ./bin_chol/chol_$c --n 256 --log2delta -12 --path $p > logs/e1/${tag}_native.log 2>&1
-        LD_PRELOAD="$NIXNAN_LIB" ./bin_chol/chol_$c --n 256 --log2delta -12 --path $p > logs/e1/${tag}_nixnan.log 2>&1
-    done; done
+    echo "== E1: reference, M0 and M1, n=256"
+    for c in f64 f32; do build $c; done
+    for m in "${MATS[@]}"; do for c in f64 f32; do for p in unblocked blocked; do
+        tag=${m}_${c}_$p
+        ./bin_chol/chol_$c --csv matrices/${m}_n256.csv --path $p > logs/e1/${tag}_native.log 2>&1
+        LD_PRELOAD="$NIXNAN_LIB" ./bin_chol/chol_$c --csv matrices/${m}_n256.csv --path $p > logs/e1/${tag}_nixnan.log 2>&1
+    done; done; done
 }
 
 case "${1:-all}" in

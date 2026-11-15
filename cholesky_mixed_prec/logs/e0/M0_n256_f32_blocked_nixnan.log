@@ -39,19 +39,47 @@ bin just reports every "count" occurrences forever, as before.
            LINE_INFO = 1 - Disable debug information for source code locations. Having this enabled may cause crashes, so set this to 0 if you encounter issues.
          LOG_KERNELS =  - Path to a log file containing the sequence of kernel invocations. When set, this will disable instrumentation; instead the program will be allowed to run normally so interesting kernels can be identified. The log file will contain the sequence of kernel invocations
           MAX_ERRORS = 0 - Maximum number of errors to report before stopping the program. Default is 0, which means no limit.
-        TIME_KERNELS = 0 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
+        TIME_KERNELS = 1 - Enable timing of kernel execution. This will print the execution time of each kernel to the log file.
   FUNCTION_WHITELIST =  - Path to a file containing a line-separated list of function names to whitelist for instrumentation.
   FUNCTION_BLACKLIST =  - Path to a file containing a line-separated list of function names to blacklist for instrumentation.
 #nixnan: ----------------------------------------------------------------------------------
 WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
 #nixnan: Initializing GPU context...
 #nixnan: Instrumenting all functions
-#nixnan: running kernel [potrf_tile_kernel(double*, int, int, int, int*)] ...
-#nixnan: running kernel [trsm_panel_kernel(double*, int, int, int)] ...
-#nixnan: running kernel [syrk_kernel(double*, int, int, int)] ...
-#nixnan: running kernel [forward_kernel(double const*, double const*, double*, int)] ...
-#nixnan: running kernel [backward_kernel(double const*, double const*, double*, int)] ...
-RESULT config=F64 path=blocked n=256 log2delta=-12 kappa=1.049e+06 status=ok fact_err=1.082e-16 resid=1.110e-15 fwd_err=3.311e-13 first_bad_pivot=-1 t_ms=2643.055
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R11, -QNAN  ;
+#nixnan: running kernel [potrf_tile_kernel(float*, int, int, int, int*)] ...
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 344618 microseconds
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R0, -QNAN  ;
+#nixnan: running kernel [trsm_panel_kernel(float*, int, int, int)] ...
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 312535 microseconds
+#nixnan: running kernel [syrk_kernel(float*, int, int, int)] ...
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 309017 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 23 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 346 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 30 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 13 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 12 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 12 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 12 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 11 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 11 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 11 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 10 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 11 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 11 microseconds
+#nixnan: Kernel [trsm_panel_kernel(float*, int, int, int)] execution time: 12 microseconds
+#nixnan: Kernel [syrk_kernel(float*, int, int, int)] execution time: 12 microseconds
+#nixnan: Kernel [potrf_tile_kernel(float*, int, int, int, int*)] execution time: 11 microseconds
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
+#nixnan: running kernel [forward_kernel(float const*, float const*, float*, int)] ...
+#nixnan: Kernel [forward_kernel(float const*, float const*, float*, int)] execution time: 289927 microseconds
+#nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
+#nixnan: running kernel [backward_kernel(float const*, float const*, float*, int)] ...
+#nixnan: Kernel [backward_kernel(float const*, float const*, float*, int)] execution time: 282564 microseconds
+RESULT matrix=M0_n256.csv config=F32 path=blocked n=256 status=ok fact_err=1.040e-07 resid=8.546e-08 fwd_err=5.635e-04 first_bad_pivot=-1 t_ms=2524.030
 #nixnan: Finalizing GPU context...
 
 #nixnan: ------------ nixnan Report -----------

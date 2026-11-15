@@ -5,9 +5,10 @@
 //   blocked    NB x NB diagonal tile (POTRF), panel TRSM, trailing SYRK update       3 kernels, 3n/NB launches
 //
 // Build:  nvcc -std=c++17 -O2 -lineinfo -arch=sm_86 -DREAL=double|float -o chol chol_study.cu
-// Run:    ./chol --n 256 --log2delta -12 --path unblocked|blocked [--nb 32]
+// Run:    ./chol --csv matrices/M1_n256.csv --path unblocked|blocked [--nb 32]      (matrices from gen_chol_matrices.py)
+//         ./chol --n 256 --log2delta -12 --path ...                                     (built-in A_delta, no file)
 //
-// Matrix A_delta = 1 1^T + delta I (SPD for every delta > 0, kappa_2 = (n+delta)/delta), built in double, rounded to REAL.
+// Matrix: read from --csv (n inferred), or the built-in A_delta = 1 1^T + delta I. Held in double, rounded to REAL for the solve.
 // b = A * ones (in double, rounded to REAL), so the exact solution is x = ones.
 // The kernels do NOT guard the pivot: a non-positive pivot still goes through sqrt and division. The index of the first
 // bad pivot is only *recorded* (atomicMin) so the host can print it; it does not change the arithmetic.
@@ -121,23 +122,46 @@ __global__ void backward_kernel(const real *L, const real *y, real *x, int n)  /
 int main(int argc, char **argv)
 {
     int n = 256, nb = 32, log2d = -12;
-    const char *path = "unblocked";
+    const char *path = "unblocked", *csv = nullptr;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--n") && i + 1 < argc) n = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--nb") && i + 1 < argc) nb = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--log2delta") && i + 1 < argc) log2d = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--path") && i + 1 < argc) path = argv[++i];
-        else { fprintf(stderr, "usage: %s [--n N] [--log2delta E] [--path unblocked|blocked] [--nb NB]\n", argv[0]); return 1; }
+        else if (!strcmp(argv[i], "--csv") && i + 1 < argc) csv = argv[++i];
+        else { fprintf(stderr, "usage: %s [--csv FILE | --n N --log2delta E] [--path unblocked|blocked] [--nb NB]\n", argv[0]); return 1; }
     }
     bool blocked = !strcmp(path, "blocked");
     if (blocked && (nb > MAXNB || n % nb)) { fprintf(stderr, "blocked path needs nb <= %d and n %% nb == 0\n", MAXNB); return 1; }
     const double delta = ldexp(1.0, log2d);
     const char *cfg = sizeof(real) == 4 ? "F32" : "F64";
 
-    // A_delta (double), b = A*1 (double)
-    std::vector<double> A((size_t)n * n), b(n, 0.0);
-    for (int i = 0; i < n; ++i)
-        for (int j = 0; j < n; ++j) A[IDX(i, j, n)] = 1.0 + (i == j ? delta : 0.0);
+    // matrix (double), b = A*1 (double)
+    std::vector<double> A, b;
+    const char *mname = "A_delta";
+    if (csv) {
+        FILE *f = fopen(csv, "r");
+        if (!f) { fprintf(stderr, "cannot open %s\n", csv); return 1; }
+        std::vector<char> line(1 << 20);
+        int rows = 0;
+        while (fgets(line.data(), (int)line.size(), f)) {
+            char *p = line.data(), *e;
+            int cols = 0;
+            while (*p && *p != '\n') { A.push_back(strtod(p, &e)); if (e == p) break; p = e; if (*p == ',') ++p; ++cols; }
+            if (rows == 0) n = cols;
+            if (cols != n) { fprintf(stderr, "%s: row %d has %d entries, expected %d\n", csv, rows, cols, n); return 1; }
+            ++rows;
+        }
+        fclose(f);
+        if (rows != n) { fprintf(stderr, "%s: %d rows but %d columns\n", csv, rows, n); return 1; }
+        mname = strrchr(csv, '/') ? strrchr(csv, '/') + 1 : csv;
+        if (blocked && n % nb) { fprintf(stderr, "blocked path needs n %% nb == 0\n"); return 1; }
+    } else {
+        A.assign((size_t)n * n, 0.0);
+        for (int i = 0; i < n; ++i)
+            for (int j = 0; j < n; ++j) A[IDX(i, j, n)] = 1.0 + (i == j ? delta : 0.0);
+    }
+    b.assign(n, 0.0);
     for (int i = 0; i < n; ++i) for (int j = 0; j < n; ++j) b[i] += A[IDX(i, j, n)];
 
     std::vector<real> hA(A.begin(), A.end()), hb(b.begin(), b.end());
@@ -208,8 +232,8 @@ int main(int argc, char **argv)
     }
     const double eps = sizeof(real) == 4 ? FLT_EPSILON : DBL_EPSILON;
     const char *status = bad != INT_MAX ? "breakdown" : !finite ? "nan" : fe > 1e3 * eps ? "inaccurate" : "ok";
-    printf("RESULT config=%s path=%s n=%d log2delta=%d kappa=%.3e status=%s fact_err=%.3e resid=%.3e fwd_err=%.3e "
-           "first_bad_pivot=%d t_ms=%.3f\n", cfg, path, n, log2d, (n + delta) / delta, status, fe, rs, fw,
+    printf("RESULT matrix=%s config=%s path=%s n=%d status=%s fact_err=%.3e resid=%.3e fwd_err=%.3e "
+           "first_bad_pivot=%d t_ms=%.3f\n", mname, cfg, path, n, status, fe, rs, fw,
            bad == INT_MAX ? -1 : bad, ms);
     return 0;
 }

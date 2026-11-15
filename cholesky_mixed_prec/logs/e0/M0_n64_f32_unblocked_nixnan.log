@@ -47,61 +47,163 @@ WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will caus
 #nixnan: Initializing GPU context...
 #nixnan: Instrumenting all functions
 #nixnan: running kernel [pivot_kernel(float*, int, int, int*)] ...
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 321206 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 320244 microseconds
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R9, -QNAN  ;
 #nixnan: running kernel [scale_kernel(float*, int, int)] ...
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 320318 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 307199 microseconds
 #nixnan: running kernel [rank1_kernel(float*, int, int)] ...
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 306681 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 30 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 293483 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 29 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 21 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 30 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 19 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 22 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 27 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 25 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 20 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 19 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 24 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 40 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 21 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 31 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 19 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 27 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 28 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 32 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 21 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 44 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 20 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 27 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 31 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 19 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 19 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 38 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 20 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 21 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
@@ -111,114 +213,12 @@ WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will caus
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 20 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 25 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 26 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 20 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 23 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 29 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 19 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 19 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 20 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 26 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
+#nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
@@ -231,22 +231,22 @@ WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will caus
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 19 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 19 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 21 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
 #nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 18 microseconds
 #nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 17 microseconds
-#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 17 microseconds
-#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 26 microseconds
+#nixnan: Kernel [scale_kernel(float*, int, int)] execution time: 27 microseconds
+#nixnan: Kernel [rank1_kernel(float*, int, int)] execution time: 17 microseconds
 #nixnan: Kernel [pivot_kernel(float*, int, int, int*)] execution time: 18 microseconds
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
 #nixnan: running kernel [forward_kernel(float const*, float const*, float*, int)] ...
-#nixnan: Kernel [forward_kernel(float const*, float const*, float*, int)] execution time: 347715 microseconds
+#nixnan: Kernel [forward_kernel(float const*, float const*, float*, int)] execution time: 325659 microseconds
 #nixnan: warning: NaN immediate found in operand 1 of MUFU.RSQ R3, -QNAN  ;
 #nixnan: running kernel [backward_kernel(float const*, float const*, float*, int)] ...
-#nixnan: Kernel [backward_kernel(float const*, float const*, float*, int)] execution time: 311222 microseconds
-RESULT config=F32 path=unblocked n=64 log2delta=-12 kappa=2.621e+05 status=ok fact_err=2.624e-09 resid=3.260e-08 fwd_err=8.810e-06 first_bad_pivot=-1 t_ms=1742.027
+#nixnan: Kernel [backward_kernel(float const*, float const*, float*, int)] execution time: 326248 microseconds
+RESULT matrix=M0_n64.csv config=F32 path=unblocked n=64 status=ok fact_err=2.462e-09 resid=3.389e-08 fwd_err=2.013e-05 first_bad_pivot=-1 t_ms=1707.094
 #nixnan: Finalizing GPU context...
 
 #nixnan: ------------ nixnan Report -----------

@@ -157,47 +157,55 @@ Planned files in this directory (none exist yet):
 5. **The matrix `A_δ` is special** (rank-one plus a shift); results on it say how the failure looks, not how often it occurs. E5 is there for that.
 6. **The PDF is an unverified chat transcript.** Its tutorial proposal contains the correct core idea and one misleading table row (Section 3). Nothing in it should be quoted in the tutorial without the check in this plan.
 
-## 9. Results so far: E0 and E1 (RTX 3090, sm_86, CUDA 12.4)
+## 9. Results so far: E0 and E1 on M0 and M1 (RTX 3090, sm_86, CUDA 12.4)
 
-Code: `chol_study.cu` (FP64/FP32, `unblocked` and `blocked` paths, 5 kernels each: 3 factorization + 2 substitution),
-`run_chol_story.sh` (`e0`, `e1`, `all`, `summary`), `chol_summary.py`. Logs: `logs/e0/`, `logs/e1/`. Reproduce: `./run_chol_story.sh`
-(about 2 minutes, most of it the one `mpir_gpu` timing run).
+Matrices (`gen_chol_matrices.py`, files in `matrices/`, definitions and κ in `matrices/matrices.tsv`), both `A = 1 1ᵀ + δI`:
 
-### E0 — budget: **passes**
-
-| run (FP32, δ=2⁻¹²) | native | nixnan | distinct kernels |
+| name | δ | κ₂ (n=256) | κ₂ (n=64) |
 |---|---|---|---|
-| unblocked, n=64 | 0.4 s | 2.2 s | 5 |
-| blocked, n=64 | 0.3 s | 2.3 s | 5 |
-| unblocked, n=256 | 0.3 s | 2.9 s | 5 |
-| blocked, n=256 | 0.3 s | 2.9 s | 5 |
+| M0 | 2⁻⁶ | 1.64e4 | 4.10e3 |
+| M1 | 2⁻¹² | 1.05e6 | 2.62e5 |
 
-- The custom-kernel design is far inside the budget (limits 60 s native, 120 s nixnan). The nixnan time is dominated by the one-time
-  instrumentation of the 5 kernels (about 0.3 s each with `TIME_KERNELS=1`); the 768 launches of the unblocked path add little.
+κ₂ is given analytically and checked against the eigenvalues of the stored matrix (they agree to 4 digits). M1 is the matrix of the first E0/E1 run;
+its results reproduce that run exactly. M0 is the benign one: FP16/BF16 storage keeps δ=2⁻⁶. The generator also writes random
+`Q diag(σ) Qᵀ` matrices on request (`--qlq KAPPA`, for E5); tested once, not used yet.
+
+Code: `chol_study.cu` (FP64/FP32, `unblocked` and `blocked` paths, 5 kernels each; reads `--csv`), `run_chol_story.sh` (`e0`, `e1`, `all`, `summary`),
+`chol_summary.py`. Logs: `logs/e0/`, `logs/e1/`. Reproduce: `./run_chol_story.sh` (about 2 minutes, most of it the one `mpir_gpu` timing run).
+
+### E0 — budget: **passes** for both matrices
+
+| run (FP32) | native | nixnan | distinct kernels |
+|---|---|---|---|
+| M0 n=64 unblocked / blocked | 0.4 / 0.3 s | 2.2 / 2.2 s | 5 |
+| M0 n=256 unblocked / blocked | 0.3 / 0.3 s | 2.9 / 3.0 s | 5 |
+| M1 n=64 unblocked / blocked | 0.3 / 0.3 s | 2.1 / 2.2 s | 5 |
+| M1 n=256 unblocked / blocked | 0.3 / 0.3 s | 2.8 / 3.0 s | 5 |
+
+- Far inside the limits (60 s native, 120 s nixnan). The nixnan time is dominated by the one-time instrumentation of 5 kernels (about 0.3 s each).
   **n=1024 therefore looks affordable for the custom kernels; not run.**
-- For comparison, the existing library-based `../mpir_gpu/ir_gpu` (cuSOLVER/cuBLAS, n=256, κ=1e3, F32): **native 1.1 s, nixnan 92.5 s**,
-  which is the case the plan wanted to avoid. Its nixnan run printed a complete report and then ended with
-  `terminate called without an active exception` and an abort; I did not investigate that. I did not rebuild `ir_gpu` (the existing
-  binary ran on sm_86), so the plan's question "does it build for sm_86" is only answered as "the existing binary runs".
+- For comparison, the existing cuSOLVER/cuBLAS `../mpir_gpu/ir_gpu` (n=256, κ=1e3, F32): native 0.5 s (1.1 s in the first run), **nixnan 87.9 s** (92.5 s in the first run).
+  Its nixnan run prints a complete report and then ends with `terminate called without an active exception` and an abort; I did not investigate that.
+  I did not rebuild `ir_gpu`; the existing binary runs on sm_86.
 - E0 timed FP32 only; FP64 runs are covered by E1 (also seconds).
 
-### E1 — reference: **passes** (`A_δ`, n=256, δ=2⁻¹², κ₂ = 1.049e6)
+### E1 — reference: **passes** (n=256)
 
-| run | status | ‖A−LLᵀ‖/‖A‖ | ‖b−Ax‖/‖b‖ | ‖x−1‖/‖1‖ | nixnan |
-|---|---|---|---|---|---|
-| F64 unblocked | ok | 1.1e-16 | 1.3e-15 | 3.1e-13 | no exceptions |
-| F64 blocked | ok | 1.1e-16 | 1.1e-15 | 3.3e-13 | no exceptions |
-| F32 unblocked | ok | 1.3e-9 | 8.1e-9 | 7.5e-6 | no exceptions |
-| F32 blocked | ok | 5.2e-8 | 1.7e-8 | 1.8e-2 | no exceptions |
+Four columns: for each matrix, the factorization error ‖A−LLᵀ‖/‖A‖ and the forward error ‖x−1‖/‖1‖.
 
-- No first bad pivot and no nixnan counter in any run, in either precision section or in memory. The matrix is valid and the kernels are right.
-- The FP32 error of the factorization is already below FP32 epsilon times a modest factor, as for LAPACK (checked earlier: 4.3e-7 for SciPy's float32 factorization; the kernels here give 1.3e-9 and 5.2e-8, so they are not identical
-  to LAPACK's operation order).
-- **Observation for E2:** the FP32 forward error differs by three orders of magnitude between the two paths (7.5e-6 vs 1.8e-2), though the
-  factorization error is small in both. At κ≈1e6 the forward error is of order κ·u, so it is the **more sensitive metric**. The status
-  `ok`/`inaccurate` in `chol_study.cu` uses only the factorization error (`inaccurate` above 1000·ε); E2 should also report the forward error.
+| config, path | M0: ‖A−LLᵀ‖/‖A‖ | M0: ‖x−1‖/‖1‖ | M1: ‖A−LLᵀ‖/‖A‖ | M1: ‖x−1‖/‖1‖ |
+|---|---|---|---|---|
+| F64 unblocked | 1.0e-16 | 1.1e-14 | 1.1e-16 | 3.1e-13 |
+| F64 blocked | 9.5e-17 | 4.0e-13 | 1.1e-16 | 3.3e-13 |
+| F32 unblocked | 1.3e-9 | 8.8e-6 | 1.3e-9 | 7.5e-6 |
+| F32 blocked | 1.0e-7 | 5.6e-4 | 5.2e-8 | 1.8e-2 |
+
+- All 8 runs: status `ok`, no bad pivot, **no nixnan exception** in any precision section or in memory. Both matrices are valid, and the kernels are right.
+- The forward error is the more sensitive metric and depends on the path: for F32 it differs by 2–3 orders of magnitude between `unblocked` and `blocked` (M1: 7.5e-6 vs 1.8e-2) while
+  the factorization errors are all small. For M1 the forward error grows with κ as expected for the blocked path (5.6e-4 → 1.8e-2 for κ 1.6e4 → 1.0e6); the unblocked path does not show that growth here (8.8e-6 → 7.5e-6).
+  I have not investigated why; likely a property of this particular matrix and summation order. E2 should report the forward error alongside the status.
+- The status `ok`/`inaccurate` in `chol_study.cu` uses only the factorization error (`inaccurate` above 1000·ε).
 
 ### Deviations from the plan
-- `gen_chol_matrices.py` was **not** written yet: `A_δ` is built inside `chol_study.cu` (double precision, then rounded), and its κ₂ is analytic
-  ((n+δ)/δ). The generator is needed for the `QΛQᵀ` matrices of E5.
 - E0's "blocked" variant uses SIMT kernels (no tensor cores yet); the WMMA update belongs to E4.
+- The matrix names are M0 (benign) and M1 (ill-conditioned); E2 onward will add the δ sweep and the randomised matrices.

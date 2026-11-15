@@ -1,1 +1,1 @@
-RESULT config=F32 n=256 kappa=1.00e+03 seed=0 status=converged niter=1 t_fact_ms=0.69 t_loop_ms=2.89 t_per_iter_ms=2.886 first_exc_iter=-1 first_exc_ms=-1.000
+RESULT config=F32 n=256 kappa=1.00e+03 seed=0 status=converged niter=1 t_fact_ms=0.41 t_loop_ms=0.70 t_per_iter_ms=0.704 first_exc_iter=-1 first_exc_ms=-1.000

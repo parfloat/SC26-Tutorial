@@ -1,0 +1,5 @@
+name	n	definition	delta	kappa_analytic	kappa_numeric	lambda_min
+M0	256	1 1^T + delta I	2^-6	1.6385e+04	1.6385e+04	1.562e-02
+M1	256	1 1^T + delta I	2^-12	1.0486e+06	1.0486e+06	2.441e-04
+M0	64	1 1^T + delta I	2^-6	4.0970e+03	4.0970e+03	1.562e-02
+M1	64	1 1^T + delta I	2^-12	2.6214e+05	2.6215e+05	2.441e-04

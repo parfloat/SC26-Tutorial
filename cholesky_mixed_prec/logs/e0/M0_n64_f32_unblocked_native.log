@@ -1,0 +1,1 @@
+RESULT matrix=M0_n64.csv config=F32 path=unblocked n=64 status=ok fact_err=2.462e-09 resid=3.389e-08 fwd_err=2.013e-05 first_bad_pivot=-1 t_ms=0.999

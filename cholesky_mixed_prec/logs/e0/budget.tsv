@@ -1,4 +1,8 @@
-f32_unblocked_n64              0.4       2.2        5 PASS
-f32_blocked_n64                0.3       2.3        5 PASS
-f32_unblocked_n256             0.3       2.9        5 PASS
-f32_blocked_n256               0.3       2.9        5 PASS
+M0_n64_f32_unblocked             0.4       2.2        5 PASS
+M0_n64_f32_blocked               0.3       2.2        5 PASS
+M0_n256_f32_unblocked            0.3       2.9        5 PASS
+M0_n256_f32_blocked              0.3       3.0        5 PASS
+M1_n64_f32_unblocked             0.3       2.1        5 PASS
+M1_n64_f32_blocked               0.3       2.2        5 PASS
+M1_n256_f32_unblocked            0.3       2.8        5 PASS
+M1_n256_f32_blocked              0.3       3.0        5 PASS

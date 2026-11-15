@@ -1,0 +1,1 @@
+RESULT matrix=M0_n256.csv config=F64 path=blocked n=256 status=ok fact_err=9.505e-17 resid=2.204e-15 fwd_err=3.984e-13 first_bad_pivot=-1 t_ms=4.693

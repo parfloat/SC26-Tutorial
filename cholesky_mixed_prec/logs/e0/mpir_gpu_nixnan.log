@@ -54,19 +54,19 @@ WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will caus
 #nixnan: running kernel [void geqr2_smem_domino_fast<double, double, 8, 512>(int, int, double*, int, double*, int*, int*)] ...
 #nixnan: error [div0] detected in operand 1 of instruction MUFU.RSQ64H R19, R27 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 2 of instruction DMUL R10, R18, R18 ; in function void geqr2_smem_domino_fast of type f64
-#nixnan: error [NaN] detected in operand 1 of instruction DMUL R10, R18, R18 ; in function void geqr2_smem_domino_fast of type f64
-#nixnan: error [NaN] detected in operand 0 of instruction DFMA R10, R26, -R10, 1 ; in function void geqr2_smem_domino_fast of type f64
-#nixnan: error [NaN] detected in operand 0 of instruction DFMA R16, R10, R16, 0.5 ; in function void geqr2_smem_domino_fast of type f64
-#nixnan: error [NaN] detected in operand 2 of instruction DFMA R10, R26, -R10, 1 ; in function void geqr2_smem_domino_fast of type f64
-#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RSQ64H R19, R27 ; in function void geqr2_smem_domino_fast of type f64
-#nixnan: error [NaN] detected in operand 1 of instruction DMUL R10, R18, R10 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 0 of instruction DMUL R10, R18, R18 ; in function void geqr2_smem_domino_fast of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R10, R26, -R10, 1 ; in function void geqr2_smem_domino_fast of type f64
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RSQ64H R19, R27 ; in function void geqr2_smem_domino_fast of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R16, R10, R16, 0.5 ; in function void geqr2_smem_domino_fast of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DMUL R10, R18, R18 ; in function void geqr2_smem_domino_fast of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R10, R26, -R10, 1 ; in function void geqr2_smem_domino_fast of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R16, R10, R16, 0.5 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 0 of instruction DMUL R10, R18, R10 ; in function void geqr2_smem_domino_fast of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DMUL R10, R18, R10 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 1 of instruction DFMA R10, R16, R10, R18 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 3 of instruction DFMA R10, R16, R10, R18 ; in function void geqr2_smem_domino_fast of type f64
-#nixnan: error [NaN] detected in operand 1 of instruction DFMA R16, R10, R16, 0.5 ; in function void geqr2_smem_domino_fast of type f64
-#nixnan: error [NaN] detected in operand 2 of instruction DMUL R10, R18, R10 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 2 of instruction DFMA R10, R16, R10, R18 ; in function void geqr2_smem_domino_fast of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DMUL R10, R18, R10 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 0 of instruction DFMA R10, R16, R10, R18 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 2 of instruction DMUL R24, R26, R10 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 0 of instruction DMUL R24, R26, R10 ; in function void geqr2_smem_domino_fast of type f64
@@ -74,8 +74,8 @@ WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will caus
 #nixnan: error [NaN] detected in operand 2 of instruction DFMA R20, R24, -R24, R26 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 0 of instruction DFMA R20, R24, -R24, R26 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 1 of instruction DFMA R8, R20, R16, R24 ; in function void geqr2_smem_domino_fast of type f64
-#nixnan: error [NaN] detected in operand 3 of instruction DFMA R8, R20, R16, R24 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: error [NaN] detected in operand 0 of instruction DFMA R8, R20, R16, R24 ; in function void geqr2_smem_domino_fast of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R8, R20, R16, R24 ; in function void geqr2_smem_domino_fast of type f64
 #nixnan: running kernel [void orgqr_step1_kernel<double, 5, 3>(int, int, int, double*, int)] ...
 #nixnan: running kernel [void cutlass::Kernel2<cutlass_80_tensorop_d884gemm_32x32_16x5_tn_align1>(cutlass_80_tensorop_d884gemm_32x32_16x5_tn_align1::Params)] ...
 #nixnan: running kernel [void larft_T_64_batch<double>(int, double*, int, double const*)] ...
@@ -99,7 +99,7 @@ WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will caus
 #nixnan: running kernel [void trsv_ln_exec<float, 32u, 32u, 4u, false>(int, float const*, long, float*, long, int*)] ...
 #nixnan: running kernel [void trsv_lt_exec<float, 32u, 32u, 4u, false, false>(int, float const*, long, float*, long, int*)] ...
 #nixnan: running kernel [void axpy_kernel_val<float, float>(cublasAxpyParamsVal<float, float, float>)] ...
-RESULT config=F32 n=256 kappa=1.00e+03 seed=0 status=converged niter=1 t_fact_ms=617.08 t_loop_ms=4189.35 t_per_iter_ms=4189.345 first_exc_iter=-1 first_exc_ms=-1.000
+RESULT config=F32 n=256 kappa=1.00e+03 seed=0 status=converged niter=1 t_fact_ms=606.00 t_loop_ms=3906.88 t_per_iter_ms=3906.876 first_exc_iter=-1 first_exc_ms=-1.000
 #nixnan: Finalizing GPU context...
 
 #nixnan: ------------ nixnan Report -----------
