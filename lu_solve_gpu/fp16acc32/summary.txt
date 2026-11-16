@@ -1,0 +1,46 @@
+f16  void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int)
+   [  zero,  zero]  reports      9
+   [   inf,   inf]  reports      2
+f32  compute_multipliers_kernel(double const*, double*, int, int)
+   [  zero,  zero]  reports      5
+   [     0,     0]  reports      1
+   [   inf,   inf]  reports      5
+f32  void pack_tc_operands<__half>(double const*, double const*, __half*, __half*, int, int, int, int)
+   [     4,     4]  reports      3
+   [    -4,    -4]  reports      3
+f32  void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int)
+   [  zero,  zero]  reports      6
+   [   inf,   inf]  reports      1
+f64  apply_permutation_kernel(double const*, double const*, double*, int)
+   [  zero, -1016]  reports     12
+   [    -7,     0]  reports     12
+f64  backward_substitution_kernel(double const*, double const*, double*, int)
+   [  1017,   inf]  reports     19
+   [    -7,     0]  reports      5
+   [   561,   568]  reports      1
+   [   -23,   -16]  reports      1
+   [  zero, -1016]  reports      2
+f64  compute_multipliers_kernel(double const*, double*, int, int)
+   [   -55,   -48]  reports      9
+   [    -7,     0]  reports     55
+   [  zero, -1016]  reports     24
+   [     1,     8]  reports      1
+   [   -23,   -16]  reports     18
+   [  -567,  -560]  reports      1
+   [  1017,   inf]  reports     62
+   [   561,   568]  reports     10
+f64  eliminate_panel_kernel(double*, double const*, int, int, int)
+   [  zero, -1016]  reports     55
+   [    -7,     0]  reports     13
+   [     1,     8]  reports      1
+   [  1017,   inf]  reports     50
+f64  find_pivot_kernel(double const*, int, int, int*)
+   [  zero, -1016]  reports      5
+   [  1017,   inf]  reports      3
+f64  forward_substitution_kernel(double const*, double const*, double*, int)
+   [    -7,     0]  reports      2
+   [  zero, -1016]  reports      3
+   [  1017,   inf]  reports      7
+f64  u12_trsm_kernel(double*, double const*, int, int)
+   [  zero, -1016]  reports     15
+   [  1017,   inf]  reports     16

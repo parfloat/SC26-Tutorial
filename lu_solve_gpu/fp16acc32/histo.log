@@ -1,0 +1,882 @@
+#nixnan: ----------------------------------------------------------------------------------
+WARNING: Do not call CUDA memory allocation in nvbit_at_ctx_init(). It will cause deadlocks. Do them in nvbit_tool_init(). If you encounter deadlocks, remove CUDA API calls to debug.
+#nixnan: Initializing GPU context...
+#nixnan: Instrumenting all functions
+#nixnan: running kernel [init_identity_kernel(double*, int)] ...
+#nixnan: running kernel [find_pivot_kernel(double const*, int, int, int*)] ...
+#nixnan: running kernel [swap_rows_kernel(double*, double*, double*, int, int, int const*)] ...
+#nixnan: running kernel [compute_multipliers_kernel(double const*, double*, int, int)] ...
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-55,-48] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R8, R2, R8, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1,8] count=64 instruction=DFMA R10, -R4, R8, R6 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-55,-48] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-55,-48] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=@!P2 DFMA R10, R10, 2, -R14 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R14, R14, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: running kernel [eliminate_panel_kernel(double*, double const*, int, int, int)] ...
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=find_pivot_kernel(double const*, int, int, int*) range=[zero,-1016] count=64 instruction=@!P0 DADD R2, -RZ, |R4| ; in function=find_pivot_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R8, -R4, R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R8, R2, R8, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,zero] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=MUFU.RCP64H R17, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-567,-560] count=64 instruction=@!P2 DFMA R10, R10, 2, -R14 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-55,-48] count=64 instruction=DFMA R14, R18, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=find_pivot_kernel(double const*, int, int, int*) range=[zero,-1016] count=64 instruction=@!P0 DADD R2, -RZ, |R4| ; in function=find_pivot_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=MUFU.RCP64H R3, R5 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R8, R2, R8, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-55,-48] count=64 instruction=DFMA R10, -R4, R8, R6 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R10, -R4, R8, R6 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,zero] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=MUFU.RCP64H R17, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=@!P2 DFMA R10, R10, 2, -R14 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=find_pivot_kernel(double const*, int, int, int*) range=[zero,-1016] count=64 instruction=@!P0 DADD R2, -RZ, |R4| ; in function=find_pivot_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R8, -R4, R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R8, R2, R8, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-55,-48] count=64 instruction=DFMA R10, -R4, R8, R6 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R10, -R4, R8, R6 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[0,0] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,zero] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1,8] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: error [div0] detected in operand 1 of instruction MUFU.RCP64H R3, R5 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RCP64H R3, R5 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, -R4, R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R8, -R4, R2, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R8, -R4, R2, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R8, R8, R8, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R8, R8, R8, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R8, R8, R8, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R8, R8, R8, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R2, R8, R2 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R8, R2, R8, R2 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R8, R2, R8, R2 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R8, R2, R8, R2 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R8, R2, R8, R2 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R2, -R4, R8, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, -R4, R8, 1 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R2, -R4, R8, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R2, R8, R2, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R2, R8, R2, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R2, R8, R2, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R2, R8, R2, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 2 of instruction DMUL R8, R6, R2 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DMUL R8, R6, R2 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R10, -R4, R8, R6 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R10, -R4, R8, R6 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R10, -R4, R8, R6 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R2, R2, R10, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R2, R2, R10, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R2, R2, R10, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R2, R2, R10, R8 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R8, RZ, R5, R3 ; in function compute_multipliers_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R8, RZ, R5, R3 ; in function compute_multipliers_kernel of type f32
+#nixnan: error [div0] detected in operand 1 of instruction MUFU.RCP64H R17, R3 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=MUFU.RCP64H R17, R3 ; in function=compute_multipliers_kernel
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RCP64H R17, R3 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R10, R16, -R2, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R10, R16, -R2, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R18, R10, R10, R10 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R18, R10, R10, R10 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R18, R10, R10, R10 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R18, R10, R10, R10 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R18, R16, R18, R16 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R18, R16, R18, R16 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R18, R16, R18, R16 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R18, R16, R18, R16 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R18, -R2, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R18, -R2, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R18, R14, R18 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R18, R14, R18 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R18, R14, R18 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R18, R14, R18 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DMUL R16, R14, R10 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DMUL R16, R14, R10 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R18, R16, -R2, R10 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R18, R16, -R2, R10 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R14, R14, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R14, R18, R16 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R14, R18, R16 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R14, R18, R16 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R14, R18, R16 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R8, R6, -R4, R8 ; in function eliminate_panel_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[-7,0] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R8, R6, -R4, R8 ; in function eliminate_panel_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[zero,-1016] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=find_pivot_kernel(double const*, int, int, int*) range=[zero,-1016] count=64 instruction=@!P0 DADD R2, -RZ, |R4| ; in function=find_pivot_kernel
+#nixnan: error [NaN] detected in operand 2 of instruction @!P0 DADD R2, -RZ, |R4| ; in function find_pivot_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction @!P0 DADD R2, -RZ, |R4| ; in function find_pivot_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP64H R3, R5 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=MUFU.RCP64H R3, R5 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RCP64H R3, R5 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R8, -R4, R2, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R2, R8, R2 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R2, -R4, R8, 1 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, -R4, R8, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DMUL R8, R6, R2 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R10, -R4, R8, R6 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R10, -R4, R8, R6 ; in function compute_multipliers_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R10, -R4, R8, R6 ; in function compute_multipliers_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R8, RZ, R5, R3 ; in function compute_multipliers_kernel of type f32
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[inf,inf] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R8, R6, -R4, R8 ; in function eliminate_panel_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R8, R6, -R4, R8 ; in function eliminate_panel_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, -R4, R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R2, R8, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=MUFU.RCP64H R17, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-55,-48] count=64 instruction=DFMA R14, R18, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R14, R14, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=find_pivot_kernel(double const*, int, int, int*) range=[1017,inf] count=64 instruction=@!P0 DADD R2, -RZ, |R4| ; in function=find_pivot_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=MUFU.RCP64H R3, R5 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R2, R8, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,zero] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[inf,inf] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=MUFU.RCP64H R17, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DFMA R14, R14, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, -R4, R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, -R4, R8, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R10, -R4, R8, R6 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-55,-48] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DFMA R14, R14, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=find_pivot_kernel(double const*, int, int, int*) range=[1017,inf] count=64 instruction=@!P0 DADD R2, -RZ, |R4| ; in function=find_pivot_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=MUFU.RCP64H R3, R5 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, -R4, R8, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R10, -R4, R8, R6 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[inf,inf] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R14, R14, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DFMA R14, R14, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=find_pivot_kernel(double const*, int, int, int*) range=[zero,-1016] count=64 instruction=@!P0 DADD R2, -RZ, |R4| ; in function=find_pivot_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=MUFU.RCP64H R3, R5 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, -R4, R8, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, -R4, R8, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[inf,inf] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, R14, R18 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R2, R8, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-55,-48] count=64 instruction=DFMA R14, R18, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, -R2, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=find_pivot_kernel(double const*, int, int, int*) range=[1017,inf] count=64 instruction=@!P0 DADD R2, -RZ, |R4| ; in function=find_pivot_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R8, R2, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,-1016] count=64 instruction=DFMA R14, R14, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DMUL R16, R14, R10 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, -R4, R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DMUL R8, R6, R2 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[zero,zero] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f32 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[inf,inf] count=64 instruction=FFMA R8, RZ, R5, R3 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R10, R16, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-23,-16] count=64 instruction=DFMA R18, R10, R10, R10 ; in function=compute_multipliers_kernel
+#nixnan: running kernel [u12_trsm_kernel(double*, double const*, int, int)] ...
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R22, R12, R14, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R18, R20, R18, R26 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R26, R24, R26, R22 ; in function=u12_trsm_kernel
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R22, R12, R14, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R22, R12, R14, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DADD R12, R12, -R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DADD R12, R12, -R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction STG.E.64 [R8.64+0x80], R12 ; in function u12_trsm_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R26, R24, R26, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R22, R12, R14, R22 ; in function=u12_trsm_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R22, R12, R14, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R22, R12, R14, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R22, R12, R14, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R22, R12, R14, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R22, R30, R28, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R22, R12, R14, R22 ; in function=u12_trsm_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction @P0 DFMA R22, R16, R18, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction @P0 DFMA R22, R16, R18, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction @P0 DFMA R22, R16, R18, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction @P0 DFMA R22, R16, R18, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R18, R26, R18, R28 ; in function=u12_trsm_kernel
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R20, R22, R20, R24 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R20, R22, R20, R24 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R16, R18, R16, R20 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R16, R18, R16, R20 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R16, R18, R16, R20 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R16, R18, R16, R20 ; in function u12_trsm_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R22, R24, R22, R16 ; in function=u12_trsm_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R22, R24, R22, R16 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R22, R24, R22, R16 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R22, R24, R22, R16 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R22, R24, R22, R16 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R22, R26, R28, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R22, R26, R28, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R22, R26, R28, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R22, R26, R28, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R18, R26, R18, R28 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R22, R24, R22, R16 ; in function=u12_trsm_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R22, R12, R14, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R22, R12, R14, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R28, R20, R28, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R16, R18, R16, R20 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R22, R12, R14, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R22, R18, R16, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R22, R26, R28, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DADD R12, R12, -R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R24, R16, R24, R18 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R20, R22, R20, R24 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R26, R24, R26, R22 ; in function=u12_trsm_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R26, R24, R26, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R26, R24, R26, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R26, R24, R26, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R26, R24, R26, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R18, R20, R18, R26 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R18, R20, R18, R26 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R18, R20, R18, R26 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R18, R20, R18, R26 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R22, R24, R22, R18 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R22, R24, R22, R18 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R22, R24, R22, R18 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R22, R24, R22, R18 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R22, R30, R28, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R22, R30, R28, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R22, R30, R28, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R22, R30, R28, R22 ; in function u12_trsm_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R24, R16, R24, R18 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R20, R22, R20, R24 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R26, R24, R26, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R22, R12, R14, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R18, R26, R18, R28 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R22, R26, R28, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R22, R30, R28, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[zero,-1016] count=64 instruction=DFMA R28, R20, R28, R22 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R16, R18, R16, R20 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R18, R20, R18, R26 ; in function=u12_trsm_kernel
+#nixnan: f64 bin has reached threshold: function=u12_trsm_kernel(double*, double const*, int, int) range=[1017,inf] count=64 instruction=DFMA R22, R12, R14, R22 ; in function=u12_trsm_kernel
+#nixnan: running kernel [void pack_tc_operands<__half>(double const*, double const*, __half*, __half*, int, int, int, int)] ...
+#nixnan: f32 bin has reached threshold: function=void pack_tc_operands<__half>(double const*, double const*, __half*, __half*, int, int, int, int) range=[4,4] count=64 instruction=MUFU.RCP R0, R0 ; in function=void pack_tc_operands
+#nixnan: f32 bin has reached threshold: function=void pack_tc_operands<__half>(double const*, double const*, __half*, __half*, int, int, int, int) range=[4,4] count=64 instruction=MUFU.RCP R0, R0 ; in function=void pack_tc_operands
+#nixnan: f32 bin has reached threshold: function=void pack_tc_operands<__half>(double const*, double const*, __half*, __half*, int, int, int, int) range=[4,4] count=64 instruction=MUFU.RCP R0, R0 ; in function=void pack_tc_operands
+#nixnan: f32 bin has reached threshold: function=void pack_tc_operands<__half>(double const*, double const*, __half*, __half*, int, int, int, int) range=[-4,-4] count=64 instruction=MUFU.RCP R0, R0 ; in function=void pack_tc_operands
+#nixnan: f32 bin has reached threshold: function=void pack_tc_operands<__half>(double const*, double const*, __half*, __half*, int, int, int, int) range=[-4,-4] count=64 instruction=MUFU.RCP R0, R0 ; in function=void pack_tc_operands
+#nixnan: f32 bin has reached threshold: function=void pack_tc_operands<__half>(double const*, double const*, __half*, __half*, int, int, int, int) range=[-4,-4] count=64 instruction=MUFU.RCP R0, R0 ; in function=void pack_tc_operands
+#nixnan: running kernel [void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int)] ...
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function=void tc_gemm_tile
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function=void tc_gemm_tile
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function=void tc_gemm_tile
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[inf,inf] count=64 instruction=HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function=void tc_gemm_tile
+#nixnan: f32 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function=void tc_gemm_tile
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function=void tc_gemm_tile
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function void tc_gemm_tile of type f16
+#nixnan: error [NaN] detected in operand 2 of instruction HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function void tc_gemm_tile of type f16
+#nixnan: f32 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[inf,inf] count=64 instruction=HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function=void tc_gemm_tile
+#nixnan: f32 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function=void tc_gemm_tile
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R20, R4.reuse, R2, RZ ; in function void tc_gemm_tile of type f32
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[inf,inf] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: f32 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: f32 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: f16 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: error [NaN] detected in operand 1 of instruction HMMA.16816.F32 R8, R4, R16, RZ ; in function void tc_gemm_tile of type f16
+#nixnan: f32 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: f32 bin has reached threshold: function=void tc_gemm_tile<__half, float>(__half const*, __half const*, float*, int) range=[zero,zero] count=64 instruction=HMMA.16816.F32 R8, R4, R16, RZ ; in function=void tc_gemm_tile
+#nixnan: error [NaN] detected in operand 0 of instruction HMMA.16816.F32 R8, R4, R16, RZ ; in function void tc_gemm_tile of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction STG.E.64 [R2.64], R20 ; in function void tc_gemm_tile of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction STG.E.64 [R2.64+0x20], R8 ; in function void tc_gemm_tile of type f32
+#nixnan: running kernel [void apply_update_kernel<float>(double*, float const*, int, int, int)] ...
+#nixnan: error [NaN] detected in operand 1 of instruction DADD R4, -R4, R6 ; in function void apply_update_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DADD R4, -R4, R6 ; in function void apply_update_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R8, R8, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R18, R16, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[561,568] count=64 instruction=DFMA R14, R14, R18, R16 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=eliminate_panel_kernel(double*, double const*, int, int, int) range=[1017,inf] count=64 instruction=DFMA R8, R6, -R4, R8 ; in function=eliminate_panel_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[1017,inf] count=64 instruction=DFMA R2, R2, R10, R8 ; in function=compute_multipliers_kernel
+#nixnan: f64 bin has reached threshold: function=compute_multipliers_kernel(double const*, double*, int, int) range=[-7,0] count=64 instruction=DFMA R14, R18, -R2, 1 ; in function=compute_multipliers_kernel
+#nixnan: running kernel [apply_permutation_kernel(double const*, double const*, double*, int)] ...
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R12, R12, R14, R16 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R32, R32, R10, R12 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R32, R32, R10, R12 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R26, R26, R28, R32 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R8, R24, R8, R26 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R8, R24, R8, R26 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R16, R16, R18, R20 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R16, R16, R18, R20 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R12, R12, R14, R16 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R30, R30, R10, R12 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R30, R30, R10, R12 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R8, R26, R8, R32 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R8, R26, R8, R32 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R8, R22, R24, R8 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R8, R18, R20, R8 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R8, R14, R16, R8 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R8, R10, R12, R8 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R8, R10, R12, R8 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R30, R28, R30, R8 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R12, R12, R14, R30 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R12, R12, R14, R30 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R12, R20, R22, R12 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R30, R8, R10, R12 ; in function=apply_permutation_kernel
+#nixnan: f64 bin has reached threshold: function=apply_permutation_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R30, R8, R10, R12 ; in function=apply_permutation_kernel
+#nixnan: running kernel [forward_substitution_kernel(double const*, double const*, double*, int)] ...
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R2, R4, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R2, R4, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DADD R6, R2, -R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DADD R6, R2, -R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction STG.E.64 [R4.64], R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R2, R4, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R2, R4, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R2, R4, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R2, R4, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction @P0 DFMA R6, R8, R10, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction @P0 DFMA R6, R8, R10, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction @P0 DFMA R6, R8, R10, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction @P0 DFMA R6, R8, R10, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R30, R8, R10, R30 ; in function=forward_substitution_kernel
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R12, R16, R18, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R12, R16, R18, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R6, R20, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R6, R20, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R6, R20, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R6, R20, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R22, R24, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R22, R24, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R22, R24, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R22, R24, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R10, R8, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R10, R8, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R10, R8, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R10, R8, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R30, R20, R30, R6 ; in function=forward_substitution_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R2, R4, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R2, R4, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R6, R6, R20, R12 ; in function=forward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R12, R12, R14, R6 ; in function=forward_substitution_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R12, R12, R14, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R12, R12, R14, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R12, R12, R14, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R12, R12, R14, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R12, R16, R18, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R12, R16, R18, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R12, R16, R18, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R12, R16, R18, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R12, R20, R22, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R12, R20, R22, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R12, R20, R22, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R12, R20, R22, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R8, R10, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R8, R10, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R8, R10, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R8, R10, R12 ; in function forward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R30, R20, R30, R6 ; in function=forward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R6, R10, R8, R6 ; in function=forward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R6, R2, R4, R6 ; in function=forward_substitution_kernel
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R18, R20, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R18, R20, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R22, R24, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R22, R24, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R22, R24, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R22, R24, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R6, R8, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R6, R8, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R6, R8, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R6, R8, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R10, R12, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R10, R12, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R10, R12, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R10, R12, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R14, R16, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R14, R16, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R14, R16, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R14, R16, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R18, R20, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R18, R20, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R18, R20, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R18, R20, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R24, R22, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R24, R22, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R24, R22, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R24, R22, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R8, R6, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R8, R6, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R8, R6, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R8, R6, R30 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R10, R12, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R10, R12, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R10, R12, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R10, R12, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R14, R16, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R14, R16, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R14, R16, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R14, R16, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R18, R20, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R18, R20, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R18, R20, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R18, R20, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R6, R22, R24, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R6, R22, R24, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R6, R22, R24, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R6, R22, R24, R6 ; in function forward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R30, R6, R8, R30 ; in function=forward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R30, R18, R20, R30 ; in function=forward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R30, R18, R20, R30 ; in function=forward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R6, R22, R24, R6 ; in function=forward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=forward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R6, R8, R6, R30 ; in function=forward_substitution_kernel
+#nixnan: running kernel [backward_substitution_kernel(double const*, double const*, double*, int)] ...
+#nixnan: error [NaN] detected in operand 1 of instruction MUFU.RCP64H R9, R7 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction MUFU.RCP64H R9, R7 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R10, -R6, R8, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R10, -R6, R8, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R10, -R6, R8, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R10, R10, R10, R10 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R10, R10, R10, R10 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R10, R10, R10, R10 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R10, R10, R10, R10 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R8, R8, R10, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R8, R8, R10, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R8, R8, R10, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R8, R8, R10, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DADD R10, R2, -R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DADD R10, R2, -R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R12, -R6, R8, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R12, -R6, R8, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R12, -R6, R8, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R12, R8, R12, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R12, R8, R12, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R12, R8, R12, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R12, R8, R12, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DMUL R8, R10, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DMUL R8, R10, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DMUL R8, R10, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, -R6, R8, R10 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, -R6, R8, R10 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, -R6, R8, R10 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, -R6, R8, R10 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R2, R12, R14, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R2, R12, R14, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R2, R12, R14, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R2, R12, R14, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction FFMA R8, RZ, R7, R3 ; in function backward_substitution_kernel of type f32
+#nixnan: error [NaN] detected in operand 3 of instruction FFMA R8, RZ, R7, R3 ; in function backward_substitution_kernel of type f32
+#nixnan: error [NaN] detected in operand 0 of instruction FFMA R8, RZ, R7, R3 ; in function backward_substitution_kernel of type f32
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R14, R2, RZ ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R14, R2, RZ ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R14, R2, RZ ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DADD R10, R2, -R14 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R14, -R6, R8, R10 ; in function=backward_substitution_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R2, R8, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R2, R8, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R2, R8, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R2, R8, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction @P0 DFMA R14, R10, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction @P0 DFMA R14, R10, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction @P0 DFMA R14, R10, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction @P0 DFMA R14, R10, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R10, R10, R10, R10 ; in function=backward_substitution_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R18, R18, R20, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R18, R18, R20, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R18, R18, R20, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R18, R24, R26, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R18, R24, R26, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R18, R24, R26, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R18, R24, R26, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R12, R12, R16, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R12, R12, R16, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R12, R12, R16, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R12, R12, R16, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R8, R30, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R8, R30, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R8, R30, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R8, R30, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R12, R8, R12, R8 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R14, R12, R14, R12 ; in function=backward_substitution_kernel
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R18, R18, R20, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R2, R12, R14, R8 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R14, R2, R8, R14 ; in function=backward_substitution_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R16, R30, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R16, R30, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R16, R30, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R30, R24, R26, R30 ; in function=backward_substitution_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R18, R20, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R18, R20, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R18, R20, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R18, R20, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R24, R26, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R24, R26, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R24, R26, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R24, R26, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R12, R8, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R12, R8, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R12, R8, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R12, R8, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R12, R14, -R2, 1 ; in function=backward_substitution_kernel
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R16, R30, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R30, R18, R20, R30 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R14, R14, R2, RZ ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R14, -R6, R8, R10 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[561,568] count=64 instruction=DFMA R14, R14, R20, R18 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DADD R10, R2, -R14 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R14, R8, R30, R12 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DMUL R18, R14, R12 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R14, R24, R26, R14 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R14, R2, R8, R14 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DADD R10, R2, -R14 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[-23,-16] count=64 instruction=DFMA R14, R14, R14, R14 ; in function=backward_substitution_kernel
+#nixnan: error [div0] detected in operand 1 of instruction MUFU.RCP64H R9, R7 ; in function backward_substitution_kernel of type f64
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RCP64H R9, R7 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R10, -R6, R8, 1 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=@!P0 DMUL R2, R6, 8.98846567431157953865e+307 ; in function=backward_substitution_kernel
+#nixnan: error [div0] detected in operand 1 of instruction MUFU.RCP64H R13, R3 ; in function backward_substitution_kernel of type f64
+#nixnan: error [infinity] detected in operand 0 of instruction MUFU.RCP64H R13, R3 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R12, -R2, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R12, -R2, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R14, R14, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R14, R14, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R14, R14, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R14, R14, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R12, R14, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R12, R14, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R12, R14, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R12, R14, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R12, R14, -R2, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R12, R14, -R2, 1 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R14, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R14, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R14, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R14, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DMUL R18, R14, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DMUL R18, R14, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R20, R18, -R2, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R20, R18, -R2, R12 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R14, R20, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 2 of instruction DFMA R14, R14, R20, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R14, R20, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R14, R20, R18 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R16, R30, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R16, R30, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R30, R14, R16, R30 ; in function=backward_substitution_kernel
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R24, R26, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R18, R20, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R14, R16, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R8, R12, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R26, R24, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R26, R24, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R26, R24, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R30, R20, R18, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R20, R18, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R30, R20, R18, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R16, R14, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R16, R14, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R16, R14, R30 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R8, R8, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R8, R8, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R8, R8, R12, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R8, R24, R26, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R8, R24, R26, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R8, R24, R26, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 1 of instruction DFMA R14, R18, R20, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R14, R18, R20, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: error [NaN] detected in operand 0 of instruction DFMA R14, R18, R20, R8 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R14, R14, R12, R14 ; in function=backward_substitution_kernel
+#nixnan: error [NaN] detected in operand 3 of instruction DFMA R30, R16, R30, R14 ; in function backward_substitution_kernel of type f64
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R30, R8, R12, R30 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R30, R8, R12, R30 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[-7,0] count=64 instruction=DFMA R12, R14, -R2, 1 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[1017,inf] count=64 instruction=DFMA R30, R8, R12, R30 ; in function=backward_substitution_kernel
+#nixnan: f64 bin has reached threshold: function=backward_substitution_kernel(double const*, double const*, double*, int) range=[zero,-1016] count=64 instruction=DFMA R30, R8, R12, R30 ; in function=backward_substitution_kernel
+#nixnan: Finalizing GPU context...
+
+#nixnan: ------------ nixnan Report -----------
+
+#nixnan: --- FP16 Operations ---
+#nixnan: NaN:                    3 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- BF16 Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP32 Operations ---
+#nixnan: NaN:                    8 (93 repeats)
+#nixnan: Infinity:               0 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          0 (0 repeats)
+
+#nixnan: --- FP64 Operations ---
+#nixnan: NaN:                  362 (2393 repeats)
+#nixnan: Infinity:               4 (0 repeats)
+#nixnan: -Infinity:              0 (0 repeats)
+#nixnan: Subnormal:              0 (0 repeats)
+#nixnan: Division by 0:          4 (4 repeats)
+
+#nixnan: --- FP16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- BF16 Memory  Operations ---
+#nixnan: NaN:                    0 (0 repeats)
+#nixnan: --- FP32 Memory  Operations ---
+#nixnan: NaN:                    2 (4 repeats)
+#nixnan: --- FP64 Memory  Operations ---
+#nixnan: NaN:                    2 (24 repeats)
+#nixnan: --- FP exponent ranges --- 
+#nixnan: Exponent range for f16: [zero, inf]
+#nixnan: Exponent range for f32: [zero, inf]
+#nixnan: Exponent range for f64: [zero, inf]
